@@ -59,14 +59,14 @@ export default function ClinicoDashboard() {
           <PatientQueue
             patients={aguardandoAvaliacao}
             title="Aguardando Avaliacao Clinica"
-            actionUrl={(id) => `/clinico/avaliacao/${id}`}
+            actionUrl={(id) => `/clinico/avaliar/${id}`}
             actionLabel="Avaliar"
             emptyMessage="Nenhum paciente aguardando avaliacao"
           />
           <PatientQueue
             patients={comExamesConcluidos}
             title="Exames Concluidos - Revisar"
-            actionUrl={(id) => `/clinico/avaliacao/${id}`}
+            actionUrl={(id) => `/clinico/revisar/${id}`}
             actionLabel="Revisar"
             emptyMessage="Nenhum exame para revisar"
             showPriority={false}
