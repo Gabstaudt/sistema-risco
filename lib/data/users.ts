@@ -1,0 +1,58 @@
+import { User } from '../types'
+
+export const users: User[] = [
+  {
+    id: 'user-1',
+    email: 'recepcao@hospital.com',
+    password: '123456',
+    name: 'Maria Silva',
+    role: 'recepcao',
+    active: true,
+    createdAt: '2024-01-15T08:00:00Z',
+  },
+  {
+    id: 'user-2',
+    email: 'triagem@hospital.com',
+    password: '123456',
+    name: 'Ana Santos',
+    role: 'triagem',
+    active: true,
+    createdAt: '2024-01-15T08:00:00Z',
+  },
+  {
+    id: 'user-3',
+    email: 'clinico@hospital.com',
+    password: '123456',
+    name: 'Dr. Carlos Mendes',
+    role: 'clinico',
+    active: true,
+    createdAt: '2024-01-15T08:00:00Z',
+  },
+  {
+    id: 'user-4',
+    email: 'laboratorio@hospital.com',
+    password: '123456',
+    name: 'Pedro Oliveira',
+    role: 'laboratorio',
+    active: true,
+    createdAt: '2024-01-15T08:00:00Z',
+  },
+  {
+    id: 'user-5',
+    email: 'cirurgiao@hospital.com',
+    password: '123456',
+    name: 'Dr. Roberto Lima',
+    role: 'cirurgiao',
+    active: true,
+    createdAt: '2024-01-15T08:00:00Z',
+  },
+  {
+    id: 'user-6',
+    email: 'admin@hospital.com',
+    password: '123456',
+    name: 'Administrador Sistema',
+    role: 'admin',
+    active: true,
+    createdAt: '2024-01-15T08:00:00Z',
+  },
+]
