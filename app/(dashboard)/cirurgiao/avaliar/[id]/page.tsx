@@ -34,8 +34,13 @@ export default function CirurgiaoAvaliarPage() {
   const [isSaving, setIsSaving] = useState(false)
   
   useEffect(() => {
-    if (!user || !hasPermission('cirurgiao.avaliar')) {
+    if (!user) {
       router.push('/login')
+      return
+    }
+
+    if (!hasPermission('classify_risk')) {
+      router.push('/cirurgiao')
     }
   }, [user, hasPermission, router])
   

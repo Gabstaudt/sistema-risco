@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Save, User, Heart, Activity, AlertTriangle } from 'lucide-react'
-import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/shared/badges'
+import { PatientStatusBadge, ASABadge } from '@/components/shared/badges'
 import { ASA_CLASSIFICATIONS, calculateASA } from '@/lib/data/exams'
 import type { ASAClassification } from '@/lib/types'
 
@@ -58,8 +58,13 @@ export default function TriagemAvaliarPage() {
   const suggestedASA = calculateASA(conditions)
   
   useEffect(() => {
-    if (!user || !hasPermission('triagem.avaliar')) {
+    if (!user) {
       router.push('/login')
+      return
+    }
+
+    if (!hasPermission('register_vital_signs')) {
+      router.push('/triagem')
     }
   }, [user, hasPermission, router])
   
@@ -115,29 +120,31 @@ export default function TriagemAvaliarPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-foreground">Triagem do Paciente</h1>
-          <p className="text-muted-foreground">Coleta de sinais vitais e historico medico</p>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Triagem do Paciente</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">Coleta de sinais vitais e historico medico</p>
         </div>
-        <PatientStatusBadge status={patient.status} />
+        <div className="self-start sm:self-auto">
+          <PatientStatusBadge status={patient.status} />
+        </div>
       </div>
       
       {/* Patient Info Card */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
               <User className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <CardTitle className="text-lg">{patient.name}</CardTitle>
-              <CardDescription>
+            <div className="min-w-0">
+              <CardTitle className="break-words text-lg">{patient.name}</CardTitle>
+              <CardDescription className="break-words">
                 {patient.age} anos | CPF: {patient.cpf} | Cirurgia: {patient.scheduledSurgery}
               </CardDescription>
             </div>
@@ -259,7 +266,7 @@ export default function TriagemAvaliarPage() {
                 { key: 'smoking', label: 'Tabagismo' },
                 { key: 'alcoholism', label: 'Etilismo' },
               ].map(({ key, label }) => (
-                <div key={key} className="flex items-center space-x-2">
+                <div key={key} className="flex min-w-0 items-start space-x-2 rounded-lg border p-3">
                   <Checkbox
                     id={key}
                     checked={conditions[key as keyof typeof conditions] as boolean}
@@ -267,7 +274,7 @@ export default function TriagemAvaliarPage() {
                       setConditions(c => ({ ...c, [key]: checked }))
                     }
                   />
-                  <Label htmlFor={key} className="text-sm font-normal cursor-pointer">
+                  <Label htmlFor={key} className="cursor-pointer text-sm font-normal leading-5">
                     {label}
                   </Label>
                 </div>
@@ -300,7 +307,7 @@ export default function TriagemAvaliarPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {suggestedASA && (
-            <div className="flex items-center gap-2 rounded-lg bg-primary/10 p-3">
+            <div className="flex flex-col gap-2 rounded-lg bg-primary/10 p-3 sm:flex-row sm:items-center">
               <span className="text-sm text-muted-foreground">Sugestao baseada nas comorbidades:</span>
               <ASABadge classification={suggestedASA} />
             </div>
@@ -312,13 +319,13 @@ export default function TriagemAvaliarPage() {
               value={selectedASA}
               onValueChange={value => setSelectedASA(value as ASAClassification)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="min-h-11">
                 <SelectValue placeholder="Selecione a classificacao ASA" />
               </SelectTrigger>
               <SelectContent>
                 {ASA_CLASSIFICATIONS.map(asa => (
                   <SelectItem key={asa.code} value={asa.code}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <span className="font-medium">{asa.code}</span>
                       <span className="text-muted-foreground">- {asa.description}</span>
                     </div>
@@ -330,7 +337,7 @@ export default function TriagemAvaliarPage() {
           
           {selectedASA && (
             <div className="rounded-lg border p-4">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <ASABadge classification={selectedASA} />
                 <span className="font-medium">
                   {ASA_CLASSIFICATIONS.find(a => a.code === selectedASA)?.description}
@@ -357,11 +364,11 @@ export default function TriagemAvaliarPage() {
             rows={4}
           />
         </CardContent>
-        <CardFooter className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
+        <CardFooter className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
             Salvar Rascunho
           </Button>
-          <Button onClick={() => handleSave(true)} disabled={isSaving || !selectedASA}>
+          <Button className="w-full sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving || !selectedASA}>
             <Save className="mr-2 h-4 w-4" />
             Concluir Triagem
           </Button>

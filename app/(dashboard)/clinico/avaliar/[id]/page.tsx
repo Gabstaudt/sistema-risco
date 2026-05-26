@@ -41,8 +41,13 @@ export default function ClinicoAvaliarPage() {
   const vsgcriScore = calculateVSGCRI(vsgcriFactors)
   
   useEffect(() => {
-    if (!user || !hasPermission('clinico.avaliar')) {
+    if (!user) {
       router.push('/login')
+      return
+    }
+
+    if (!hasPermission('clinical_evaluation')) {
+      router.push('/clinico')
     }
   }, [user, hasPermission, router])
   

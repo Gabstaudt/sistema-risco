@@ -67,35 +67,37 @@ export default function PatientDetailsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-foreground">Detalhes do Paciente</h1>
-          <p className="text-muted-foreground">Visualizacao completa do prontuario</p>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Detalhes do Paciente</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">Visualizacao completa do prontuario</p>
         </div>
-        <PatientStatusBadge status={patient.status} />
+        <div className="self-start sm:self-auto">
+          <PatientStatusBadge status={patient.status} />
+        </div>
       </div>
       
       {/* Patient Header Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10">
                 <User className="h-7 w-7 text-primary" />
               </div>
-              <div>
-                <CardTitle className="text-2xl">{patient.name}</CardTitle>
-                <CardDescription className="text-base">
+              <div className="min-w-0">
+                <CardTitle className="break-words text-xl sm:text-2xl">{patient.name}</CardTitle>
+                <CardDescription className="mt-1 break-words text-sm sm:text-base">
                   {patient.age} anos | CPF: {patient.cpf}
                 </CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {patient.riskLevel && <RiskLevelBadge level={patient.riskLevel} />}
               {triageData?.asaClassification && (
                 <ASABadge classification={triageData.asaClassification} />
@@ -104,12 +106,12 @@ export default function PatientDetailsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Cirurgia</p>
-              <p className="font-medium">{patient.scheduledSurgery}</p>
+              <p className="break-words font-medium">{patient.scheduledSurgery}</p>
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Data Prevista</p>
               <p className="font-medium">
                 {patient.scheduledDate 
@@ -118,25 +120,35 @@ export default function PatientDetailsPage() {
                 }
               </p>
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Medico Solicitante</p>
-              <p className="font-medium">{patient.requestingPhysician || 'Nao informado'}</p>
+              <p className="break-words font-medium">{patient.requestingPhysician || 'Nao informado'}</p>
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Convenio</p>
-              <p className="font-medium">{patient.healthInsurance || 'Particular'}</p>
+              <p className="break-words font-medium">{patient.healthInsurance || 'Particular'}</p>
             </div>
           </div>
         </CardContent>
       </Card>
       
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="summary">Resumo</TabsTrigger>
-          <TabsTrigger value="triage">Triagem</TabsTrigger>
-          <TabsTrigger value="clinical">Avaliacao Clinica</TabsTrigger>
-          <TabsTrigger value="exams">Exames</TabsTrigger>
-          <TabsTrigger value="audit">Historico</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-3 lg:grid-cols-5">
+          <TabsTrigger value="summary" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Resumo
+          </TabsTrigger>
+          <TabsTrigger value="triage" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Triagem
+          </TabsTrigger>
+          <TabsTrigger value="clinical" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Avaliacao Clinica
+          </TabsTrigger>
+          <TabsTrigger value="exams" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Exames
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Historico
+          </TabsTrigger>
         </TabsList>
         
         {/* Summary Tab */}
@@ -152,11 +164,11 @@ export default function PatientDetailsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-4 mb-4">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
                     {surgicalAssessment.finalRiskLevel && (
                       <RiskLevelBadge level={surgicalAssessment.finalRiskLevel} />
                     )}
-                    <span className="text-lg font-medium">
+                    <span className="text-base font-medium sm:text-lg">
                       {surgicalAssessment.recommendation === 'aprovar' && 'Aprovado para Cirurgia'}
                       {surgicalAssessment.recommendation === 'adiar' && 'Procedimento Adiado'}
                       {surgicalAssessment.recommendation === 'contraindicar' && 'Cirurgia Contraindicada'}
@@ -175,7 +187,7 @@ export default function PatientDetailsPage() {
                 <CardTitle className="text-base">Scores de Risco</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-muted-foreground">ASA</span>
                   {triageData?.asaClassification ? (
                     <ASABadge classification={triageData.asaClassification} />
@@ -184,10 +196,10 @@ export default function PatientDetailsPage() {
                   )}
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-muted-foreground">RCRI</span>
                   {clinicalEval?.rcriScore ? (
-                    <div className="text-right">
+                    <div className="sm:text-right">
                       <RCRIBadge score={clinicalEval.rcriScore.score} />
                       <p className="text-xs text-muted-foreground mt-1">
                         {clinicalEval.rcriScore.riskPercentage}
@@ -198,10 +210,10 @@ export default function PatientDetailsPage() {
                   )}
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-muted-foreground">VSG-CRI</span>
                   {clinicalEval?.vsgcriScore ? (
-                    <div className="text-right">
+                    <div className="sm:text-right">
                       <span className="font-medium">{clinicalEval.vsgcriScore.score} pts</span>
                       <p className="text-xs text-muted-foreground">
                         {clinicalEval.vsgcriScore.riskClass}
@@ -221,28 +233,28 @@ export default function PatientDetailsPage() {
               </CardHeader>
               <CardContent>
                 {triageData?.vitalSigns ? (
-                  <div className="grid gap-3 grid-cols-2">
-                    <div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Pressao</p>
-                      <p className="font-medium">{triageData.vitalSigns.bloodPressure || '-'}</p>
+                      <p className="break-words font-medium">{triageData.vitalSigns.bloodPressure || '-'}</p>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">FC</p>
                       <p className="font-medium">{triageData.vitalSigns.heartRate || '-'} bpm</p>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">SpO2</p>
                       <p className="font-medium">{triageData.vitalSigns.oxygenSaturation || '-'}%</p>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Temp</p>
                       <p className="font-medium">{triageData.vitalSigns.temperature || '-'}°C</p>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Peso</p>
                       <p className="font-medium">{triageData.vitalSigns.weight || '-'} kg</p>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">IMC</p>
                       <p className="font-medium">
                         {triageData.vitalSigns.weight && triageData.vitalSigns.height
@@ -274,20 +286,20 @@ export default function PatientDetailsPage() {
                 <>
                   <div>
                     <h4 className="font-medium mb-3">Sinais Vitais</h4>
-                    <div className="grid gap-4 sm:grid-cols-4">
-                      <div className="rounded-lg border p-3">
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className="min-w-0 rounded-lg border p-3">
                         <p className="text-xs text-muted-foreground">Pressao Arterial</p>
-                        <p className="text-lg font-medium">{triageData.vitalSigns?.bloodPressure || '-'}</p>
+                        <p className="break-words text-lg font-medium">{triageData.vitalSigns?.bloodPressure || '-'}</p>
                       </div>
-                      <div className="rounded-lg border p-3">
+                      <div className="min-w-0 rounded-lg border p-3">
                         <p className="text-xs text-muted-foreground">Freq. Cardiaca</p>
                         <p className="text-lg font-medium">{triageData.vitalSigns?.heartRate || '-'} bpm</p>
                       </div>
-                      <div className="rounded-lg border p-3">
+                      <div className="min-w-0 rounded-lg border p-3">
                         <p className="text-xs text-muted-foreground">Saturacao O2</p>
                         <p className="text-lg font-medium">{triageData.vitalSigns?.oxygenSaturation || '-'}%</p>
                       </div>
-                      <div className="rounded-lg border p-3">
+                      <div className="min-w-0 rounded-lg border p-3">
                         <p className="text-xs text-muted-foreground">Temperatura</p>
                         <p className="text-lg font-medium">{triageData.vitalSigns?.temperature || '-'}°C</p>
                       </div>
@@ -379,7 +391,7 @@ export default function PatientDetailsPage() {
                   <div className="grid gap-6 sm:grid-cols-2">
                     <div className="rounded-lg border p-4">
                       <h4 className="font-medium mb-2">RCRI Score</h4>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                         <span className="text-3xl font-bold text-primary">
                           {clinicalEval.rcriScore?.score || 0}
                         </span>
@@ -394,7 +406,7 @@ export default function PatientDetailsPage() {
                     
                     <div className="rounded-lg border p-4">
                       <h4 className="font-medium mb-2">VSG-CRI Score</h4>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                         <span className="text-3xl font-bold text-primary">
                           {clinicalEval.vsgcriScore?.score || 0}
                         </span>
@@ -440,33 +452,33 @@ export default function PatientDetailsPage() {
                     return (
                       <div 
                         key={examId}
-                        className={`rounded-lg border p-4 ${
+                        className={`overflow-hidden rounded-lg border p-4 ${
                           result?.status === 'alterado' ? 'border-amber-200 bg-amber-50/50' : ''
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex min-w-0 items-start gap-2">
                             {result?.status === 'normal' && (
-                              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
                             )}
                             {result?.status === 'alterado' && (
-                              <AlertTriangle className="h-5 w-5 text-amber-500" />
+                              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
                             )}
                             {(!result?.status || result?.status === 'pendente') && (
-                              <Clock className="h-5 w-5 text-muted-foreground" />
+                              <Clock className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
                             )}
-                            <span className="font-medium">{exam?.name || examId}</span>
+                            <span className="break-words font-medium">{exam?.name || examId}</span>
                           </div>
-                          <span className="text-xs text-muted-foreground">{exam?.category}</span>
+                          <span className="text-xs text-muted-foreground sm:text-right">{exam?.category}</span>
                         </div>
                         {result?.value ? (
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-lg font-medium">{result.value}</span>
+                          <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-2">
+                            <span className="break-words text-lg font-medium">{result.value}</span>
                             {exam?.unit && (
                               <span className="text-muted-foreground">{exam.unit}</span>
                             )}
                             {exam?.referenceRange && (
-                              <span className="text-xs text-muted-foreground ml-2">
+                              <span className="text-xs text-muted-foreground sm:ml-2">
                                 (Ref: {exam.referenceRange})
                               </span>
                             )}
@@ -504,13 +516,13 @@ export default function PatientDetailsPage() {
               <div className="relative">
                 <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
                 <div className="space-y-6">
-                  {auditLogs.map((log, index) => (
+                  {auditLogs.map((log) => (
                     <div key={log.id} className="relative pl-10">
                       <div className="absolute left-2 top-1 h-4 w-4 rounded-full border-2 border-primary bg-background" />
                       <div className="rounded-lg border p-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium">{getActionLabel(log.action)}</span>
-                          <span className="text-xs text-muted-foreground">
+                        <div className="mb-1 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                          <span className="break-words font-medium">{getActionLabel(log.action)}</span>
+                          <span className="text-xs text-muted-foreground sm:text-right">
                             {formatDate(log.timestamp)}
                           </span>
                         </div>

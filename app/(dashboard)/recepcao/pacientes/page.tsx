@@ -6,19 +6,16 @@ import { useAuth } from '@/lib/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StatusBadge, PriorityBadge } from '@/components/shared/badges'
-import { Search, Plus, Eye, Edit2, UserPlus, Filter } from 'lucide-react'
+import { Search, Eye, UserPlus, Filter } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Patient, PatientStatus, STATUS_LABELS, PRIORITY_LABELS, Priority } from '@/lib/types'
+import { STATUS_LABELS, PRIORITY_LABELS } from '@/lib/types'
 
 export default function PacientesPage() {
   const { user } = useAuth()
   const { patients, updatePatientStatus } = useData()
-  const router = useRouter()
   
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -58,13 +55,13 @@ export default function PacientesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Pacientes</h1>
           <p className="text-muted-foreground">Gerenciar todos os pacientes cadastrados</p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto">
           <Link href="/recepcao/cadastro">
             <UserPlus className="mr-2 h-4 w-4" />
             Novo Paciente
@@ -81,19 +78,19 @@ export default function PacientesPage() {
         </CardHeader>
         <CardContent>
           {/* Filtros */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-center mb-6">
-            <div className="relative flex-1">
+          <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center">
+            <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, prontuario ou CPF..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="h-11 pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:justify-end">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="h-11 w-full sm:min-w-[200px]">
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
@@ -105,7 +102,7 @@ export default function PacientesPage() {
                 </SelectContent>
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="h-11 w-full sm:min-w-[170px]">
                   <SelectValue placeholder="Prioridade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -119,17 +116,18 @@ export default function PacientesPage() {
           </div>
 
           {/* Tabela */}
-          <div className="rounded-md border">
-            <Table>
+          <div className="overflow-hidden rounded-xl border bg-background">
+            <div className="w-full overflow-x-auto">
+            <Table className="min-w-[760px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Prontuario</TableHead>
+                  <TableHead className="whitespace-nowrap">Prontuario</TableHead>
                   <TableHead>Paciente</TableHead>
-                  <TableHead>Idade</TableHead>
-                  <TableHead>Entrada</TableHead>
-                  <TableHead>Prioridade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Acoes</TableHead>
+                  <TableHead className="whitespace-nowrap">Idade</TableHead>
+                  <TableHead className="whitespace-nowrap">Entrada</TableHead>
+                  <TableHead className="whitespace-nowrap">Prioridade</TableHead>
+                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Acoes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -142,17 +140,17 @@ export default function PacientesPage() {
                 ) : (
                   filteredPatients.map((patient) => (
                     <TableRow key={patient.id}>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="whitespace-nowrap font-mono text-sm">
                         {patient.prontuario}
                       </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{patient.nomeCompleto}</p>
+                      <TableCell className="min-w-[220px]">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{patient.nomeCompleto}</p>
                           <p className="text-xs text-muted-foreground">{patient.cpf}</p>
                         </div>
                       </TableCell>
-                      <TableCell>{patient.idade} anos</TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="whitespace-nowrap">{patient.idade} anos</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">
                         {formatDate(patient.dataEntrada)}
                       </TableCell>
                       <TableCell>
@@ -167,6 +165,7 @@ export default function PacientesPage() {
                             variant="ghost"
                             size="sm"
                             asChild
+                            className="shrink-0"
                           >
                             <Link href={`/paciente/${patient.id}`}>
                               <Eye className="h-4 w-4" />
@@ -176,6 +175,7 @@ export default function PacientesPage() {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="shrink-0"
                               onClick={() => handleEncaminharTriagem(patient.id)}
                             >
                               Encaminhar
@@ -188,6 +188,7 @@ export default function PacientesPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

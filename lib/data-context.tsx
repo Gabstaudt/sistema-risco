@@ -11,6 +11,7 @@ interface DataContextType {
   // Pacientes
   patients: Patient[]
   getPatient: (id: string) => Patient | undefined
+  getPatientById: (id: string) => Patient | undefined
   getPatientsByStatus: (status: PatientStatus | PatientStatus[]) => Patient[]
   createPatient: (patient: Omit<Patient, 'id' | 'prontuario' | 'cadastradoEm' | 'ultimaAtualizacao' | 'ultimoAtualizadoPor'>) => Patient
   updatePatient: (id: string, updates: Partial<Patient>) => void
@@ -32,7 +33,8 @@ interface DataContextType {
   // Auditoria
   auditLogs: AuditLog[]
   getAuditLogsByPatient: (patientId: string) => AuditLog[]
-  addAuditLog: (log: Omit<AuditLog, 'id' | 'timestamp' | 'userId' | 'userName' | 'userRole'>) => void
+  getPatientAuditLogs: (patientId: string) => AuditLog[]
+  addAuditLog: (log: AuditLogInput) => void
   
   // Estatisticas
   getStats: () => {
@@ -45,6 +47,12 @@ interface DataContextType {
     altoRisco: number
     contraindicados: number
   }
+}
+
+type AuditLogInput = Omit<Partial<AuditLog>, 'id' | 'timestamp' | 'userName' | 'userRole'> & {
+  action: AuditAction
+  description?: string
+  details?: string
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -105,15 +113,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
   // Helper para adicionar log de auditoria
-  const addAuditLog = useCallback((log: Omit<AuditLog, 'id' | 'timestamp' | 'userId' | 'userName' | 'userRole'>) => {
+  const addAuditLog = useCallback((log: AuditLogInput) => {
     if (!user) return
     
     const newLog: AuditLog = {
       ...log,
       id: generateId('audit'),
-      userId: user.id,
+      userId: log.userId || user.id,
       userName: user.name,
       userRole: user.role,
+      description: log.description || log.details || '',
+      details: log.details || log.description,
       timestamp: new Date().toISOString(),
     }
     
@@ -135,8 +145,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ...patientData,
       id: generateId('patient'),
       prontuario: `PRONT-${new Date().getFullYear()}-${String(patients.length + 1).padStart(3, '0')}`,
+      name: patientData.nomeCompleto,
+      age: patientData.idade,
       cadastradoEm: new Date().toISOString(),
       ultimaAtualizacao: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       ultimoAtualizadoPor: user?.id || '',
     }
     
@@ -157,7 +170,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return {
           ...p,
           ...updates,
+          name: updates.nomeCompleto ?? p.name ?? p.nomeCompleto,
+          age: updates.idade ?? p.age ?? p.idade,
           ultimaAtualizacao: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           ultimoAtualizadoPor: user?.id || '',
         }
       }
@@ -174,14 +190,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const actionMap: Record<PatientStatus, AuditAction> = {
       aguardando_triagem: 'encaminhamento_triagem',
       em_triagem: 'encaminhamento_triagem',
+      aguardando_avaliacao: 'encaminhamento_clinico',
       aguardando_clinico: 'encaminhamento_clinico',
       em_avaliacao_clinica: 'avaliacao_clinica',
+      aguardando_exames: 'solicitacao_exame',
+      aguardando_resultado: 'resultado_exame',
       exames_solicitados: 'solicitacao_exame',
       aguardando_laboratorio: 'encaminhamento_laboratorio',
       exames_em_analise: 'analise_exame',
       exames_concluidos: 'resultado_exame',
       aguardando_cirurgiao: 'encaminhamento_cirurgiao',
       em_avaliacao_cirurgica: 'calculo_score',
+      concluido: 'classificacao_risco',
       liberado: 'liberacao_cirurgia',
       alto_risco: 'classificacao_risco',
       contraindicado: 'contraindicacao_cirurgia',
@@ -373,6 +393,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
   }, [auditLogs])
 
+  const getPatientById = useCallback((id: string) => {
+    return getPatient(id)
+  }, [getPatient])
+
+  const getPatientAuditLogs = useCallback((patientId: string) => {
+    return getAuditLogsByPatient(patientId)
+  }, [getAuditLogsByPatient])
+
   // Estatisticas
   const getStats = useCallback(() => {
     return {
@@ -391,6 +419,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     <DataContext.Provider value={{
       patients,
       getPatient,
+      getPatientById,
       getPatientsByStatus,
       createPatient,
       updatePatient,
@@ -408,6 +437,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       updateExamStatus,
       auditLogs,
       getAuditLogsByPatient,
+      getPatientAuditLogs,
       addAuditLog,
       getStats,
     }}>

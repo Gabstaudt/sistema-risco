@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
@@ -26,8 +26,14 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   
-  const { login, getRedirectPath } = useAuth()
+  const { user, isLoading: isAuthLoading, login, getRedirectPath } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      router.replace(getRedirectPath())
+    }
+  }, [user, isAuthLoading, getRedirectPath, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,7 +43,7 @@ export default function LoginPage() {
     const result = await login(email, password)
     
     if (result.success) {
-      router.push(getRedirectPath())
+      router.replace(result.redirectPath || '/login')
     } else {
       setError(result.error || 'Erro ao fazer login')
       setIsLoading(false)

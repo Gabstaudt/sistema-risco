@@ -7,7 +7,7 @@ import { users as initialUsers } from './data/users'
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectPath?: string }>
   logout: () => void
   hasPermission: (permission: string) => boolean
   getRedirectPath: () => string
@@ -16,6 +16,19 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const STORAGE_KEY = 'hospital-auth-user'
+
+function getRedirectPathForRole(role: UserRole): string {
+  const roleRedirects: Record<UserRole, string> = {
+    recepcao: '/recepcao',
+    triagem: '/triagem',
+    clinico: '/clinico',
+    laboratorio: '/laboratorio',
+    cirurgiao: '/cirurgiao',
+    admin: '/admin',
+  }
+
+  return roleRedirects[role] || '/login'
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -34,12 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string; redirectPath?: string }> => {
     // Simular delay de rede
     await new Promise(resolve => setTimeout(resolve, 500))
 
+    const normalizedEmail = email.trim().toLowerCase()
+
     const foundUser = initialUsers.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password && u.active
+      u => u.email.toLowerCase() === normalizedEmail && u.password === password && u.active
     )
 
     if (!foundUser) {
@@ -48,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setUser(foundUser)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(foundUser))
-    return { success: true }
+    return { success: true, redirectPath: getRedirectPathForRole(foundUser.role) }
   }, [])
 
   const logout = useCallback(() => {
@@ -64,17 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getRedirectPath = useCallback((): string => {
     if (!user) return '/login'
-    
-    const roleRedirects: Record<UserRole, string> = {
-      recepcao: '/recepcao',
-      triagem: '/triagem',
-      clinico: '/clinico',
-      laboratorio: '/laboratorio',
-      cirurgiao: '/cirurgiao',
-      admin: '/admin',
-    }
-    
-    return roleRedirects[user.role] || '/login'
+
+    return getRedirectPathForRole(user.role)
   }, [user])
 
   return (
