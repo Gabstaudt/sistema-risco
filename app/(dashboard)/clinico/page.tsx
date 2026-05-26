@@ -19,15 +19,15 @@ export default function ClinicoDashboard() {
       <Header 
         breadcrumbs={[{ label: 'Dashboard' }]} 
       />
-      <div className="flex-1 p-6 space-y-6">
+      <div className="mx-auto flex-1 w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         {/* Header */}
-        <div>
+        <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Medico Clinico</h1>
           <p className="text-muted-foreground">Avaliacao clinica e solicitacao de exames</p>
         </div>
 
         {/* Cards de estatisticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="Aguardando Avaliacao"
             value={aguardandoAvaliacao.length}
@@ -55,7 +55,7 @@ export default function ClinicoDashboard() {
         </div>
 
         {/* Filas */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <PatientQueue
             patients={aguardandoAvaliacao}
             title="Aguardando Avaliacao Clinica"

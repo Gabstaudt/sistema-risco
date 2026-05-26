@@ -32,8 +32,8 @@ export function PatientQueue({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">{title}</CardTitle>
+      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="min-w-0 text-lg break-words">{title}</CardTitle>
         {patients.length > maxItems && (
           <span className="text-sm text-muted-foreground">
             +{patients.length - maxItems} pacientes
@@ -50,7 +50,7 @@ export function PatientQueue({
             {displayPatients.map((patient) => (
               <div
                 key={patient.id}
-                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                className="flex flex-col gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50 md:flex-row md:items-center md:justify-between"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -58,7 +58,7 @@ export function PatientQueue({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{patient.nomeCompleto}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <span>{patient.prontuario}</span>
                       <span>|</span>
                       <span>{patient.idade} anos</span>
@@ -73,10 +73,10 @@ export function PatientQueue({
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex flex-wrap items-center gap-2 md:ml-2 md:justify-end">
                   {showPriority && <PriorityBadge priority={patient.prioridade} />}
                   <StatusBadge status={patient.status} />
-                  <Button asChild size="sm" variant="outline">
+                  <Button asChild size="sm" variant="outline" className="shrink-0">
                     <Link href={actionUrl(patient.id)}>
                       {actionLabel}
                       <ArrowRight className="w-3 h-3 ml-1" />
