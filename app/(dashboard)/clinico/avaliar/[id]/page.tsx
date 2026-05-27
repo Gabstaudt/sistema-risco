@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Save, User, FileText, Calculator, Stethoscope } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
 import { RCRI_CRITERIA, calculateRCRI, VSGCRI_FACTORS, calculateVSGCRI, EXAM_TYPES } from '@/lib/data/exams'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { users } from '@/lib/data/users'
 
 export default function ClinicoAvaliarPage() {
   const params = useParams()
@@ -35,7 +37,12 @@ export default function ClinicoAvaliarPage() {
   const [clinicalNotes, setClinicalNotes] = useState(
     patient?.clinicalEvaluation?.notes || ''
   )
+  const [requestSurgicalRisk, setRequestSurgicalRisk] = useState(patient?.clinicalRequestsSurgicalRisk || false)
+  const [assignedSurgeonId, setAssignedSurgeonId] = useState(patient?.clinicalAssignedSurgeonId || '')
   const [isSaving, setIsSaving] = useState(false)
+  const surgeons = users.filter((item) => item.role === 'cirurgiao' && item.active)
+  const normalizedSurgeonId = assignedSurgeonId === 'unassigned' ? '' : assignedSurgeonId
+  const assignedSurgeon = surgeons.find((item) => item.id === normalizedSurgeonId)
   
   const rcriScore = calculateRCRI(rcriCriteria)
   const vsgcriScore = calculateVSGCRI(vsgcriFactors)
@@ -82,8 +89,15 @@ export default function ClinicoAvaliarPage() {
     updatePatient(patientId, {
       clinicalEvaluation,
       status: complete 
-        ? (selectedExams.length > 0 ? 'aguardando_exames' : 'aguardando_resultado') 
+        ? (selectedExams.length > 0
+            ? 'aguardando_exames'
+            : requestSurgicalRisk
+              ? 'aguardando_cirurgiao'
+              : 'aguardando_resultado')
         : 'em_avaliacao_clinica',
+      clinicalRequestsSurgicalRisk: requestSurgicalRisk,
+      clinicalAssignedSurgeonId: normalizedSurgeonId || undefined,
+      clinicalAssignedSurgeonName: assignedSurgeon?.name || undefined,
       updatedAt: new Date().toISOString(),
     })
     
@@ -92,7 +106,7 @@ export default function ClinicoAvaliarPage() {
       userId: user!.id,
       patientId,
       details: complete 
-        ? `Avaliacao clinica concluida. RCRI: ${rcriScore.score}, VSG-CRI: ${vsgcriScore.riskClass}. Exames solicitados: ${selectedExams.length}`
+        ? `Avaliacao clinica concluida. RCRI: ${rcriScore.score}, VSG-CRI: ${vsgcriScore.riskClass}. Exames solicitados: ${selectedExams.length}. Risco cirurgico: ${requestSurgicalRisk ? `solicitado${assignedSurgeon ? ` para ${assignedSurgeon.name}` : ''}` : 'nao solicitado'}`
         : 'Dados de avaliacao clinica atualizados',
     })
     
@@ -392,6 +406,54 @@ export default function ClinicoAvaliarPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Encaminhamento para Risco Cirurgico</CardTitle>
+          <CardDescription>
+            O clinico pode solicitar avaliacao do cirurgiao ao final desta etapa e definir um responsavel, se desejar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start space-x-3 rounded-lg border p-3">
+            <Checkbox
+              id="request-surgical-risk"
+              checked={requestSurgicalRisk}
+              onCheckedChange={(checked) => setRequestSurgicalRisk(Boolean(checked))}
+            />
+            <div className="min-w-0 flex-1">
+              <Label htmlFor="request-surgical-risk" className="cursor-pointer text-sm font-medium">
+                Solicitar risco cirurgico ao cirurgiao
+              </Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Use esta opcao quando o caso ja deve seguir para avaliacao do cirurgiao apos a etapa clinica.
+              </p>
+            </div>
+          </div>
+
+          {requestSurgicalRisk && (
+            <div className="space-y-2">
+              <Label>Cirurgiao Responsavel</Label>
+              <Select value={assignedSurgeonId} onValueChange={setAssignedSurgeonId}>
+                <SelectTrigger className="min-h-11">
+                  <SelectValue placeholder="Selecione um cirurgiao ou deixe em aberto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Sem definicao no momento</SelectItem>
+                  {surgeons.map((surgeon) => (
+                    <SelectItem key={surgeon.id} value={surgeon.id}>
+                      {surgeon.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                A selecao do medico e opcional. Se nao definir agora, o caso ainda pode seguir para a fila cirurgica.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       
       {/* Observacoes */}
       <Card>
