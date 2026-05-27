@@ -230,6 +230,9 @@ export interface Patient {
   // Triagem
   queixaPrincipal?: string
   descricaoInicial?: string
+  triageAssignedClinicianId?: string
+  triageAssignedClinicianName?: string
+  triageRiskClassification?: LabUrgency
   sinaisVitais?: VitalSigns
   observacoesTriagem?: string
   triageData?: {

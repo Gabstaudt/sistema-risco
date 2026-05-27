@@ -14,7 +14,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Save, User, Heart, Activity, AlertTriangle } from 'lucide-react'
 import { PatientStatusBadge, ASABadge } from '@/components/shared/badges'
 import { ASA_CLASSIFICATIONS, calculateASA } from '@/lib/data/exams'
-import type { ASAClassification } from '@/lib/types'
+import { users } from '@/lib/data/users'
+import type { ASAClassification, LabUrgency } from '@/lib/types'
+
+const urgencyMeta: Record<LabUrgency, { label: string; className: string }> = {
+  emergente: { label: 'Vermelho - Emergente', className: 'bg-red-100 text-red-800 border-red-200' },
+  muito_urgente: { label: 'Laranja - Muito urgente', className: 'bg-orange-100 text-orange-800 border-orange-200' },
+  urgente: { label: 'Amarelo - Urgente', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+  pouco_urgente: { label: 'Verde - Pouco urgente', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  nao_urgente: { label: 'Azul - Nao urgente', className: 'bg-sky-100 text-sky-800 border-sky-200' },
+}
 
 export default function TriagemAvaliarPage() {
   const params = useParams()
@@ -24,6 +33,7 @@ export default function TriagemAvaliarPage() {
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
+  const clinicians = users.filter((item) => item.role === 'clinico' && item.active)
   
   const [vitalSigns, setVitalSigns] = useState({
     bloodPressure: patient?.triageData?.vitalSigns?.bloodPressure || '',
@@ -52,10 +62,15 @@ export default function TriagemAvaliarPage() {
   const [selectedASA, setSelectedASA] = useState<ASAClassification | ''>(
     patient?.triageData?.asaClassification || ''
   )
+  const [assignedClinicianId, setAssignedClinicianId] = useState(patient?.triageAssignedClinicianId || '')
+  const [triageRiskClassification, setTriageRiskClassification] = useState<LabUrgency | ''>(
+    patient?.triageRiskClassification || ''
+  )
   const [notes, setNotes] = useState(patient?.triageData?.notes || '')
   const [isSaving, setIsSaving] = useState(false)
   
   const suggestedASA = calculateASA(conditions)
+  const assignedClinician = clinicians.find((item) => item.id === assignedClinicianId)
   
   useEffect(() => {
     if (!user) {
@@ -90,7 +105,17 @@ export default function TriagemAvaliarPage() {
     
     updatePatient(patientId, {
       triageData,
-      status: complete ? 'aguardando_avaliacao' : 'em_triagem',
+      triageAssignedClinicianId: assignedClinicianId || undefined,
+      triageAssignedClinicianName: assignedClinician?.name || undefined,
+      triageRiskClassification: triageRiskClassification || undefined,
+      requestingPhysician: assignedClinician?.name || patient.requestingPhysician,
+      prioridade:
+        triageRiskClassification === 'emergente' || triageRiskClassification === 'muito_urgente'
+          ? 'urgente'
+          : triageRiskClassification === 'urgente'
+            ? 'alta'
+            : 'normal',
+      status: complete ? 'aguardando_clinico' : 'em_triagem',
       updatedAt: new Date().toISOString(),
     })
     
@@ -99,7 +124,7 @@ export default function TriagemAvaliarPage() {
       userId: user!.id,
       patientId,
       details: complete 
-        ? `Triagem concluída. ASA: ${selectedASA}`
+        ? `Triagem concluida. ASA: ${selectedASA} | Clinico: ${assignedClinician?.name || 'Nao definido'} | Classificacao: ${triageRiskClassification || 'Nao definida'}`
         : 'Dados de triagem atualizados',
     })
     
@@ -147,6 +172,10 @@ export default function TriagemAvaliarPage() {
               <CardDescription className="break-words">
                 {patient.age} anos | CPF: {patient.cpf} | Cirurgia: {patient.scheduledSurgery}
               </CardDescription>
+              <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                <p>Queixa inicial: {patient.queixaPrincipal || 'Nao informada'}</p>
+                <p>Relato da recepcao: {patient.descricaoInicial || 'Nao informado'}</p>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -293,6 +322,50 @@ export default function TriagemAvaliarPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Encaminhamento da Triagem</CardTitle>
+          <CardDescription>
+            Defina o clinico responsavel e a classificacao de risco inicial do paciente antes do encaminhamento.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Label>Clinico Responsavel</Label>
+            <Select value={assignedClinicianId} onValueChange={setAssignedClinicianId}>
+              <SelectTrigger className="min-h-11">
+                <SelectValue placeholder="Selecione quem atendera este paciente" />
+              </SelectTrigger>
+              <SelectContent>
+                {clinicians.map((clinician) => (
+                  <SelectItem key={clinician.id} value={clinician.id}>
+                    {clinician.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Classificacao de Risco Inicial</Label>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              {(Object.entries(urgencyMeta) as Array<[LabUrgency, { label: string; className: string }]>).map(
+                ([urgency, meta]) => (
+                  <button
+                    key={urgency}
+                    type="button"
+                    onClick={() => setTriageRiskClassification(urgency)}
+                    className={`rounded-lg border px-3 py-3 text-left text-sm transition-colors ${meta.className} ${triageRiskClassification === urgency ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                  >
+                    {meta.label}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       
       {/* Classificacao ASA */}
       <Card>
@@ -368,7 +441,11 @@ export default function TriagemAvaliarPage() {
           <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
             Salvar Rascunho
           </Button>
-          <Button className="w-full sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving || !selectedASA}>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() => handleSave(true)}
+            disabled={isSaving || !selectedASA || !assignedClinicianId || !triageRiskClassification}
+          >
             <Save className="mr-2 h-4 w-4" />
             Concluir Triagem
           </Button>
