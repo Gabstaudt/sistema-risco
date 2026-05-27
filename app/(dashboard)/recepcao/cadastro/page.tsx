@@ -34,6 +34,8 @@ export default function CadastroPage() {
     responsavel: '',
     contatoEmergencia: '',
     unidade: 'Hospital Central',
+    queixaPrincipal: '',
+    descricaoInicial: '',
   })
 
   const calcularIdade = (dataNascimento: string): number => {
@@ -79,10 +81,10 @@ export default function CadastroPage() {
     const normalizedPhone = formData.telefone.replace(/\D/g, '')
     const age = calcularIdade(formData.dataNascimento)
 
-    if (!normalizedName || !formData.dataNascimento || !formData.sexo || !normalizedCpf || !normalizedPhone) {
+    if (!normalizedName || !formData.dataNascimento || !formData.sexo || !normalizedCpf || !normalizedPhone || !formData.queixaPrincipal.trim()) {
       toast({
         title: 'Campos obrigatorios',
-        description: 'Preencha todos os campos obrigatorios.',
+        description: 'Preencha os dados obrigatorios e a queixa inicial do paciente.',
         variant: 'destructive',
       })
       return
@@ -141,6 +143,8 @@ export default function CadastroPage() {
         endereco: formData.endereco.trim(),
         responsavel: formData.responsavel.trim(),
         unidade: formData.unidade.trim() || 'Hospital Central',
+        queixaPrincipal: formData.queixaPrincipal.trim(),
+        descricaoInicial: formData.descricaoInicial.trim(),
         sexo: formData.sexo as 'M' | 'F' | 'O',
         idade: age,
         dataEntrada: new Date().toISOString(),
@@ -151,11 +155,11 @@ export default function CadastroPage() {
       })
 
       toast({
-        title: 'Paciente cadastrado',
-        description: `${newPatient.nomeCompleto} foi cadastrado com sucesso.`,
+        title: 'Paciente encaminhado',
+        description: `${newPatient.nomeCompleto} foi cadastrado e enviado para a triagem.`,
       })
 
-      router.push(`/paciente/${newPatient.id}`)
+      router.push(patientsListUrl)
     } catch {
       toast({
         title: 'Erro',
@@ -193,7 +197,7 @@ export default function CadastroPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Dados Pessoais</CardTitle>
-                <CardDescription>Informacoes basicas do paciente</CardDescription>
+                <CardDescription>Cadastro basico e registro da queixa inicial para encaminhamento a triagem</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -318,6 +322,30 @@ export default function CadastroPage() {
                       disabled={isLoading}
                     />
                   </div>
+
+                  <div className="md:col-span-2 space-y-2">
+                    <Label htmlFor="queixaPrincipal">Queixa Inicial *</Label>
+                    <Input
+                      id="queixaPrincipal"
+                      value={formData.queixaPrincipal}
+                      onChange={(e) => setFormData({ ...formData, queixaPrincipal: e.target.value })}
+                      placeholder="Ex.: falta de ar, dor abdominal, tontura"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 space-y-2">
+                    <Label htmlFor="descricaoInicial">Relato Inicial</Label>
+                    <Textarea
+                      id="descricaoInicial"
+                      value={formData.descricaoInicial}
+                      onChange={(e) => setFormData({ ...formData, descricaoInicial: e.target.value })}
+                      placeholder="Descreva brevemente o que o paciente relata na recepcao."
+                      rows={3}
+                      disabled={isLoading}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4 border-t">
@@ -333,7 +361,7 @@ export default function CadastroPage() {
                     ) : (
                       <>
                         <Save className="w-4 h-4 mr-2" />
-                        Cadastrar Paciente
+                        Cadastrar e Encaminhar
                       </>
                     )}
                   </Button>

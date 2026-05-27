@@ -12,6 +12,9 @@ export default function RecepcaoDashboard() {
   const { patients, getPatientsByStatus } = useData()
   
   const aguardandoTriagem = getPatientsByStatus('aguardando_triagem')
+  const emAtendimento = patients.filter((patient) =>
+    !['aguardando_triagem', 'liberado', 'contraindicado', 'alto_risco', 'concluido'].includes(patient.status)
+  )
   const cadastradosHoje = patients.filter(p => {
     const hoje = new Date()
     const cadastro = new Date(p.cadastradoEm)
@@ -41,27 +44,27 @@ export default function RecepcaoDashboard() {
         {/* Cards de estatisticas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            title="Total de Pacientes"
+            title="Base de Pacientes"
             value={patients.length}
-            description="Cadastrados no sistema"
+            description="Cadastros disponiveis"
             icon={Users}
           />
           <StatCard
-            title="Cadastrados Hoje"
+            title="Cadastros Hoje"
             value={cadastradosHoje.length}
-            description="Novos registros"
+            description="Novos pacientes incluidos"
             icon={UserPlus}
           />
           <StatCard
             title="Aguardando Triagem"
             value={aguardandoTriagem.length}
-            description="Na fila de espera"
+            description="Encaminhados pela recepcao"
             icon={Clock}
           />
           <StatCard
             title="Em Atendimento"
-            value={patients.filter(p => !['aguardando_triagem', 'liberado', 'contraindicado'].includes(p.status)).length}
-            description="Em processo de avaliacao"
+            value={emAtendimento.length}
+            description="Pacientes em fluxo assistencial"
             icon={CheckCircle}
           />
         </div>
@@ -70,9 +73,18 @@ export default function RecepcaoDashboard() {
         <PatientQueue
           patients={aguardandoTriagem}
           title="Pacientes Aguardando Triagem"
-          actionUrl={(id) => `/recepcao/pacientes/${id}`}
-          actionLabel="Ver"
+          actionUrl={() => '/recepcao/pacientes'}
+          actionLabel="Ir para fila"
           emptyMessage="Nenhum paciente aguardando triagem"
+        />
+
+        <PatientQueue
+          patients={emAtendimento}
+          title="Pacientes Em Atendimento"
+          actionUrl={() => '/recepcao/pacientes'}
+          actionLabel="Ir para fila"
+          emptyMessage="Nenhum paciente em atendimento"
+          showPriority={false}
         />
       </div>
     </>
