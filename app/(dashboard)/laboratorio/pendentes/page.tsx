@@ -27,6 +27,10 @@ type DraftState = {
   observacoesLab: string
 }
 
+function getEffectiveRiskClassification(triageRisk?: LabUrgency, updatedRisk?: LabUrgency) {
+  return updatedRisk || triageRisk || ''
+}
+
 export default function LaboratorioPendentesPage() {
   const { user } = useAuth()
   const { examRequests, patients, updatePatient, addAuditLog } = useData()
@@ -66,9 +70,10 @@ export default function LaboratorioPendentesPage() {
       const next = { ...prev }
 
       pendingReleaseItems.forEach(({ exam }) => {
+        const patient = patients.find((item) => item.id === exam.patientId)
         if (!next[exam.id]) {
           next[exam.id] = {
-            labUrgency: '',
+            labUrgency: getEffectiveRiskClassification(patient?.triageRiskClassification, patient?.labRiskClassification),
             labAnalysis: '',
             observacoesLab: '',
           }
@@ -77,7 +82,7 @@ export default function LaboratorioPendentesPage() {
 
       return next
     })
-  }, [pendingReleaseItems])
+  }, [pendingReleaseItems, patients])
 
   const formatDateTime = (value?: string) => {
     if (!value) return 'Nao informado'
@@ -165,7 +170,7 @@ export default function LaboratorioPendentesPage() {
                 {pendingReleaseItems.map(({ exam, patient }) => {
                   const isExpanded = expandedId === exam.id
                   const draft = drafts[exam.id] || {
-                    labUrgency: '',
+                    labUrgency: getEffectiveRiskClassification(patient?.triageRiskClassification, patient?.labRiskClassification),
                     labAnalysis: '',
                     observacoesLab: '',
                   }
@@ -189,6 +194,11 @@ export default function LaboratorioPendentesPage() {
                               <span>Resultado concluido em {formatDateTime(exam.concluidoEm)}</span>
                               <span>Unidade {patient!.unidade}</span>
                               <span>{patient!.idade} anos</span>
+                              <span>
+                                Risco atual {getEffectiveRiskClassification(patient!.triageRiskClassification, patient!.labRiskClassification)
+                                  ? urgencyMeta[getEffectiveRiskClassification(patient!.triageRiskClassification, patient!.labRiskClassification) as LabUrgency].label
+                                  : 'nao definido'}
+                              </span>
                             </div>
                           </div>
                         </Link>

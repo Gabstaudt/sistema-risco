@@ -15,6 +15,8 @@ import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/compo
 import { EXAM_TYPES } from '@/lib/data/exams'
 import type { RiskLevel } from '@/lib/types'
 
+const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
+
 export default function CirurgiaoAvaliarPage() {
   const params = useParams()
   const router = useRouter()
@@ -30,8 +32,14 @@ export default function CirurgiaoAvaliarPage() {
   const [recommendation, setRecommendation] = useState<'aprovar' | 'adiar' | 'contraindicar' | ''>(
     patient?.surgicalRiskAssessment?.recommendation || ''
   )
+  const [bloodType, setBloodType] = useState(patient?.bloodType || '')
+  const [allergiesText, setAllergiesText] = useState((patient?.allergies || []).join(', '))
   const [notes, setNotes] = useState(patient?.surgicalRiskAssessment?.notes || '')
   const [isSaving, setIsSaving] = useState(false)
+  const parsedAllergies = allergiesText
+    .split(/,|\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
   
   useEffect(() => {
     if (!user) {
@@ -65,6 +73,8 @@ export default function CirurgiaoAvaliarPage() {
     
     updatePatient(patientId, {
       surgicalRiskAssessment,
+      bloodType: bloodType || undefined,
+      allergies: parsedAllergies,
       status: complete ? 'concluido' : 'em_avaliacao_cirurgica',
       riskLevel: finalRisk || patient.riskLevel,
       updatedAt: new Date().toISOString(),
@@ -160,8 +170,16 @@ export default function CirurgiaoAvaliarPage() {
               <p className="font-medium">{patient.requestingPhysician || 'Nao informado'}</p>
             </div>
             <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Tipo Sanguineo</p>
+              <p className="font-medium">{bloodType || patient.bloodType || 'Nao informado'}</p>
+            </div>
+            <div className="space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Convenio</p>
               <p className="font-medium">{patient.healthInsurance || 'Particular'}</p>
+            </div>
+            <div className="space-y-1 sm:col-span-2 lg:col-span-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Alergias</p>
+              <p className="font-medium">{parsedAllergies.length > 0 ? parsedAllergies.join(', ') : 'Nenhuma registrada'}</p>
             </div>
           </div>
         </CardContent>
@@ -340,6 +358,40 @@ export default function CirurgiaoAvaliarPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dados Adicionais</CardTitle>
+          <CardDescription>Informacoes basicas que impactam a decisao cirurgica e anestesica.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Tipo Sanguineo</Label>
+            <Select value={bloodType} onValueChange={setBloodType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo sanguineo" />
+              </SelectTrigger>
+              <SelectContent>
+                {BLOOD_TYPE_OPTIONS.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="surgery-allergies">Alergias</Label>
+            <Textarea
+              id="surgery-allergies"
+              placeholder="Ex.: dipirona, penicilina, contraste iodado"
+              value={allergiesText}
+              onChange={(e) => setAllergiesText(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
       
       {/* Final Assessment */}
       <Card className="border-primary/20">

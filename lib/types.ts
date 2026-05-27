@@ -215,6 +215,8 @@ export interface Patient {
   idade: number
   sexo: 'M' | 'F' | 'O'
   cpf: string
+  bloodType?: string
+  allergies?: string[]
   cartaoSus?: string
   telefone: string
   endereco: string

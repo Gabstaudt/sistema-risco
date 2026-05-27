@@ -16,6 +16,8 @@ import { RCRI_CRITERIA, calculateRCRI, VSGCRI_FACTORS, calculateVSGCRI, EXAM_TYP
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { users } from '@/lib/data/users'
 
+const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
+
 export default function ClinicoAvaliarPage() {
   const params = useParams()
   const router = useRouter()
@@ -37,12 +39,18 @@ export default function ClinicoAvaliarPage() {
   const [clinicalNotes, setClinicalNotes] = useState(
     patient?.clinicalEvaluation?.notes || ''
   )
+  const [bloodType, setBloodType] = useState(patient?.bloodType || '')
+  const [allergiesText, setAllergiesText] = useState((patient?.allergies || []).join(', '))
   const [requestSurgicalRisk, setRequestSurgicalRisk] = useState(patient?.clinicalRequestsSurgicalRisk || false)
   const [assignedSurgeonId, setAssignedSurgeonId] = useState(patient?.clinicalAssignedSurgeonId || '')
   const [isSaving, setIsSaving] = useState(false)
   const surgeons = users.filter((item) => item.role === 'cirurgiao' && item.active)
   const normalizedSurgeonId = assignedSurgeonId === 'unassigned' ? '' : assignedSurgeonId
   const assignedSurgeon = surgeons.find((item) => item.id === normalizedSurgeonId)
+  const parsedAllergies = allergiesText
+    .split(/,|\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
   
   const rcriScore = calculateRCRI(rcriCriteria)
   const vsgcriScore = calculateVSGCRI(vsgcriFactors)
@@ -88,6 +96,8 @@ export default function ClinicoAvaliarPage() {
     
     updatePatient(patientId, {
       clinicalEvaluation,
+      bloodType: bloodType || undefined,
+      allergies: parsedAllergies,
       status: complete 
         ? (selectedExams.length > 0
             ? 'aguardando_exames'
@@ -168,6 +178,10 @@ export default function ClinicoAvaliarPage() {
                 <span className="font-medium">{patient.cpf}</span>
               </div>
               <div className="min-w-0">
+                <span className="text-muted-foreground">Tipo sanguineo:</span>{' '}
+                <span className="font-medium">{bloodType || patient.bloodType || 'Nao informado'}</span>
+              </div>
+              <div className="min-w-0">
                 <span className="text-muted-foreground">Telefone:</span>{' '}
                 <span className="font-medium">{patient.telefone || 'Nao informado'}</span>
               </div>
@@ -209,8 +223,46 @@ export default function ClinicoAvaliarPage() {
                 })}
               </span>
             </div>
+            <div className="mt-2 text-sm">
+              <span className="text-muted-foreground">Alergias:</span>{' '}
+              <span className="font-medium">{parsedAllergies.length > 0 ? parsedAllergies.join(', ') : 'Nenhuma registrada'}</span>
+            </div>
           </CardContent>
         )}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dados Adicionais</CardTitle>
+          <CardDescription>Informacoes clinicas basicas compartilhadas com cirurgia e laboratorio.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Tipo Sanguineo</Label>
+            <Select value={bloodType} onValueChange={setBloodType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo sanguineo" />
+              </SelectTrigger>
+              <SelectContent>
+                {BLOOD_TYPE_OPTIONS.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="clinical-allergies">Alergias</Label>
+            <Textarea
+              id="clinical-allergies"
+              placeholder="Ex.: dipirona, penicilina, contraste iodado"
+              value={allergiesText}
+              onChange={(e) => setAllergiesText(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </CardContent>
       </Card>
       
       <Tabs defaultValue="rcri" className="space-y-4">
