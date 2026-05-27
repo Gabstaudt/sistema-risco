@@ -146,6 +146,22 @@ export default function ClinicoAvaliarPage() {
           <CardContent className="pt-0">
             <div className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
               <div className="min-w-0">
+                <span className="text-muted-foreground">Prontuario:</span>{' '}
+                <span className="font-medium">{patient.prontuario}</span>
+              </div>
+              <div className="min-w-0">
+                <span className="text-muted-foreground">CPF:</span>{' '}
+                <span className="font-medium">{patient.cpf}</span>
+              </div>
+              <div className="min-w-0">
+                <span className="text-muted-foreground">Telefone:</span>{' '}
+                <span className="font-medium">{patient.telefone || 'Nao informado'}</span>
+              </div>
+              <div className="min-w-0">
+                <span className="text-muted-foreground">Unidade:</span>{' '}
+                <span className="font-medium">{patient.unidade || 'Nao informada'}</span>
+              </div>
+              <div className="min-w-0">
                 <span className="text-muted-foreground">Pressao:</span>{' '}
                 <span className="break-words font-medium">{patient.triageData.vitalSigns?.bloodPressure || '-'}</span>
               </div>
@@ -166,6 +182,18 @@ export default function ClinicoAvaliarPage() {
                   } kg/m²
                 </span>
               </div>
+            </div>
+            <div className="mt-4 text-sm">
+              <span className="text-muted-foreground">Entrada no sistema:</span>{' '}
+              <span className="font-medium">
+                {new Date(patient.dataEntrada).toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
             </div>
           </CardContent>
         )}

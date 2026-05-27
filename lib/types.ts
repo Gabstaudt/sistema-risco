@@ -140,6 +140,13 @@ export interface ExamResult {
 
 export type ExamStatus = 'solicitado' | 'coletado' | 'em_analise' | 'concluido' | 'cancelado'
 
+export type LabUrgency =
+  | 'emergente'
+  | 'muito_urgente'
+  | 'urgente'
+  | 'pouco_urgente'
+  | 'nao_urgente'
+
 export interface ExamRequest {
   id: string
   patientId: string
@@ -150,6 +157,8 @@ export interface ExamRequest {
   resultado?: string
   valorReferencia?: string
   observacoesLab?: string
+  labAnalysis?: string
+  labUrgency?: LabUrgency
   anexoUrl?: string
   solicitadoPor: string
   solicitadoEm: string
@@ -239,6 +248,9 @@ export interface Patient {
   // Exames
   examesSolicitados: string[]
   examResults?: Record<string, ExamResult>
+  labRiskClassification?: LabUrgency
+  labRiskNotes?: string
+  labNurseObservation?: string
   
   // Avaliacao cirurgica
   avaliacaoCirurgica?: SurgicalEvaluation
