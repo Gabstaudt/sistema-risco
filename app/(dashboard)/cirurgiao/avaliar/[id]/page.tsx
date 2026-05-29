@@ -71,6 +71,15 @@ export default function CirurgiaoAvaliarPage() {
   }
 
   const patientExamRequests = getExamRequestsByPatient(patientId)
+
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back()
+      return
+    }
+
+    router.push('/cirurgiao')
+  }
   
   const handleSave = async (complete: boolean) => {
     setIsSaving(true)
@@ -124,7 +133,7 @@ export default function CirurgiaoAvaliarPage() {
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0 flex-1">

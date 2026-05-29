@@ -47,6 +47,15 @@ export default function RelatorioPage() {
   const vitalSigns = patient.sinaisVitais
   const completedExams = exams.filter(e => e.status === 'concluido')
 
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back()
+      return
+    }
+
+    router.push('/cirurgiao')
+  }
+
   const getRiskIcon = () => {
     if (!evaluation?.riscoFinal) return null
     switch (evaluation.riscoFinal) {
@@ -98,7 +107,7 @@ export default function RelatorioPage() {
       {/* Header - escondido na impressao */}
       <div className="flex items-center justify-between print:hidden">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
