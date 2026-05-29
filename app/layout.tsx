@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth'
 import { DataProvider } from '@/lib/data-context'
 import './globals.css'
@@ -17,23 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'MedRisk Pro | Sistema de Avaliacao de Risco Cirurgico',
   description: 'Sistema hospitalar completo para avaliacao de risco cirurgico pre-operatorio',
-  generator: 'v0.app',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
   },
 }
 
@@ -56,7 +41,6 @@ export default function RootLayout({
             {children}
           </DataProvider>
         </AuthProvider>
-        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )
