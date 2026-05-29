@@ -1,4 +1,4 @@
-import { ExamType } from '../types'
+import { ASAClassification, ExamType } from '../types'
 
 export const examTypes: ExamType[] = [
   {
@@ -108,3 +108,109 @@ export const examTypes: ExamType[] = [
     createdAt: '2024-01-15T08:00:00Z',
   },
 ]
+
+export const EXAM_TYPES = examTypes
+
+export const ASA_CLASSIFICATIONS: Array<{
+  code: ASAClassification
+  description: string
+  examples: string
+}> = [
+  { code: 'I', description: 'Paciente saudavel', examples: 'Sem doenca sistemica, sem limitacoes funcionais.' },
+  { code: 'II', description: 'Doenca sistemica leve', examples: 'Hipertensao controlada, diabetes sem complicacoes.' },
+  { code: 'III', description: 'Doenca sistemica grave', examples: 'DPOC, diabetes com complicacoes, obesidade importante.' },
+  { code: 'IV', description: 'Doenca sistemica grave com ameaca constante a vida', examples: 'ICC descompensada, insuficiencia renal avancada.' },
+  { code: 'V', description: 'Paciente moribundo', examples: 'Sem expectativa de sobrevivencia sem a cirurgia.' },
+  { code: 'VI', description: 'Doador de orgaos em morte encefalica', examples: 'Paciente mantido para captacao de orgaos.' },
+]
+
+export function calculateASA(conditions: Record<string, boolean | string | number | undefined>): ASAClassification {
+  const majorConditions = [
+    'heartDisease',
+    'kidneyDisease',
+    'liverDisease',
+    'neurologicalDisease',
+  ]
+  const moderateConditions = [
+    'diabetes',
+    'hypertension',
+    'respiratoryDisease',
+    'obesity',
+    'smoking',
+    'alcoholism',
+  ]
+
+  const majorCount = majorConditions.filter((key) => Boolean(conditions[key])).length
+  const moderateCount = moderateConditions.filter((key) => Boolean(conditions[key])).length
+
+  if (majorCount >= 2) return 'IV'
+  if (majorCount >= 1 || moderateCount >= 3) return 'III'
+  if (moderateCount >= 1 || Boolean(conditions.other)) return 'II'
+  return 'I'
+}
+
+export const RCRI_CRITERIA = [
+  {
+    id: 'high_risk_surgery',
+    name: 'Cirurgia de alto risco',
+    description: 'Procedimento intraperitoneal, intratoracico ou suprainguinal vascular.',
+  },
+  {
+    id: 'ischemic_heart_disease',
+    name: 'Doenca isquemica cardiaca',
+    description: 'Historia de IAM, angina ou teste positivo para isquemia.',
+  },
+  {
+    id: 'heart_failure',
+    name: 'Insuficiencia cardiaca',
+    description: 'Historia de congestao pulmonar, edema ou dispneia paroxistica noturna.',
+  },
+  {
+    id: 'cerebrovascular_disease',
+    name: 'Doenca cerebrovascular',
+    description: 'Historia de AVC ou AIT.',
+  },
+  {
+    id: 'insulin_therapy',
+    name: 'Uso de insulina',
+    description: 'Diabetes em uso de insulinoterapia.',
+  },
+  {
+    id: 'creatinine_gt_2',
+    name: 'Creatinina > 2,0 mg/dL',
+    description: 'Insuficiencia renal com creatinina elevada.',
+  },
+] as const
+
+export function calculateRCRI(criteria: string[]) {
+  const score = criteria.length
+  const riskPercentage =
+    score === 0 ? '3,9%' :
+    score === 1 ? '6,0%' :
+    score === 2 ? '10,1%' : '15%+'
+
+  return { score, riskPercentage }
+}
+
+export const VSGCRI_FACTORS = [
+  { id: 'age_75', name: 'Idade >= 75 anos', description: 'Faixa etaria de maior risco.', points: 2 },
+  { id: 'coronary_disease', name: 'Doenca coronariana', description: 'Historia de DAC conhecida.', points: 2 },
+  { id: 'heart_failure', name: 'Insuficiencia cardiaca', description: 'Disfuncao cardiaca clinicamente relevante.', points: 2 },
+  { id: 'copd', name: 'DPOC', description: 'Doenca pulmonar obstrutiva cronica.', points: 1 },
+  { id: 'creatinine_18', name: 'Creatinina > 1,8 mg/dL', description: 'Comprometimento renal moderado a grave.', points: 2 },
+  { id: 'smoker', name: 'Tabagismo ativo', description: 'Uso atual de tabaco.', points: 1 },
+] as const
+
+export function calculateVSGCRI(factors: string[]) {
+  const score = factors.reduce((total, factorId) => {
+    const factor = VSGCRI_FACTORS.find((item) => item.id === factorId)
+    return total + (factor?.points || 0)
+  }, 0)
+
+  const riskClass =
+    score <= 2 ? 'Classe I' :
+    score <= 4 ? 'Classe II' :
+    score <= 6 ? 'Classe III' : 'Classe IV'
+
+  return { score, riskClass }
+}

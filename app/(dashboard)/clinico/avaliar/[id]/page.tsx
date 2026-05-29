@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Save, User, FileText, Calculator, Stethoscope } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
 import { RCRI_CRITERIA, calculateRCRI, VSGCRI_FACTORS, calculateVSGCRI, EXAM_TYPES } from '@/lib/data/exams'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { users } from '@/lib/data/users'
 
 export default function ClinicoAvaliarPage() {
   const params = useParams()
@@ -35,14 +37,24 @@ export default function ClinicoAvaliarPage() {
   const [clinicalNotes, setClinicalNotes] = useState(
     patient?.clinicalEvaluation?.notes || ''
   )
+  const [requestSurgicalRisk, setRequestSurgicalRisk] = useState(patient?.clinicalRequestsSurgicalRisk || false)
+  const [assignedSurgeonId, setAssignedSurgeonId] = useState(patient?.clinicalAssignedSurgeonId || '')
   const [isSaving, setIsSaving] = useState(false)
+  const surgeons = users.filter((item) => item.role === 'cirurgiao' && item.active)
+  const normalizedSurgeonId = assignedSurgeonId === 'unassigned' ? '' : assignedSurgeonId
+  const assignedSurgeon = surgeons.find((item) => item.id === normalizedSurgeonId)
   
   const rcriScore = calculateRCRI(rcriCriteria)
   const vsgcriScore = calculateVSGCRI(vsgcriFactors)
   
   useEffect(() => {
-    if (!user || !hasPermission('clinico.avaliar')) {
+    if (!user) {
       router.push('/login')
+      return
+    }
+
+    if (!hasPermission('clinical_evaluation')) {
+      router.push('/clinico')
     }
   }, [user, hasPermission, router])
   
@@ -77,8 +89,15 @@ export default function ClinicoAvaliarPage() {
     updatePatient(patientId, {
       clinicalEvaluation,
       status: complete 
-        ? (selectedExams.length > 0 ? 'aguardando_exames' : 'aguardando_resultado') 
+        ? (selectedExams.length > 0
+            ? 'aguardando_exames'
+            : requestSurgicalRisk
+              ? 'aguardando_cirurgiao'
+              : 'aguardando_resultado')
         : 'em_avaliacao_clinica',
+      clinicalRequestsSurgicalRisk: requestSurgicalRisk,
+      clinicalAssignedSurgeonId: normalizedSurgeonId || undefined,
+      clinicalAssignedSurgeonName: assignedSurgeon?.name || undefined,
       updatedAt: new Date().toISOString(),
     })
     
@@ -87,7 +106,7 @@ export default function ClinicoAvaliarPage() {
       userId: user!.id,
       patientId,
       details: complete 
-        ? `Avaliacao clinica concluida. RCRI: ${rcriScore.score}, VSG-CRI: ${vsgcriScore.riskClass}. Exames solicitados: ${selectedExams.length}`
+        ? `Avaliacao clinica concluida. RCRI: ${rcriScore.score}, VSG-CRI: ${vsgcriScore.riskClass}. Exames solicitados: ${selectedExams.length}. Risco cirurgico: ${requestSurgicalRisk ? `solicitado${assignedSurgeon ? ` para ${assignedSurgeon.name}` : ''}` : 'nao solicitado'}`
         : 'Dados de avaliacao clinica atualizados',
     })
     
@@ -100,55 +119,75 @@ export default function ClinicoAvaliarPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-foreground">Avaliacao Clinica</h1>
-          <p className="text-muted-foreground">Calculo de scores de risco e solicitacao de exames</p>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao Clinica</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">Calculo de scores de risco e solicitacao de exames</p>
         </div>
-        <PatientStatusBadge status={patient.status} />
+        <div className="self-start sm:self-auto">
+          <PatientStatusBadge status={patient.status} />
+        </div>
       </div>
       
       {/* Patient Info Card */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                 <User className="h-5 w-5 text-primary" />
               </div>
-              <div>
-                <CardTitle className="text-lg">{patient.name}</CardTitle>
-                <CardDescription>
+              <div className="min-w-0">
+                <CardTitle className="break-words text-lg">{patient.name}</CardTitle>
+                <CardDescription className="break-words">
                   {patient.age} anos | Cirurgia: {patient.scheduledSurgery}
                 </CardDescription>
               </div>
             </div>
-            {patient.triageData?.asaClassification && (
-              <ASABadge classification={patient.triageData.asaClassification} />
-            )}
+            <div className="flex flex-wrap gap-2">
+              {patient.triageData?.asaClassification && (
+                <ASABadge classification={patient.triageData.asaClassification} />
+              )}
+            </div>
           </div>
         </CardHeader>
         {patient.triageData && (
           <CardContent className="pt-0">
-            <div className="grid gap-4 text-sm sm:grid-cols-4">
-              <div>
-                <span className="text-muted-foreground">Pressao:</span>{' '}
-                <span className="font-medium">{patient.triageData.vitalSigns?.bloodPressure || '-'}</span>
+            <div className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
+              <div className="min-w-0">
+                <span className="text-muted-foreground">Prontuario:</span>{' '}
+                <span className="font-medium">{patient.prontuario}</span>
               </div>
-              <div>
+              <div className="min-w-0">
+                <span className="text-muted-foreground">CPF:</span>{' '}
+                <span className="font-medium">{patient.cpf}</span>
+              </div>
+              <div className="min-w-0">
+                <span className="text-muted-foreground">Telefone:</span>{' '}
+                <span className="font-medium">{patient.telefone || 'Nao informado'}</span>
+              </div>
+              <div className="min-w-0">
+                <span className="text-muted-foreground">Unidade:</span>{' '}
+                <span className="font-medium">{patient.unidade || 'Nao informada'}</span>
+              </div>
+              <div className="min-w-0">
+                <span className="text-muted-foreground">Pressao:</span>{' '}
+                <span className="break-words font-medium">{patient.triageData.vitalSigns?.bloodPressure || '-'}</span>
+              </div>
+              <div className="min-w-0">
                 <span className="text-muted-foreground">FC:</span>{' '}
                 <span className="font-medium">{patient.triageData.vitalSigns?.heartRate || '-'} bpm</span>
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-muted-foreground">SpO2:</span>{' '}
                 <span className="font-medium">{patient.triageData.vitalSigns?.oxygenSaturation || '-'}%</span>
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-muted-foreground">IMC:</span>{' '}
                 <span className="font-medium">
                   {patient.triageData.vitalSigns?.weight && patient.triageData.vitalSigns?.height
@@ -158,21 +197,33 @@ export default function ClinicoAvaliarPage() {
                 </span>
               </div>
             </div>
+            <div className="mt-4 text-sm">
+              <span className="text-muted-foreground">Entrada no sistema:</span>{' '}
+              <span className="font-medium">
+                {new Date(patient.dataEntrada).toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
           </CardContent>
         )}
       </Card>
       
       <Tabs defaultValue="rcri" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="rcri" className="flex items-center gap-2">
+        <TabsList className="grid h-auto w-full grid-cols-1 gap-2 bg-transparent p-0 sm:grid-cols-3">
+          <TabsTrigger value="rcri" className="flex h-auto items-center justify-center gap-2 rounded-md border px-3 py-2 text-center whitespace-normal">
             <Calculator className="h-4 w-4" />
             RCRI
           </TabsTrigger>
-          <TabsTrigger value="vsgcri" className="flex items-center gap-2">
+          <TabsTrigger value="vsgcri" className="flex h-auto items-center justify-center gap-2 rounded-md border px-3 py-2 text-center whitespace-normal">
             <Calculator className="h-4 w-4" />
             VSG-CRI
           </TabsTrigger>
-          <TabsTrigger value="exams" className="flex items-center gap-2">
+          <TabsTrigger value="exams" className="flex h-auto items-center justify-center gap-2 rounded-md border px-3 py-2 text-center whitespace-normal">
             <FileText className="h-4 w-4" />
             Exames
           </TabsTrigger>
@@ -192,7 +243,7 @@ export default function ClinicoAvaliarPage() {
                 {RCRI_CRITERIA.map(criteria => (
                   <div 
                     key={criteria.id} 
-                    className="flex items-start space-x-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                    className="flex items-start space-x-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
                     <Checkbox
                       id={criteria.id}
@@ -205,8 +256,8 @@ export default function ClinicoAvaliarPage() {
                         }
                       }}
                     />
-                    <div className="flex-1">
-                      <Label htmlFor={criteria.id} className="text-sm font-medium cursor-pointer">
+                    <div className="min-w-0 flex-1">
+                      <Label htmlFor={criteria.id} className="cursor-pointer text-sm font-medium">
                         {criteria.name}
                       </Label>
                       <p className="text-xs text-muted-foreground mt-1">{criteria.description}</p>
@@ -216,12 +267,12 @@ export default function ClinicoAvaliarPage() {
               </div>
               
               <div className="rounded-lg bg-muted p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-medium">Score RCRI</p>
                     <p className="text-3xl font-bold text-primary">{rcriScore.score}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="sm:text-right">
                     <p className="text-sm font-medium">Risco de Evento Cardiaco</p>
                     <RCRIBadge score={rcriScore.score} />
                     <p className="text-sm text-muted-foreground mt-1">{rcriScore.riskPercentage}</p>
@@ -246,7 +297,7 @@ export default function ClinicoAvaliarPage() {
                 {VSGCRI_FACTORS.map(factor => (
                   <div 
                     key={factor.id} 
-                    className="flex items-start space-x-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                    className="flex items-start space-x-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
                     <Checkbox
                       id={factor.id}
@@ -259,8 +310,8 @@ export default function ClinicoAvaliarPage() {
                         }
                       }}
                     />
-                    <div className="flex-1">
-                      <Label htmlFor={factor.id} className="text-sm font-medium cursor-pointer">
+                    <div className="min-w-0 flex-1">
+                      <Label htmlFor={factor.id} className="cursor-pointer text-sm font-medium">
                         {factor.name}
                       </Label>
                       <p className="text-xs text-muted-foreground mt-1">{factor.description}</p>
@@ -273,12 +324,12 @@ export default function ClinicoAvaliarPage() {
               </div>
               
               <div className="rounded-lg bg-muted p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-medium">Score VSG-CRI</p>
                     <p className="text-3xl font-bold text-primary">{vsgcriScore.score}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="sm:text-right">
                     <p className="text-sm font-medium">Classificacao de Risco</p>
                     <div className="mt-1">
                       <RiskLevelBadge level={
@@ -321,7 +372,7 @@ export default function ClinicoAvaliarPage() {
                       {exams.map(exam => (
                         <div 
                           key={exam.id}
-                          className="flex items-center space-x-2 rounded-lg border p-2 hover:bg-muted/50 transition-colors"
+                          className="flex min-w-0 items-start space-x-2 rounded-lg border p-3 transition-colors hover:bg-muted/50"
                         >
                           <Checkbox
                             id={exam.id}
@@ -334,7 +385,7 @@ export default function ClinicoAvaliarPage() {
                               }
                             }}
                           />
-                          <Label htmlFor={exam.id} className="text-sm font-normal cursor-pointer flex-1">
+                          <Label htmlFor={exam.id} className="flex-1 cursor-pointer text-sm font-normal leading-5">
                             {exam.name}
                           </Label>
                         </div>
@@ -355,6 +406,54 @@ export default function ClinicoAvaliarPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Encaminhamento para Risco Cirurgico</CardTitle>
+          <CardDescription>
+            O clinico pode solicitar avaliacao do cirurgiao ao final desta etapa e definir um responsavel, se desejar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start space-x-3 rounded-lg border p-3">
+            <Checkbox
+              id="request-surgical-risk"
+              checked={requestSurgicalRisk}
+              onCheckedChange={(checked) => setRequestSurgicalRisk(Boolean(checked))}
+            />
+            <div className="min-w-0 flex-1">
+              <Label htmlFor="request-surgical-risk" className="cursor-pointer text-sm font-medium">
+                Solicitar risco cirurgico ao cirurgiao
+              </Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Use esta opcao quando o caso ja deve seguir para avaliacao do cirurgiao apos a etapa clinica.
+              </p>
+            </div>
+          </div>
+
+          {requestSurgicalRisk && (
+            <div className="space-y-2">
+              <Label>Cirurgiao Responsavel</Label>
+              <Select value={assignedSurgeonId} onValueChange={setAssignedSurgeonId}>
+                <SelectTrigger className="min-h-11">
+                  <SelectValue placeholder="Selecione um cirurgiao ou deixe em aberto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Sem definicao no momento</SelectItem>
+                  {surgeons.map((surgeon) => (
+                    <SelectItem key={surgeon.id} value={surgeon.id}>
+                      {surgeon.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                A selecao do medico e opcional. Se nao definir agora, o caso ainda pode seguir para a fila cirurgica.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       
       {/* Observacoes */}
       <Card>
@@ -372,18 +471,18 @@ export default function ClinicoAvaliarPage() {
             rows={4}
           />
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <div className="flex gap-2">
+        <CardFooter className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2">
             {rcriScore.score > 0 && <RCRIBadge score={rcriScore.score} />}
             {patient.triageData?.asaClassification && (
               <ASABadge classification={patient.triageData.asaClassification} />
             )}
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
               Salvar Rascunho
             </Button>
-            <Button onClick={() => handleSave(true)} disabled={isSaving}>
+            <Button className="w-full sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving}>
               <Save className="mr-2 h-4 w-4" />
               Concluir Avaliacao
             </Button>

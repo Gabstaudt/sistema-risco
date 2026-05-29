@@ -1,4 +1,4 @@
-import { Patient, ExamRequest } from '../types'
+import { Patient, ExamRequest, ExamResult } from '../types'
 
 // Funcao para calcular idade
 function calcularIdade(dataNascimento: string): number {
@@ -12,7 +12,7 @@ function calcularIdade(dataNascimento: string): number {
   return idade
 }
 
-export const patients: Patient[] = [
+const basePatients: Patient[] = [
   // 1. Aguardando triagem
   {
     id: 'patient-1',
@@ -76,6 +76,9 @@ export const patients: Patient[] = [
     prioridade: 'normal',
     queixaPrincipal: 'Dor abdominal ha 3 dias, piora apos alimentacao',
     descricaoInicial: 'Paciente consciente, orientado, referindo dor em quadrante superior direito',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'urgente',
     sinaisVitais: {
       pressaoSistolica: 140,
       pressaoDiastolica: 90,
@@ -92,6 +95,9 @@ export const patients: Patient[] = [
     },
     observacoesTriagem: 'Paciente hipertenso em uso de Losartana. Encaminhado para avaliacao clinica.',
     examesSolicitados: [],
+    labRiskClassification: 'emergente',
+    labRiskNotes: 'Funcao renal alterada em exame concluido, configurando prioridade maxima para reavaliacao da programacao assistencial.',
+    labNurseObservation: 'Enfermeiro do laboratorio sinalizou o resultado critico para a equipe clinica.',
     cadastradoPor: 'user-1',
     cadastradoEm: new Date(Date.now() - 2 * 3600000).toISOString(),
     ultimaAtualizacao: new Date(Date.now() - 1.5 * 3600000).toISOString(),
@@ -115,6 +121,9 @@ export const patients: Patient[] = [
     prioridade: 'normal',
     queixaPrincipal: 'Hernia umbilical sintomatica',
     descricaoInicial: 'Paciente com hernia umbilical de grande volume, referindo desconforto',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'pouco_urgente',
     sinaisVitais: {
       pressaoSistolica: 120,
       pressaoDiastolica: 80,
@@ -195,6 +204,9 @@ export const patients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 5 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-2', 'exam-3', 'exam-4', 'exam-5'],
+    labRiskClassification: 'muito_urgente',
+    labRiskNotes: 'Paciente com distorcoes metabolicas laboratoriais que exigem revisao clinica antes de seguir para liberacao.',
+    labNurseObservation: 'Equipe do laboratorio registrou necessidade de contato com o clinico responsavel.',
     cadastradoPor: 'user-1',
     cadastradoEm: new Date(Date.now() - 6 * 3600000).toISOString(),
     ultimaAtualizacao: new Date(Date.now() - 5 * 3600000).toISOString(),
@@ -258,6 +270,9 @@ export const patients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 7 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-3', 'exam-4', 'exam-5', 'exam-6'],
+    labRiskClassification: 'pouco_urgente',
+    labRiskNotes: 'Achados laboratoriais sem impacto imediato sobre a estabilidade clinica do caso.',
+    labNurseObservation: 'Liberacao realizada sem intercorrencias de bancada.',
     cadastradoPor: 'user-1',
     cadastradoEm: new Date(Date.now() - 8 * 3600000).toISOString(),
     ultimaAtualizacao: new Date(Date.now() - 6 * 3600000).toISOString(),
@@ -324,6 +339,9 @@ export const patients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 22 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-2', 'exam-3', 'exam-4', 'exam-5', 'exam-6', 'exam-7', 'exam-9', 'exam-10'],
+    labRiskClassification: 'emergente',
+    labRiskNotes: 'Conjunto de achados laboratoriais e cardiologicos elevando o risco assistencial global do paciente.',
+    labNurseObservation: 'Comunicacao imediata feita para clinica e cirurgia apos validacao final.',
     cadastradoPor: 'user-1',
     cadastradoEm: new Date(Date.now() - 24 * 3600000).toISOString(),
     ultimaAtualizacao: new Date(Date.now() - 12 * 3600000).toISOString(),
@@ -387,6 +405,9 @@ export const patients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 46 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-3', 'exam-4', 'exam-5', 'exam-6'],
+    labRiskClassification: 'urgente',
+    labRiskNotes: 'Anemia e achados pre-operatorios merecem ajuste antes da manutencao do cronograma cirurgico.',
+    labNurseObservation: 'Orientada revisao da conduta clinica antes da confirmacao definitiva do preparo.',
     cadastradoPor: 'user-1',
     cadastradoEm: new Date(Date.now() - 48 * 3600000).toISOString(),
     ultimaAtualizacao: new Date(Date.now() - 24 * 3600000).toISOString(),
@@ -659,6 +680,132 @@ export const patients: Patient[] = [
     ultimaAtualizacao: new Date(Date.now() - 96 * 3600000).toISOString(),
     ultimoAtualizadoPor: 'user-5',
   },
+  // 12. Entrada clinica prioritaria
+  {
+    id: 'patient-12',
+    prontuario: 'PRONT-2024-012',
+    nomeCompleto: 'Marcos Vinicius Araujo',
+    dataNascimento: '1960-10-03',
+    idade: calcularIdade('1960-10-03'),
+    sexo: 'M',
+    cpf: '222.333.444-55',
+    telefone: '(11) 96666-1212',
+    endereco: 'Rua Vergueiro, 2100 - Sao Paulo/SP',
+    unidade: 'Hospital Central',
+    dataEntrada: new Date(Date.now() - 90 * 60000).toISOString(),
+    status: 'aguardando_clinico',
+    prioridade: 'urgente',
+    queixaPrincipal: 'Dor toracica e falta de ar aos esforcos',
+    descricaoInicial: 'Paciente relata piora progressiva nas ultimas 24 horas, sem desmaios.',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'emergente',
+    sinaisVitais: {
+      pressaoSistolica: 168,
+      pressaoDiastolica: 98,
+      temperatura: 36.7,
+      frequenciaCardiaca: 108,
+      frequenciaRespiratoria: 24,
+      saturacao: 92,
+      peso: 84,
+      altura: 1.73,
+      imc: 28.1,
+      dorRelatada: 7,
+      registradoPor: 'user-2',
+      registradoEm: new Date(Date.now() - 75 * 60000).toISOString(),
+    },
+    triageData: {
+      vitalSigns: {
+        bloodPressure: '168/98',
+        heartRate: 108,
+        temperature: 36.7,
+        oxygenSaturation: 92,
+        respiratoryRate: 24,
+        weight: 84,
+        height: 173,
+      },
+      comorbidities: {
+        hypertension: true,
+        heartDisease: true,
+        smoking: true,
+      },
+      asaClassification: 'III',
+      notes: 'Paciente encaminhado com prioridade maxima para avaliacao clinica imediata.',
+      completedAt: new Date(Date.now() - 70 * 60000).toISOString(),
+      completedBy: 'user-2',
+    },
+    examesSolicitados: [],
+    cadastradoPor: 'user-1',
+    cadastradoEm: new Date(Date.now() - 100 * 60000).toISOString(),
+    ultimaAtualizacao: new Date(Date.now() - 70 * 60000).toISOString(),
+    ultimoAtualizadoPor: 'user-2',
+  },
+  // 13. Retorno clinico com exames concluidos
+  {
+    id: 'patient-13',
+    prontuario: 'PRONT-2024-013',
+    nomeCompleto: 'Helena Duarte Pires',
+    dataNascimento: '1978-02-14',
+    idade: calcularIdade('1978-02-14'),
+    sexo: 'F',
+    cpf: '333.444.555-66',
+    telefone: '(11) 95555-1313',
+    endereco: 'Rua Teodoro Sampaio, 980 - Sao Paulo/SP',
+    unidade: 'Hospital Central',
+    dataEntrada: new Date(Date.now() - 7 * 3600000).toISOString(),
+    status: 'exames_concluidos',
+    prioridade: 'alta',
+    queixaPrincipal: 'Dor pelvica cronica e sangramento uterino aumentado',
+    descricaoInicial: 'Paciente comparece para continuidade da avaliacao pre-operatoria.',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'urgente',
+    sinaisVitais: {
+      pressaoSistolica: 132,
+      pressaoDiastolica: 84,
+      temperatura: 36.4,
+      frequenciaCardiaca: 88,
+      frequenciaRespiratoria: 18,
+      saturacao: 97,
+      peso: 69,
+      altura: 1.61,
+      imc: 26.6,
+      dorRelatada: 5,
+      registradoPor: 'user-2',
+      registradoEm: new Date(Date.now() - 6.5 * 3600000).toISOString(),
+    },
+    avaliacaoClinica: {
+      id: 'eval-8',
+      patientId: 'patient-13',
+      motivoAvaliacao: 'Avaliacao pre-operatoria para histeroscopia cirurgica',
+      hipoteseDiagnostica: 'Miomatose uterina com anemia ferropriva',
+      historicoClinico: 'Paciente em seguimento ginecologico, sem cardiopatia previa, com anemia em acompanhamento.',
+      comorbidades: {
+        hipertensao: false,
+        diabetes: false,
+        cardiopatia: false,
+        avcPrevio: false,
+        dpoc: false,
+        doencaRenal: false,
+        tabagismo: false,
+        anticoagulantes: false,
+        alergias: [],
+        medicacoes: ['Sulfato ferroso'],
+        outras: ['Anemia por perda cronica'],
+      },
+      tipoCirurgia: 'Histeroscopia cirurgica',
+      porteCirurgico: 'medio',
+      urgencia: 'eletiva',
+      observacoesMedicas: 'Retorno apos exames para definicao de liberacao e possivel encaminhamento cirurgico.',
+      avaliadoPor: 'user-3',
+      avaliadoEm: new Date(Date.now() - 6 * 3600000).toISOString(),
+    },
+    examesSolicitados: ['exam-1', 'exam-4', 'exam-5'],
+    cadastradoPor: 'user-1',
+    cadastradoEm: new Date(Date.now() - 8 * 3600000).toISOString(),
+    ultimaAtualizacao: new Date(Date.now() - 2 * 3600000).toISOString(),
+    ultimoAtualizadoPor: 'user-4',
+  },
 ]
 
 // Exames solicitados
@@ -766,6 +913,8 @@ export const examRequests: ExamRequest[] = [
     resultado: 'Hb: 13.5 g/dL | Ht: 40% | Leucocitos: 7.800/mm3 | Plaquetas: 220.000/mm3',
     valorReferencia: 'Hb: 12-16 g/dL | Ht: 36-48% | Leucocitos: 4.000-11.000/mm3',
     observacoesLab: 'Valores dentro da normalidade',
+    labAnalysis: 'Hemograma sem alteracoes relevantes para a janela pre-operatoria. Serie vermelha preservada e sem sinais de infeccao ativa.',
+    labUrgency: 'nao_urgente',
     solicitadoPor: 'user-3',
     solicitadoEm: new Date(Date.now() - 22 * 3600000).toISOString(),
     coletadoPor: 'user-4',
@@ -783,6 +932,8 @@ export const examRequests: ExamRequest[] = [
     resultado: 'Ritmo sinusal, FC 78bpm, alteracoes isquemicas em parede inferior (IAM antigo)',
     valorReferencia: 'Ritmo sinusal, FC 60-100 bpm',
     observacoesLab: 'Alteracoes compativeis com IAM previo. Encaminhar para avaliacao cardiologica.',
+    labAnalysis: 'Tracado com sequela isquemica previa, sem supra agudo. Achado deve ser correlacionado com avaliacao cardiologica antes da definicao anestesica.',
+    labUrgency: 'urgente',
     solicitadoPor: 'user-3',
     solicitadoEm: new Date(Date.now() - 22 * 3600000).toISOString(),
     coletadoPor: 'user-4',
@@ -800,6 +951,8 @@ export const examRequests: ExamRequest[] = [
     resultado: 'FE: 45% (reduzida) | Hipocinesia de parede inferior | Sem alteracoes valvares significativas',
     valorReferencia: 'FE >= 55%',
     observacoesLab: 'Funcao sistolica global reduzida. Disfuncao ventricular leve a moderada.',
+    labAnalysis: 'Disfuncao ventricular esquerda leve a moderada, sem repercussao valvar importante. Recomendado aviso imediato ao time clinico-cirurgico.',
+    labUrgency: 'muito_urgente',
     solicitadoPor: 'user-3',
     solicitadoEm: new Date(Date.now() - 22 * 3600000).toISOString(),
     coletadoPor: 'user-4',
@@ -815,9 +968,287 @@ export const examRequests: ExamRequest[] = [
     status: 'concluido',
     justificativa: 'Parecer cardiologico - paciente com IAM previo',
     resultado: 'Paciente com cardiopatia isquemica estavel. Disfuncao ventricular leve. Risco cardiovascular moderado a alto para procedimento proposto. Manter medicacoes. Reservar vaga em UTI.',
+    observacoesLab: 'Parecer externo anexado e validado pela equipe do laboratorio de apoio diagnostico.',
+    labAnalysis: 'Parecer especializado recebido e liberado para o prontuario com recomendacao de retaguarda intensiva no pos-operatorio imediato.',
+    labUrgency: 'emergente',
     solicitadoPor: 'user-3',
     solicitadoEm: new Date(Date.now() - 22 * 3600000).toISOString(),
     concluidoPor: 'user-4',
     concluidoEm: new Date(Date.now() - 13 * 3600000).toISOString(),
   },
+  {
+    id: 'req-13',
+    patientId: 'patient-8',
+    examTypeId: 'exam-1',
+    examTypeName: 'Hemograma Completo',
+    status: 'concluido',
+    justificativa: 'Investigacao de anemia pre-operatoria',
+    resultado: 'Hb: 10.2 g/dL | Ht: 31% | Leucocitos: 8.400/mm3 | Plaquetas: 280.000/mm3',
+    valorReferencia: 'Hb: 12-16 g/dL | Ht: 36-48% | Leucocitos: 4.000-11.000/mm3',
+    observacoesLab: 'Anemia moderada confirmada em segunda leitura.',
+    labAnalysis: 'Hemograma demonstra anemia relevante para o preparo cirurgico, sem leucocitose associada.',
+    labUrgency: 'urgente',
+    solicitadoPor: 'user-3',
+    solicitadoEm: new Date(Date.now() - 44 * 3600000).toISOString(),
+    coletadoPor: 'user-4',
+    coletadoEm: new Date(Date.now() - 42 * 3600000).toISOString(),
+    analisadoPor: 'user-4',
+    analisadoEm: new Date(Date.now() - 41 * 3600000).toISOString(),
+    concluidoPor: 'user-4',
+    concluidoEm: new Date(Date.now() - 40 * 3600000).toISOString(),
+  },
+  {
+    id: 'req-14',
+    patientId: 'patient-8',
+    examTypeId: 'exam-4',
+    examTypeName: 'Coagulograma',
+    status: 'concluido',
+    justificativa: 'Avaliacao hemostatica pre-operatoria',
+    resultado: 'INR: 1.0 | TTPA: 31s | TP: 13s',
+    valorReferencia: 'INR: 0.8-1.2 | TTPA: 25-35s | TP: 11-14s',
+    observacoesLab: 'Coagulacao dentro da faixa de referencia.',
+    labAnalysis: 'Perfil hemostatico sem alteracoes relevantes para o procedimento programado.',
+    labUrgency: 'nao_urgente',
+    solicitadoPor: 'user-3',
+    solicitadoEm: new Date(Date.now() - 44 * 3600000).toISOString(),
+    coletadoPor: 'user-4',
+    coletadoEm: new Date(Date.now() - 42 * 3600000).toISOString(),
+    analisadoPor: 'user-4',
+    analisadoEm: new Date(Date.now() - 41 * 3600000).toISOString(),
+    concluidoPor: 'user-4',
+    concluidoEm: new Date(Date.now() - 39 * 3600000).toISOString(),
+  },
+  {
+    id: 'req-15',
+    patientId: 'patient-5',
+    examTypeId: 'exam-2',
+    examTypeName: 'Glicemia de Jejum',
+    status: 'concluido',
+    justificativa: 'Controle glicemico no preparo pre-operatorio',
+    resultado: 'Glicemia: 182 mg/dL',
+    valorReferencia: '70-99 mg/dL',
+    observacoesLab: 'Resultado comunicado ao setor clinico para ajuste metabolico.',
+    labAnalysis: 'Hiperglicemia persistente no pre-operatorio, exigindo revisao clinica antes do prosseguimento.',
+    labUrgency: 'muito_urgente',
+    solicitadoPor: 'user-3',
+    solicitadoEm: new Date(Date.now() - 10 * 3600000).toISOString(),
+    coletadoPor: 'user-4',
+    coletadoEm: new Date(Date.now() - 9 * 3600000).toISOString(),
+    analisadoPor: 'user-4',
+    analisadoEm: new Date(Date.now() - 8.5 * 3600000).toISOString(),
+    concluidoPor: 'user-4',
+    concluidoEm: new Date(Date.now() - 8 * 3600000).toISOString(),
+  },
+  {
+    id: 'req-16',
+    patientId: 'patient-6',
+    examTypeId: 'exam-6',
+    examTypeName: 'Raio-X de Torax',
+    status: 'concluido',
+    justificativa: 'Avaliacao pre-anestesica respiratoria',
+    resultado: 'Campos pulmonares sem infiltrados. Area cardiaca preservada. Sem derrame pleural.',
+    valorReferencia: 'Sem alteracoes radiograficas agudas',
+    observacoesLab: 'Imagem liberada no PACS e validada pela equipe.',
+    labAnalysis: 'Exame sem sinais de processo infeccioso ou congestivo agudo.',
+    labUrgency: 'pouco_urgente',
+    solicitadoPor: 'user-3',
+    solicitadoEm: new Date(Date.now() - 9 * 3600000).toISOString(),
+    coletadoPor: 'user-4',
+    coletadoEm: new Date(Date.now() - 8.2 * 3600000).toISOString(),
+    analisadoPor: 'user-4',
+    analisadoEm: new Date(Date.now() - 7.4 * 3600000).toISOString(),
+    concluidoPor: 'user-4',
+    concluidoEm: new Date(Date.now() - 7 * 3600000).toISOString(),
+  },
+  {
+    id: 'req-17',
+    patientId: 'patient-3',
+    examTypeId: 'exam-3',
+    examTypeName: 'Creatinina',
+    status: 'concluido',
+    justificativa: 'Triagem de funcao renal para avaliacao clinica',
+    resultado: 'Creatinina: 2.1 mg/dL',
+    valorReferencia: '0.6-1.3 mg/dL',
+    observacoesLab: 'Insuficiencia renal sinalizada no sistema e revisada pela equipe.',
+    labAnalysis: 'Disfuncao renal importante, com impacto potencial em contraste, hidratacao e estrategia anestesica.',
+    labUrgency: 'emergente',
+    solicitadoPor: 'user-3',
+    solicitadoEm: new Date(Date.now() - 6 * 3600000).toISOString(),
+    coletadoPor: 'user-4',
+    coletadoEm: new Date(Date.now() - 5.4 * 3600000).toISOString(),
+    analisadoPor: 'user-4',
+    analisadoEm: new Date(Date.now() - 4.8 * 3600000).toISOString(),
+    concluidoPor: 'user-4',
+    concluidoEm: new Date(Date.now() - 4.5 * 3600000).toISOString(),
+  },
+  {
+    id: 'req-18',
+    patientId: 'patient-13',
+    examTypeId: 'exam-1',
+    examTypeName: 'Hemograma Completo',
+    status: 'concluido',
+    justificativa: 'Controle de anemia pre-operatoria',
+    resultado: 'Hb: 9.8 g/dL | Ht: 30% | Leucocitos: 7.100/mm3 | Plaquetas: 310.000/mm3',
+    valorReferencia: 'Hb: 12-16 g/dL | Ht: 36-48%',
+    observacoesLab: 'Anemia persistente, sem sinais infecciosos associados.',
+    labAnalysis: 'Persistencia de anemia moderada com necessidade de correlacao clinica antes da liberacao definitiva.',
+    labUrgency: 'urgente',
+    solicitadoPor: 'user-3',
+    solicitadoEm: new Date(Date.now() - 5.5 * 3600000).toISOString(),
+    coletadoPor: 'user-4',
+    coletadoEm: new Date(Date.now() - 5 * 3600000).toISOString(),
+    analisadoPor: 'user-4',
+    analisadoEm: new Date(Date.now() - 4.5 * 3600000).toISOString(),
+    concluidoPor: 'user-4',
+    concluidoEm: new Date(Date.now() - 4 * 3600000).toISOString(),
+  },
+  {
+    id: 'req-19',
+    patientId: 'patient-13',
+    examTypeId: 'exam-5',
+    examTypeName: 'Eletrocardiograma (ECG)',
+    status: 'concluido',
+    justificativa: 'Avaliacao cardiovascular pre-anestesica',
+    resultado: 'Ritmo sinusal, sem alteracoes isquemicas agudas, FC 82 bpm',
+    valorReferencia: 'Ritmo sinusal, FC 60-100 bpm',
+    observacoesLab: 'Traçado dentro do esperado para o contexto clinico atual.',
+    labAnalysis: 'Sem evidencias de instabilidade eletrica ou isquemica aguda no momento.',
+    labUrgency: 'pouco_urgente',
+    solicitadoPor: 'user-3',
+    solicitadoEm: new Date(Date.now() - 5.5 * 3600000).toISOString(),
+    coletadoPor: 'user-4',
+    coletadoEm: new Date(Date.now() - 5.1 * 3600000).toISOString(),
+    analisadoPor: 'user-4',
+    analisadoEm: new Date(Date.now() - 4.6 * 3600000).toISOString(),
+    concluidoPor: 'user-4',
+    concluidoEm: new Date(Date.now() - 4.1 * 3600000).toISOString(),
+  },
 ]
+
+function mapComorbidities(patient: Patient) {
+  const comorbidades = patient.avaliacaoClinica?.comorbidades
+
+  return {
+    diabetes: comorbidades?.diabetes || false,
+    hypertension: comorbidades?.hipertensao || false,
+    heartDisease: comorbidades?.cardiopatia || false,
+    respiratoryDisease: comorbidades?.dpoc || false,
+    kidneyDisease: comorbidades?.doencaRenal || false,
+    liverDisease: false,
+    neurologicalDisease: comorbidades?.avcPrevio || false,
+    obesity: (patient.sinaisVitais?.imc || 0) >= 30,
+    smoking: comorbidades?.tabagismo || false,
+    alcoholism: false,
+    other: comorbidades?.outras?.join(', ') || '',
+    hipertensao: comorbidades?.hipertensao || false,
+  }
+}
+
+function buildExamResults(patientId: string) {
+  const patientExamRequests = examRequests.filter((exam) => exam.patientId === patientId)
+
+  return patientExamRequests.reduce<Record<string, ExamResult>>((acc, exam) => {
+    acc[exam.examTypeId] = {
+      status:
+        exam.status === 'concluido'
+          ? (exam.observacoesLab?.toLowerCase().includes('alter') ? 'alterado' : 'normal')
+          : 'pendente',
+      value: exam.resultado || '',
+      notes: exam.observacoesLab || '',
+    }
+
+    return acc
+  }, {})
+}
+
+function hydratePatient(patient: Patient): Patient {
+  const triageComorbidities = mapComorbidities(patient)
+  const requestedExams = patient.examesSolicitados || []
+  const hasExamResults = examRequests.some((exam) => exam.patientId === patient.id)
+
+  return {
+    ...patient,
+    name: patient.nomeCompleto,
+    age: patient.idade,
+    scheduledSurgery: patient.avaliacaoClinica?.tipoCirurgia || patient.avaliacaoCirurgica?.tipoCirurgia || patient.queixaPrincipal || 'Procedimento em avaliacao',
+    scheduledDate: patient.dataEntrada,
+    requestingPhysician: patient.avaliacaoClinica?.avaliadoPor || 'Dr. Carlos Mendes',
+    healthInsurance: patient.cartaoSus ? 'SUS' : 'Particular',
+    riskLevel: patient.avaliacaoCirurgica?.riscoFinal,
+    triageData: patient.sinaisVitais
+      ? {
+          vitalSigns: {
+            bloodPressure:
+              patient.sinaisVitais.pressaoSistolica && patient.sinaisVitais.pressaoDiastolica
+                ? `${patient.sinaisVitais.pressaoSistolica}/${patient.sinaisVitais.pressaoDiastolica}`
+                : undefined,
+            heartRate: patient.sinaisVitais.frequenciaCardiaca,
+            temperature: patient.sinaisVitais.temperatura,
+            oxygenSaturation: patient.sinaisVitais.saturacao,
+            respiratoryRate: patient.sinaisVitais.frequenciaRespiratoria,
+            weight: patient.sinaisVitais.peso,
+            height: patient.sinaisVitais.altura ? Math.round(patient.sinaisVitais.altura * 100) : undefined,
+            ...patient.sinaisVitais,
+          },
+          comorbidities: triageComorbidities,
+          asaClassification:
+            patient.avaliacaoCirurgica?.scores?.asa === 1 ? 'I' :
+            patient.avaliacaoCirurgica?.scores?.asa === 2 ? 'II' :
+            patient.avaliacaoCirurgica?.scores?.asa === 3 ? 'III' :
+            patient.avaliacaoCirurgica?.scores?.asa === 4 ? 'IV' :
+            patient.avaliacaoCirurgica?.scores?.asa === 5 ? 'V' :
+            patient.avaliacaoCirurgica?.scores?.asa === 6 ? 'VI' :
+            undefined,
+          notes: patient.observacoesTriagem || patient.descricaoInicial,
+          completedAt: patient.sinaisVitais.registradoEm,
+          completedBy: patient.sinaisVitais.registradoPor,
+        }
+      : undefined,
+    clinicalEvaluation: patient.avaliacaoClinica
+      ? {
+          ...patient.avaliacaoClinica,
+          requestedExams,
+          notes: patient.avaliacaoClinica.observacoesMedicas,
+          rcriScore: patient.avaliacaoCirurgica?.scores?.rcri !== undefined
+            ? {
+                score: patient.avaliacaoCirurgica.scores.rcri,
+                riskPercentage:
+                  patient.avaliacaoCirurgica.scores.rcri === 0 ? '3,9%' :
+                  patient.avaliacaoCirurgica.scores.rcri === 1 ? '6,0%' :
+                  patient.avaliacaoCirurgica.scores.rcri === 2 ? '10,1%' : '15%+',
+                criteria: patient.avaliacaoCirurgica.scores.rcriFactors || [],
+              }
+            : undefined,
+          vsgcriScore: patient.avaliacaoCirurgica?.scores?.vsgCri !== undefined
+            ? {
+                score: patient.avaliacaoCirurgica.scores.vsgCri,
+                riskClass:
+                  patient.avaliacaoCirurgica.scores.vsgCri <= 2 ? 'Classe I' :
+                  patient.avaliacaoCirurgica.scores.vsgCri <= 4 ? 'Classe II' :
+                  patient.avaliacaoCirurgica.scores.vsgCri <= 6 ? 'Classe III' : 'Classe IV',
+                factors: patient.avaliacaoCirurgica.scores.vsgCriFactors || [],
+              }
+            : undefined,
+          completedAt: patient.avaliacaoClinica.avaliadoEm,
+          completedBy: patient.avaliacaoClinica.avaliadoPor,
+        }
+      : undefined,
+    examResults: hasExamResults ? buildExamResults(patient.id) : undefined,
+    surgicalRiskAssessment: patient.avaliacaoCirurgica
+      ? {
+          finalRiskLevel: patient.avaliacaoCirurgica.riscoFinal,
+          recommendation:
+            patient.avaliacaoCirurgica.riscoFinal === 'baixo' || patient.avaliacaoCirurgica.riscoFinal === 'moderado'
+              ? 'aprovar'
+              : patient.avaliacaoCirurgica.riscoFinal === 'alto'
+                ? 'adiar'
+                : 'contraindicar',
+          notes: patient.avaliacaoCirurgica.observacoesCirurgiao || patient.avaliacaoCirurgica.conduta,
+          completedAt: patient.avaliacaoCirurgica.avaliadoEm,
+          completedBy: patient.avaliacaoCirurgica.avaliadoPor,
+        }
+      : undefined,
+  }
+}
+
+export const patients: Patient[] = basePatients.map(hydratePatient)

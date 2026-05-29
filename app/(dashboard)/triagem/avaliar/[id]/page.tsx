@@ -12,9 +12,18 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Save, User, Heart, Activity, AlertTriangle } from 'lucide-react'
-import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/shared/badges'
+import { PatientStatusBadge, ASABadge } from '@/components/shared/badges'
 import { ASA_CLASSIFICATIONS, calculateASA } from '@/lib/data/exams'
-import type { ASAClassification } from '@/lib/types'
+import { users } from '@/lib/data/users'
+import type { ASAClassification, LabUrgency } from '@/lib/types'
+
+const urgencyMeta: Record<LabUrgency, { label: string; className: string }> = {
+  emergente: { label: 'Vermelho - Emergente', className: 'bg-red-100 text-red-800 border-red-200' },
+  muito_urgente: { label: 'Laranja - Muito urgente', className: 'bg-orange-100 text-orange-800 border-orange-200' },
+  urgente: { label: 'Amarelo - Urgente', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+  pouco_urgente: { label: 'Verde - Pouco urgente', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  nao_urgente: { label: 'Azul - Nao urgente', className: 'bg-sky-100 text-sky-800 border-sky-200' },
+}
 
 export default function TriagemAvaliarPage() {
   const params = useParams()
@@ -24,6 +33,7 @@ export default function TriagemAvaliarPage() {
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
+  const clinicians = users.filter((item) => item.role === 'clinico' && item.active)
   
   const [vitalSigns, setVitalSigns] = useState({
     bloodPressure: patient?.triageData?.vitalSigns?.bloodPressure || '',
@@ -52,14 +62,24 @@ export default function TriagemAvaliarPage() {
   const [selectedASA, setSelectedASA] = useState<ASAClassification | ''>(
     patient?.triageData?.asaClassification || ''
   )
+  const [assignedClinicianId, setAssignedClinicianId] = useState(patient?.triageAssignedClinicianId || '')
+  const [triageRiskClassification, setTriageRiskClassification] = useState<LabUrgency | ''>(
+    patient?.triageRiskClassification || ''
+  )
   const [notes, setNotes] = useState(patient?.triageData?.notes || '')
   const [isSaving, setIsSaving] = useState(false)
   
   const suggestedASA = calculateASA(conditions)
+  const assignedClinician = clinicians.find((item) => item.id === assignedClinicianId)
   
   useEffect(() => {
-    if (!user || !hasPermission('triagem.avaliar')) {
+    if (!user) {
       router.push('/login')
+      return
+    }
+
+    if (!hasPermission('register_vital_signs')) {
+      router.push('/triagem')
     }
   }, [user, hasPermission, router])
   
@@ -85,7 +105,17 @@ export default function TriagemAvaliarPage() {
     
     updatePatient(patientId, {
       triageData,
-      status: complete ? 'aguardando_avaliacao' : 'em_triagem',
+      triageAssignedClinicianId: assignedClinicianId || undefined,
+      triageAssignedClinicianName: assignedClinician?.name || undefined,
+      triageRiskClassification: triageRiskClassification || undefined,
+      requestingPhysician: assignedClinician?.name || patient.requestingPhysician,
+      prioridade:
+        triageRiskClassification === 'emergente' || triageRiskClassification === 'muito_urgente'
+          ? 'urgente'
+          : triageRiskClassification === 'urgente'
+            ? 'alta'
+            : 'normal',
+      status: complete ? 'aguardando_clinico' : 'em_triagem',
       updatedAt: new Date().toISOString(),
     })
     
@@ -94,7 +124,7 @@ export default function TriagemAvaliarPage() {
       userId: user!.id,
       patientId,
       details: complete 
-        ? `Triagem concluída. ASA: ${selectedASA}`
+        ? `Triagem concluida. ASA: ${selectedASA} | Clinico: ${assignedClinician?.name || 'Nao definido'} | Classificacao: ${triageRiskClassification || 'Nao definida'}`
         : 'Dados de triagem atualizados',
     })
     
@@ -115,31 +145,37 @@ export default function TriagemAvaliarPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-foreground">Triagem do Paciente</h1>
-          <p className="text-muted-foreground">Coleta de sinais vitais e historico medico</p>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Triagem do Paciente</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">Coleta de sinais vitais e historico medico</p>
         </div>
-        <PatientStatusBadge status={patient.status} />
+        <div className="self-start sm:self-auto">
+          <PatientStatusBadge status={patient.status} />
+        </div>
       </div>
       
       {/* Patient Info Card */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
               <User className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <CardTitle className="text-lg">{patient.name}</CardTitle>
-              <CardDescription>
+            <div className="min-w-0">
+              <CardTitle className="break-words text-lg">{patient.name}</CardTitle>
+              <CardDescription className="break-words">
                 {patient.age} anos | CPF: {patient.cpf} | Cirurgia: {patient.scheduledSurgery}
               </CardDescription>
+              <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                <p>Queixa inicial: {patient.queixaPrincipal || 'Nao informada'}</p>
+                <p>Relato da recepcao: {patient.descricaoInicial || 'Nao informado'}</p>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -259,7 +295,7 @@ export default function TriagemAvaliarPage() {
                 { key: 'smoking', label: 'Tabagismo' },
                 { key: 'alcoholism', label: 'Etilismo' },
               ].map(({ key, label }) => (
-                <div key={key} className="flex items-center space-x-2">
+                <div key={key} className="flex min-w-0 items-start space-x-2 rounded-lg border p-3">
                   <Checkbox
                     id={key}
                     checked={conditions[key as keyof typeof conditions] as boolean}
@@ -267,7 +303,7 @@ export default function TriagemAvaliarPage() {
                       setConditions(c => ({ ...c, [key]: checked }))
                     }
                   />
-                  <Label htmlFor={key} className="text-sm font-normal cursor-pointer">
+                  <Label htmlFor={key} className="cursor-pointer text-sm font-normal leading-5">
                     {label}
                   </Label>
                 </div>
@@ -286,6 +322,50 @@ export default function TriagemAvaliarPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Encaminhamento da Triagem</CardTitle>
+          <CardDescription>
+            Defina o clinico responsavel e a classificacao de risco inicial do paciente antes do encaminhamento.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Label>Clinico Responsavel</Label>
+            <Select value={assignedClinicianId} onValueChange={setAssignedClinicianId}>
+              <SelectTrigger className="min-h-11">
+                <SelectValue placeholder="Selecione quem atendera este paciente" />
+              </SelectTrigger>
+              <SelectContent>
+                {clinicians.map((clinician) => (
+                  <SelectItem key={clinician.id} value={clinician.id}>
+                    {clinician.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Classificacao de Risco Inicial</Label>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              {(Object.entries(urgencyMeta) as Array<[LabUrgency, { label: string; className: string }]>).map(
+                ([urgency, meta]) => (
+                  <button
+                    key={urgency}
+                    type="button"
+                    onClick={() => setTriageRiskClassification(urgency)}
+                    className={`rounded-lg border px-3 py-3 text-left text-sm transition-colors ${meta.className} ${triageRiskClassification === urgency ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                  >
+                    {meta.label}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       
       {/* Classificacao ASA */}
       <Card>
@@ -300,7 +380,7 @@ export default function TriagemAvaliarPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {suggestedASA && (
-            <div className="flex items-center gap-2 rounded-lg bg-primary/10 p-3">
+            <div className="flex flex-col gap-2 rounded-lg bg-primary/10 p-3 sm:flex-row sm:items-center">
               <span className="text-sm text-muted-foreground">Sugestao baseada nas comorbidades:</span>
               <ASABadge classification={suggestedASA} />
             </div>
@@ -312,13 +392,13 @@ export default function TriagemAvaliarPage() {
               value={selectedASA}
               onValueChange={value => setSelectedASA(value as ASAClassification)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="min-h-11">
                 <SelectValue placeholder="Selecione a classificacao ASA" />
               </SelectTrigger>
               <SelectContent>
                 {ASA_CLASSIFICATIONS.map(asa => (
                   <SelectItem key={asa.code} value={asa.code}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <span className="font-medium">{asa.code}</span>
                       <span className="text-muted-foreground">- {asa.description}</span>
                     </div>
@@ -330,7 +410,7 @@ export default function TriagemAvaliarPage() {
           
           {selectedASA && (
             <div className="rounded-lg border p-4">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <ASABadge classification={selectedASA} />
                 <span className="font-medium">
                   {ASA_CLASSIFICATIONS.find(a => a.code === selectedASA)?.description}
@@ -357,11 +437,15 @@ export default function TriagemAvaliarPage() {
             rows={4}
           />
         </CardContent>
-        <CardFooter className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
+        <CardFooter className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
             Salvar Rascunho
           </Button>
-          <Button onClick={() => handleSave(true)} disabled={isSaving || !selectedASA}>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() => handleSave(true)}
+            disabled={isSaving || !selectedASA || !assignedClinicianId || !triageRiskClassification}
+          >
             <Save className="mr-2 h-4 w-4" />
             Concluir Triagem
           </Button>

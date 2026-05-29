@@ -8,6 +8,7 @@ export interface User {
   password: string
   name: string
   role: UserRole
+  department?: string
   avatar?: string
   active: boolean
   createdAt: string
@@ -16,21 +17,27 @@ export interface User {
 export type PatientStatus = 
   | 'aguardando_triagem'
   | 'em_triagem'
+  | 'aguardando_avaliacao'
   | 'aguardando_clinico'
   | 'em_avaliacao_clinica'
+  | 'aguardando_exames'
+  | 'aguardando_resultado'
   | 'exames_solicitados'
   | 'aguardando_laboratorio'
   | 'exames_em_analise'
   | 'exames_concluidos'
   | 'aguardando_cirurgiao'
   | 'em_avaliacao_cirurgica'
+  | 'concluido'
   | 'liberado'
   | 'alto_risco'
   | 'contraindicado'
 
 export type Priority = 'baixa' | 'normal' | 'alta' | 'urgente'
 
-export type RiskLevel = 'baixo' | 'moderado' | 'alto' | 'contraindicado' | 'pendente'
+export type RiskLevel = 'baixo' | 'moderado' | 'alto' | 'contraindicado' | 'pendente' | 'critico'
+
+export type ASAClassification = 'I' | 'II' | 'III' | 'IV' | 'V' | 'VI'
 
 export type ASAScore = 1 | 2 | 3 | 4 | 5 | 6
 
@@ -39,6 +46,13 @@ export type SurgeryUrgency = 'eletiva' | 'urgencia' | 'emergencia'
 export type SurgerySize = 'pequeno' | 'medio' | 'grande'
 
 export interface VitalSigns {
+  bloodPressure?: string
+  heartRate?: number
+  temperature?: number
+  oxygenSaturation?: number
+  respiratoryRate?: number
+  weight?: number
+  height?: number
   pressaoSistolica?: number
   pressaoDiastolica?: number
   temperatura?: number
@@ -49,37 +63,61 @@ export interface VitalSigns {
   altura?: number
   imc?: number
   dorRelatada?: number
-  registradoPor: string
-  registradoEm: string
+  registradoPor?: string
+  registradoEm?: string
 }
 
 export interface Comorbidities {
-  hipertensao: boolean
-  diabetes: boolean
-  cardiopatia: boolean
-  avcPrevio: boolean
-  dpoc: boolean
-  doencaRenal: boolean
-  tabagismo: boolean
-  anticoagulantes: boolean
-  alergias: string[]
-  medicacoes: string[]
-  outras: string[]
+  hypertension?: boolean
+  heartDisease?: boolean
+  respiratoryDisease?: boolean
+  kidneyDisease?: boolean
+  liverDisease?: boolean
+  neurologicalDisease?: boolean
+  obesity?: boolean
+  smoking?: boolean
+  alcoholism?: boolean
+  other?: string
+  hipertensao?: boolean
+  diabetes?: boolean
+  cardiopatia?: boolean
+  avcPrevio?: boolean
+  dpoc?: boolean
+  doencaRenal?: boolean
+  tabagismo?: boolean
+  anticoagulantes?: boolean
+  alergias?: string[]
+  medicacoes?: string[]
+  outras?: string[]
 }
 
 export interface ClinicalEvaluation {
-  id: string
-  patientId: string
-  motivoAvaliacao: string
-  hipoteseDiagnostica: string
-  historicoClinico: string
-  comorbidades: Comorbidities
-  tipoCirurgia: string
-  porteCirurgico: SurgerySize
-  urgencia: SurgeryUrgency
-  observacoesMedicas: string
-  avaliadoPor: string
-  avaliadoEm: string
+  id?: string
+  patientId?: string
+  rcriScore?: {
+    score: number
+    riskPercentage: string
+    criteria: string[]
+  }
+  vsgcriScore?: {
+    score: number
+    riskClass: string
+    factors: string[]
+  }
+  requestedExams?: string[]
+  notes?: string
+  completedAt?: string
+  completedBy?: string
+  motivoAvaliacao?: string
+  hipoteseDiagnostica?: string
+  historicoClinico?: string
+  comorbidades?: Comorbidities
+  tipoCirurgia?: string
+  porteCirurgico?: SurgerySize
+  urgencia?: SurgeryUrgency
+  observacoesMedicas?: string
+  avaliadoPor?: string
+  avaliadoEm?: string
 }
 
 export interface ExamType {
@@ -87,12 +125,27 @@ export interface ExamType {
   name: string
   category: string
   description?: string
+  unit?: string
+  referenceRange?: string
   valueReference?: string
   createdBy: string
   createdAt: string
 }
 
+export interface ExamResult {
+  status?: 'normal' | 'alterado' | 'pendente'
+  value?: string
+  notes?: string
+}
+
 export type ExamStatus = 'solicitado' | 'coletado' | 'em_analise' | 'concluido' | 'cancelado'
+
+export type LabUrgency =
+  | 'emergente'
+  | 'muito_urgente'
+  | 'urgente'
+  | 'pouco_urgente'
+  | 'nao_urgente'
 
 export interface ExamRequest {
   id: string
@@ -104,6 +157,8 @@ export interface ExamRequest {
   resultado?: string
   valorReferencia?: string
   observacoesLab?: string
+  labAnalysis?: string
+  labUrgency?: LabUrgency
   anexoUrl?: string
   solicitadoPor: string
   solicitadoEm: string
@@ -127,25 +182,32 @@ export interface RiskScores {
 }
 
 export interface SurgicalEvaluation {
-  id: string
-  patientId: string
-  tipoCirurgia: string
-  especialidade: string
-  porteCirurgico: SurgerySize
-  urgencia: SurgeryUrgency
-  anestesiaPrevista: string
-  scores: RiskScores
-  riscoFinal: RiskLevel
-  conduta: string
-  observacoesCirurgiao: string
-  assinatura: string
-  avaliadoPor: string
-  avaliadoEm: string
+  id?: string
+  patientId?: string
+  tipoCirurgia?: string
+  especialidade?: string
+  porteCirurgico?: SurgerySize
+  urgencia?: SurgeryUrgency
+  anestesiaPrevista?: string
+  scores?: RiskScores
+  riscoFinal?: RiskLevel
+  conduta?: string
+  observacoesCirurgiao?: string
+  assinatura?: string
+  avaliadoPor?: string
+  avaliadoEm?: string
 }
 
 export interface Patient {
   id: string
   prontuario: string
+  name?: string
+  age?: number
+  scheduledSurgery?: string
+  scheduledDate?: string
+  requestingPhysician?: string
+  healthInsurance?: string
+  riskLevel?: RiskLevel
   
   // Dados basicos (Recepcao)
   nomeCompleto: string
@@ -168,23 +230,50 @@ export interface Patient {
   // Triagem
   queixaPrincipal?: string
   descricaoInicial?: string
+  triageAssignedClinicianId?: string
+  triageAssignedClinicianName?: string
+  triageRiskClassification?: LabUrgency
+  clinicalRequestsSurgicalRisk?: boolean
+  clinicalAssignedSurgeonId?: string
+  clinicalAssignedSurgeonName?: string
   sinaisVitais?: VitalSigns
   observacoesTriagem?: string
+  triageData?: {
+    vitalSigns?: VitalSigns
+    comorbidities?: Comorbidities
+    asaClassification?: ASAClassification
+    notes?: string
+    completedAt?: string
+    completedBy?: string
+  }
   
   // Avaliacao clinica
   avaliacaoClinica?: ClinicalEvaluation
+  clinicalEvaluation?: ClinicalEvaluation
   
   // Exames
   examesSolicitados: string[]
+  examResults?: Record<string, ExamResult>
+  labRiskClassification?: LabUrgency
+  labRiskNotes?: string
+  labNurseObservation?: string
   
   // Avaliacao cirurgica
   avaliacaoCirurgica?: SurgicalEvaluation
+  surgicalRiskAssessment?: {
+    finalRiskLevel?: RiskLevel
+    recommendation?: 'aprovar' | 'adiar' | 'contraindicar'
+    notes?: string
+    completedAt?: string
+    completedBy?: string
+  }
   
   // Auditoria
   cadastradoPor: string
   cadastradoEm: string
   ultimaAtualizacao: string
   ultimoAtualizadoPor: string
+  updatedAt?: string
 }
 
 export type AuditAction = 
@@ -208,6 +297,15 @@ export type AuditAction =
   | 'liberacao_cirurgia'
   | 'contraindicacao_cirurgia'
   | 'geracao_relatorio'
+  | 'triagem_concluida'
+  | 'triagem_atualizada'
+  | 'avaliacao_clinica_concluida'
+  | 'avaliacao_clinica_atualizada'
+  | 'avaliacao_cirurgica_concluida'
+  | 'avaliacao_cirurgica_atualizada'
+  | 'paciente_cadastrado'
+  | 'exames_registrados'
+  | 'exames_atualizados'
   | 'login'
   | 'logout'
 
@@ -219,6 +317,7 @@ export interface AuditLog {
   userRole: UserRole
   action: AuditAction
   description: string
+  details?: string
   previousValue?: string
   newValue?: string
   timestamp: string
@@ -311,14 +410,18 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 export const STATUS_LABELS: Record<PatientStatus, string> = {
   aguardando_triagem: 'Aguardando Triagem',
   em_triagem: 'Em Triagem',
+  aguardando_avaliacao: 'Aguardando Avaliacao',
   aguardando_clinico: 'Aguardando Clinico',
   em_avaliacao_clinica: 'Em Avaliacao Clinica',
+  aguardando_exames: 'Aguardando Exames',
+  aguardando_resultado: 'Aguardando Resultado',
   exames_solicitados: 'Exames Solicitados',
   aguardando_laboratorio: 'Aguardando Laboratorio',
   exames_em_analise: 'Exames em Analise',
   exames_concluidos: 'Exames Concluidos',
   aguardando_cirurgiao: 'Aguardando Cirurgiao',
   em_avaliacao_cirurgica: 'Em Avaliacao Cirurgica',
+  concluido: 'Concluido',
   liberado: 'Liberado para Cirurgia',
   alto_risco: 'Alto Risco',
   contraindicado: 'Contraindicado',
@@ -335,6 +438,7 @@ export const RISK_LABELS: Record<RiskLevel, string> = {
   baixo: 'Baixo Risco',
   moderado: 'Risco Moderado',
   alto: 'Alto Risco',
+  critico: 'Risco Critico',
   contraindicado: 'Contraindicado',
   pendente: 'Pendente',
 }

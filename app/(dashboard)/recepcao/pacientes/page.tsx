@@ -1,50 +1,96 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useData } from '@/lib/data-context'
-import { useAuth } from '@/lib/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { StatusBadge, PriorityBadge } from '@/components/shared/badges'
-import { Search, Plus, Eye, Edit2, UserPlus, Filter } from 'lucide-react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Patient, PatientStatus, STATUS_LABELS, PRIORITY_LABELS, Priority } from '@/lib/types'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { StatusBadge } from '@/components/shared/badges'
+import { Search, Eye, UserPlus, LogIn, ClipboardPlus } from 'lucide-react'
+import type { Patient, PatientStatus } from '@/lib/types'
+
+const activeCareStatuses: PatientStatus[] = [
+  'aguardando_triagem',
+  'em_triagem',
+  'aguardando_avaliacao',
+  'aguardando_clinico',
+  'em_avaliacao_clinica',
+  'aguardando_exames',
+  'aguardando_resultado',
+  'exames_solicitados',
+  'aguardando_laboratorio',
+  'exames_em_analise',
+  'exames_concluidos',
+  'aguardando_cirurgiao',
+  'em_avaliacao_cirurgica',
+]
+
+type IntakeFormState = {
+  queixaPrincipal: string
+  descricaoInicial: string
+}
 
 export default function PacientesPage() {
-  const { user } = useAuth()
-  const { patients, updatePatientStatus } = useData()
-  const router = useRouter()
-  
+  const { patients, updatePatient } = useData()
+
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [priorityFilter, setPriorityFilter] = useState<string>('all')
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
+  const [intakeForm, setIntakeForm] = useState<IntakeFormState>({
+    queixaPrincipal: '',
+    descricaoInicial: '',
+  })
 
   const filteredPatients = useMemo(() => {
-    return patients.filter(patient => {
-      // Filtro de busca
-      const searchLower = search.toLowerCase()
-      const matchesSearch = search === '' || 
-        patient.nomeCompleto.toLowerCase().includes(searchLower) ||
-        patient.prontuario.toLowerCase().includes(searchLower) ||
-        patient.cpf.includes(search)
-      
-      // Filtro de status
-      const matchesStatus = statusFilter === 'all' || patient.status === statusFilter
-      
-      // Filtro de prioridade
-      const matchesPriority = priorityFilter === 'all' || patient.prioridade === priorityFilter
-      
-      return matchesSearch && matchesStatus && matchesPriority
-    }).sort((a, b) => new Date(b.dataEntrada).getTime() - new Date(a.dataEntrada).getTime())
-  }, [patients, search, statusFilter, priorityFilter])
+    return patients
+      .filter((patient) => {
+        const searchLower = search.toLowerCase()
+        return (
+          search === '' ||
+          patient.nomeCompleto.toLowerCase().includes(searchLower) ||
+          patient.prontuario.toLowerCase().includes(searchLower) ||
+          patient.cpf.includes(search)
+        )
+      })
+      .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto))
+  }, [patients, search])
 
-  const handleEncaminharTriagem = (patientId: string) => {
-    updatePatientStatus(patientId, 'aguardando_triagem')
+  const canCheckIn = (patient: Patient) => !activeCareStatuses.includes(patient.status)
+
+  const openIntake = (patient: Patient) => {
+    setSelectedPatient(patient)
+    setIntakeForm({
+      queixaPrincipal: patient.queixaPrincipal || '',
+      descricaoInicial: patient.descricaoInicial || '',
+    })
+  }
+
+  const closeIntake = () => {
+    setSelectedPatient(null)
+    setIntakeForm({
+      queixaPrincipal: '',
+      descricaoInicial: '',
+    })
+  }
+
+  const handleCheckIn = () => {
+    if (!selectedPatient || !intakeForm.queixaPrincipal.trim()) {
+      return
+    }
+
+    updatePatient(selectedPatient.id, {
+      dataEntrada: new Date().toISOString(),
+      status: 'aguardando_triagem',
+      prioridade: 'normal',
+      queixaPrincipal: intakeForm.queixaPrincipal.trim(),
+      descricaoInicial: intakeForm.descricaoInicial.trim(),
+    })
+
+    closeIntake()
   }
 
   const formatDate = (dateString: string) => {
@@ -53,144 +99,175 @@ export default function PacientesPage() {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Pacientes</h1>
-          <p className="text-muted-foreground">Gerenciar todos os pacientes cadastrados</p>
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-2xl font-bold text-foreground">Entrada de Pacientes</h1>
+          <p className="text-muted-foreground">
+            Busque pacientes ja cadastrados, registre a queixa inicial e encaminhe para a triagem.
+          </p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto">
           <Link href="/recepcao/cadastro">
             <UserPlus className="mr-2 h-4 w-4" />
-            Novo Paciente
+            Cadastrar Paciente
           </Link>
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Pacientes</CardTitle>
+          <CardTitle>Pacientes Cadastrados</CardTitle>
           <CardDescription>
-            {filteredPatients.length} paciente(s) encontrado(s)
+            {filteredPatients.length} paciente(s) encontrado(s). A recepcao so registra dados basicos e encaminha para a triagem.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Filtros */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-center mb-6">
-            <div className="relative flex-1">
+          <div className="mb-6">
+            <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, prontuario ou CPF..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="h-11 pl-10"
               />
-            </div>
-            <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Prioridade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
-          {/* Tabela */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Prontuario</TableHead>
-                  <TableHead>Paciente</TableHead>
-                  <TableHead>Idade</TableHead>
-                  <TableHead>Entrada</TableHead>
-                  <TableHead>Prioridade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Acoes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPatients.length === 0 ? (
+          <div className="overflow-hidden rounded-xl border bg-background">
+            <div className="w-full overflow-x-auto">
+              <Table className="min-w-[820px]">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Nenhum paciente encontrado
-                    </TableCell>
+                    <TableHead className="whitespace-nowrap">Prontuario</TableHead>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead className="whitespace-nowrap">Telefone</TableHead>
+                    <TableHead className="whitespace-nowrap">Ultima Entrada</TableHead>
+                    <TableHead className="whitespace-nowrap">Status</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Acoes</TableHead>
                   </TableRow>
-                ) : (
-                  filteredPatients.map((patient) => (
-                    <TableRow key={patient.id}>
-                      <TableCell className="font-mono text-sm">
-                        {patient.prontuario}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{patient.nomeCompleto}</p>
-                          <p className="text-xs text-muted-foreground">{patient.cpf}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>{patient.idade} anos</TableCell>
-                      <TableCell className="text-sm">
-                        {formatDate(patient.dataEntrada)}
-                      </TableCell>
-                      <TableCell>
-                        <PriorityBadge priority={patient.prioridade} />
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={patient.status} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                          >
-                            <Link href={`/paciente/${patient.id}`}>
-                              <Eye className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          {patient.status === 'aguardando_triagem' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEncaminharTriagem(patient.id)}
-                            >
-                              Encaminhar
-                            </Button>
-                          )}
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredPatients.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                        Nenhum paciente encontrado
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    filteredPatients.map((patient) => (
+                      <TableRow key={patient.id}>
+                        <TableCell className="whitespace-nowrap font-mono text-sm">{patient.prontuario}</TableCell>
+                        <TableCell className="min-w-[260px]">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{patient.nomeCompleto}</p>
+                            <p className="text-xs text-muted-foreground">{patient.cpf}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{patient.telefone || 'Nao informado'}</TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">{formatDate(patient.dataEntrada)}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={patient.status} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button variant="ghost" size="sm" asChild className="shrink-0">
+                              <Link href={`/paciente/${patient.id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            {canCheckIn(patient) ? (
+                              <Button variant="outline" size="sm" className="shrink-0" onClick={() => openIntake(patient)}>
+                                <LogIn className="mr-2 h-4 w-4" />
+                                Dar Entrada
+                              </Button>
+                            ) : (
+                              <Button variant="secondary" size="sm" className="shrink-0" disabled>
+                                <ClipboardPlus className="mr-2 h-4 w-4" />
+                                Em Atendimento
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!selectedPatient} onOpenChange={(open) => !open && closeIntake()}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Dar Entrada e Encaminhar para Triagem</DialogTitle>
+            <DialogDescription>
+              Registre a queixa inicial informada na recepcao e encaminhe o paciente para a triagem.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedPatient && (
+            <div className="space-y-5">
+              <div className="grid gap-3 rounded-xl border bg-muted/20 p-4 text-sm md:grid-cols-2">
+                <div>
+                  <p className="text-muted-foreground">Paciente</p>
+                  <p className="font-medium">{selectedPatient.nomeCompleto}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Prontuario</p>
+                  <p className="font-medium">{selectedPatient.prontuario}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">CPF</p>
+                  <p className="font-medium">{selectedPatient.cpf}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Telefone</p>
+                  <p className="font-medium">{selectedPatient.telefone || 'Nao informado'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="queixaPrincipal">Queixa Inicial *</Label>
+                <Input
+                  id="queixaPrincipal"
+                  value={intakeForm.queixaPrincipal}
+                  onChange={(e) => setIntakeForm((prev) => ({ ...prev, queixaPrincipal: e.target.value }))}
+                  placeholder="Ex.: dor no peito, falta de ar, tontura"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="descricaoInicial">Relato Inicial do Paciente</Label>
+                <Textarea
+                  id="descricaoInicial"
+                  value={intakeForm.descricaoInicial}
+                  onChange={(e) => setIntakeForm((prev) => ({ ...prev, descricaoInicial: e.target.value }))}
+                  placeholder="Descreva resumidamente o que o paciente relatou na recepcao."
+                  rows={4}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeIntake}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleCheckIn} disabled={!intakeForm.queixaPrincipal.trim()}>
+              Encaminhar para Triagem
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
