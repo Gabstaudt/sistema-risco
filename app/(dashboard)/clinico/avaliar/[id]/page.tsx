@@ -21,7 +21,7 @@ const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as
 export default function ClinicoAvaliarPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, hasPermission } = useAuth()
+  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { getPatientById, updatePatient, addAuditLog } = useData()
   
   const patientId = params.id as string
@@ -56,15 +56,25 @@ export default function ClinicoAvaliarPage() {
   const vsgcriScore = calculateVSGCRI(vsgcriFactors)
   
   useEffect(() => {
+    if (isAuthLoading) return
+
     if (!user) {
-      router.push('/login')
+      router.replace('/login')
       return
     }
 
     if (!hasPermission('clinical_evaluation')) {
-      router.push('/clinico')
+      router.replace('/clinico')
     }
-  }, [user, hasPermission, router])
+  }, [user, hasPermission, router, isAuthLoading])
+
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    )
+  }
   
   if (!patient) {
     return (

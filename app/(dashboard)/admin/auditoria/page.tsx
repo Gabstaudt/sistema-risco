@@ -77,7 +77,7 @@ const ITEMS_PER_PAGE = 15
 
 export default function AuditoriaPage() {
   const router = useRouter()
-  const { user, hasPermission } = useAuth()
+  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { auditLogs, patients } = useData()
   
   const [search, setSearch] = useState('')
@@ -87,10 +87,20 @@ export default function AuditoriaPage() {
   const [currentPage, setCurrentPage] = useState(1)
   
   useEffect(() => {
+    if (isAuthLoading) return
+
     if (!user || !hasPermission('admin.auditoria')) {
-      router.push('/login')
+      router.replace('/login')
     }
-  }, [user, hasPermission, router])
+  }, [user, hasPermission, router, isAuthLoading])
+
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    )
+  }
   
   const filteredLogs = useMemo(() => {
     return auditLogs

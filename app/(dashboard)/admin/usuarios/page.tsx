@@ -30,14 +30,24 @@ const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
 
 export default function UsuariosPage() {
   const router = useRouter()
-  const { user, hasPermission } = useAuth()
+  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const [search, setSearch] = useState('')
   
   useEffect(() => {
+    if (isAuthLoading) return
+
     if (!user || !hasPermission('admin.usuarios')) {
-      router.push('/login')
+      router.replace('/login')
     }
-  }, [user, hasPermission, router])
+  }, [user, hasPermission, router, isAuthLoading])
+
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    )
+  }
   
   const filteredUsers = users.filter(u => {
     if (!search) return true
