@@ -10,9 +10,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Save, User, Shield, Activity, FileText, Calculator, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Save, User, Shield, Activity, Calculator } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
-import { EXAM_TYPES } from '@/lib/data/exams'
+import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import type { RiskLevel } from '@/lib/types'
 
 const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
@@ -21,7 +21,7 @@ export default function CirurgiaoAvaliarPage() {
   const params = useParams()
   const router = useRouter()
   const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
-  const { getPatientById, updatePatient, addAuditLog } = useData()
+  const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog } = useData()
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
@@ -69,6 +69,17 @@ export default function CirurgiaoAvaliarPage() {
       </div>
     )
   }
+
+  const patientExamRequests = getExamRequestsByPatient(patientId)
+
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back()
+      return
+    }
+
+    router.push('/cirurgiao')
+  }
   
   const handleSave = async (complete: boolean) => {
     setIsSaving(true)
@@ -109,9 +120,6 @@ export default function CirurgiaoAvaliarPage() {
   
   const triageData = patient.triageData
   const clinicalEval = patient.clinicalEvaluation
-  const examResults = patient.examResults || {}
-  const requestedExams = clinicalEval?.requestedExams || []
-  
   const getRecommendationColor = (rec: string) => {
     switch (rec) {
       case 'aprovar': return 'text-emerald-600 bg-emerald-50 border-emerald-200'
@@ -125,7 +133,7 @@ export default function CirurgiaoAvaliarPage() {
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0 flex-1">
@@ -322,54 +330,12 @@ export default function CirurgiaoAvaliarPage() {
         </Card>
       </div>
       
-      {/* Exam Results */}
-      {requestedExams.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              Resultados dos Exames
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {requestedExams.map(examId => {
-                const exam = EXAM_TYPES.find(e => e.id === examId)
-                const result = examResults[examId]
-                return (
-                  <div 
-                    key={examId}
-                    className={`rounded-lg border p-3 ${
-                      result?.status === 'alterado' ? 'border-amber-200 bg-amber-50/50' : ''
-                    }`}
-                  >
-                    <div className="mb-1 flex items-start justify-between gap-2">
-                      <span className="min-w-0 break-words text-sm font-medium">{exam?.name || examId}</span>
-                      {result?.status === 'normal' && (
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                      )}
-                      {result?.status === 'alterado' && (
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                      )}
-                    </div>
-                    {result?.value ? (
-                      <p className="text-sm">
-                        <span className="font-medium">{result.value}</span>
-                        {exam?.unit && <span className="text-muted-foreground"> {exam.unit}</span>}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Pendente</p>
-                    )}
-                    {result?.notes && (
-                      <p className="mt-1 break-words text-xs text-muted-foreground">{result.notes}</p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <PatientExamsHistory
+        examRequests={patientExamRequests}
+        title="Historico Completo de Exames"
+        description="Todos os exames ja executados ou em andamento neste paciente, incluindo leitura do laboratorio."
+        emptyMessage="Este paciente ainda nao possui exames registrados."
+      />
 
       <Card>
         <CardHeader>
