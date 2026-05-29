@@ -10,9 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { 
   Activity, 
-  Heart, 
-  Stethoscope, 
-  Shield,
   Eye,
   EyeOff,
   Loader2,
@@ -103,43 +100,6 @@ export default function LoginPage() {
           <h2 className="text-4xl xl:text-5xl font-bold leading-tight mb-6 text-balance">
             Avaliacao de Risco Cirurgico Inteligente
           </h2>
-          
-          <p className="text-lg text-white/80 mb-12 max-w-md leading-relaxed">
-            Plataforma completa para avaliacao pre-operatoria, calculo de scores de risco e gestao de fluxo hospitalar.
-          </p>
-
-          {/* Features */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <Heart className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-medium">Scores de Risco</p>
-                <p className="text-white/60 text-sm">ASA, RCRI, VSG-CRI integrados</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <Stethoscope className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-medium">Fluxo Completo</p>
-                <p className="text-white/60 text-sm">Recepcao ate liberacao cirurgica</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-medium">Auditoria Completa</p>
-                <p className="text-white/60 text-sm">Rastreabilidade de todas as acoes</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Bottom Decoration */}
