@@ -198,6 +198,46 @@ export interface SurgicalEvaluation {
   avaliadoEm?: string
 }
 
+export interface AdministeredMedication {
+  name: string
+  dose?: string
+  route?: string
+  administeredAt?: string
+  prescribedBy?: string
+  notes?: string
+}
+
+export interface PatientEncounter {
+  id: string
+  entryAt: string
+  dischargeAt?: string
+  unit: string
+  reason: string
+  receptionNotes?: string
+  triage?: {
+    performedBy?: string
+    assignedClinicianName?: string
+    riskClassification?: LabUrgency
+    asaClassification?: ASAClassification
+    vitalSignsSummary?: string
+    notes?: string
+  }
+  clinical?: {
+    physicianName?: string
+    hypothesis?: string
+    conduct?: string
+    notes?: string
+  }
+  surgery?: {
+    surgeonName?: string
+    decision?: string
+    notes?: string
+  }
+  medicationsAdministered?: AdministeredMedication[]
+  examsSummary?: string[]
+  outcome?: string
+}
+
 export interface Patient {
   id: string
   prontuario: string
@@ -259,6 +299,7 @@ export interface Patient {
   labRiskClassification?: LabUrgency
   labRiskNotes?: string
   labNurseObservation?: string
+  visitHistory?: PatientEncounter[]
   
   // Avaliacao cirurgica
   avaliacaoCirurgica?: SurgicalEvaluation

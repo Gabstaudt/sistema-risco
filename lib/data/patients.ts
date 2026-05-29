@@ -1,4 +1,4 @@
-import { Patient, ExamRequest, ExamResult } from '../types'
+import { Patient, PatientEncounter, ExamRequest, ExamResult } from '../types'
 
 // Funcao para calcular idade
 function calcularIdade(dataNascimento: string): number {
@@ -10,6 +10,76 @@ function calcularIdade(dataNascimento: string): number {
     idade--
   }
   return idade
+}
+
+function createMedication(
+  name: string,
+  dose: string,
+  route: string,
+  hoursAgo: number,
+  prescribedBy: string,
+  notes?: string,
+) {
+  return {
+    name,
+    dose,
+    route,
+    administeredAt: new Date(Date.now() - hoursAgo * 3600000).toISOString(),
+    prescribedBy,
+    notes,
+  }
+}
+
+function summarizeVitalSigns(patient: Patient) {
+  if (!patient.sinaisVitais) return 'Sem sinais vitais registrados'
+
+  return [
+    patient.sinaisVitais.pressaoSistolica && patient.sinaisVitais.pressaoDiastolica
+      ? `PA ${patient.sinaisVitais.pressaoSistolica}/${patient.sinaisVitais.pressaoDiastolica} mmHg`
+      : undefined,
+    patient.sinaisVitais.frequenciaCardiaca ? `FC ${patient.sinaisVitais.frequenciaCardiaca} bpm` : undefined,
+    patient.sinaisVitais.saturacao ? `SpO2 ${patient.sinaisVitais.saturacao}%` : undefined,
+    patient.sinaisVitais.temperatura ? `Temp ${patient.sinaisVitais.temperatura} C` : undefined,
+  ]
+    .filter(Boolean)
+    .join(' | ')
+}
+
+function buildCurrentEncounter(patient: Patient): PatientEncounter {
+  return {
+    id: `${patient.id}-visit-current`,
+    entryAt: patient.dataEntrada,
+    unit: patient.unidade,
+    reason: patient.queixaPrincipal || patient.scheduledSurgery || 'Admissao hospitalar',
+    receptionNotes: patient.descricaoInicial,
+    triage: patient.sinaisVitais || patient.observacoesTriagem || patient.triageRiskClassification
+      ? {
+          performedBy: patient.sinaisVitais?.registradoPor,
+          assignedClinicianName: patient.triageAssignedClinicianName,
+          riskClassification: patient.triageRiskClassification,
+          vitalSignsSummary: summarizeVitalSigns(patient),
+          notes: patient.observacoesTriagem,
+        }
+      : undefined,
+    clinical: patient.avaliacaoClinica
+      ? {
+          physicianName: patient.avaliacaoClinica.avaliadoPor,
+          hypothesis: patient.avaliacaoClinica.hipoteseDiagnostica,
+          conduct: patient.avaliacaoClinica.observacoesMedicas,
+          notes: patient.avaliacaoClinica.historicoClinico,
+        }
+      : undefined,
+    surgery: patient.avaliacaoCirurgica
+      ? {
+          surgeonName: patient.avaliacaoCirurgica.avaliadoPor,
+          decision: patient.avaliacaoCirurgica.conduta,
+          notes: patient.avaliacaoCirurgica.observacoesCirurgiao,
+        }
+      : undefined,
+    medicationsAdministered: [],
+    examsSummary: patient.examesSolicitados,
+    outcome: patient.status,
+  }
 }
 
 const basePatients: Patient[] = [
@@ -33,7 +103,7 @@ const basePatients: Patient[] = [
     dataEntrada: new Date().toISOString(),
     status: 'aguardando_triagem',
     prioridade: 'normal',
-    examesSolicitados: [],
+    examesSolicitados: ['exam-3'],
     cadastradoPor: 'user-1',
     cadastradoEm: new Date().toISOString(),
     ultimaAtualizacao: new Date().toISOString(),
@@ -165,10 +235,13 @@ const basePatients: Patient[] = [
     contatoEmergencia: '(11) 97777-5555',
     unidade: 'Hospital Central',
     dataEntrada: new Date(Date.now() - 6 * 3600000).toISOString(),
-    status: 'exames_solicitados',
+    status: 'aguardando_resultado',
     prioridade: 'alta',
     queixaPrincipal: 'Colecistite cronica calculosa',
     descricaoInicial: 'Paciente com historico de colica biliar recorrente',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'urgente',
     sinaisVitais: {
       pressaoSistolica: 150,
       pressaoDiastolica: 95,
@@ -183,6 +256,7 @@ const basePatients: Patient[] = [
       registradoPor: 'user-2',
       registradoEm: new Date(Date.now() - 5.5 * 3600000).toISOString(),
     },
+    observacoesTriagem: 'Dor em hipocondrio direito ha 12 horas, hipertensao e diabetes em uso regular de medicacoes. Encaminhado para avaliacao clinica com prioridade amarela.',
     avaliacaoClinica: {
       id: 'eval-1',
       patientId: 'patient-5',
@@ -210,6 +284,33 @@ const basePatients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 5 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-2', 'exam-3', 'exam-4', 'exam-5'],
+    visitHistory: [
+      {
+        id: 'patient-5-visit-1',
+        entryAt: new Date(Date.now() - 35 * 24 * 3600000).toISOString(),
+        dischargeAt: new Date(Date.now() - 35 * 24 * 3600000 + 8 * 3600000).toISOString(),
+        unit: 'Hospital Central',
+        reason: 'Crise de colica biliar',
+        receptionNotes: 'Paciente liberado apos analgesia e orientacao para seguir com avaliacao eletiva.',
+        triage: {
+          performedBy: 'user-2',
+          assignedClinicianName: 'Dr. Carlos Mendes',
+          riskClassification: 'pouco_urgente',
+          vitalSignsSummary: 'PA 148/92 mmHg | FC 84 bpm | SpO2 97% | Temp 36.6 C',
+          notes: 'Sem sinais de sepse. Dor controlada apos medicacao.',
+        },
+        clinical: {
+          physicianName: 'user-3',
+          hypothesis: 'Colelitíase sintomatica',
+          conduct: 'Solicitada ultrassonografia e orientado retorno para preparo pre-operatorio.',
+        },
+        medicationsAdministered: [
+          createMedication('Cetoprofeno', '100 mg', 'EV', 840, 'user-3', 'Boa resposta analgésica'),
+          createMedication('Ondansetrona', '4 mg', 'EV', 839.5, 'user-3'),
+        ],
+        outcome: 'Alta com seguimento ambulatorial',
+      },
+    ],
     labRiskClassification: 'muito_urgente',
     labRiskNotes: 'Paciente com distorcoes metabolicas laboratoriais que exigem revisao clinica antes de seguir para liberacao.',
     labNurseObservation: 'Equipe do laboratorio registrou necessidade de contato com o clinico responsavel.',
@@ -235,6 +336,9 @@ const basePatients: Patient[] = [
     prioridade: 'normal',
     queixaPrincipal: 'Nodulo tireoidiano para investigacao',
     descricaoInicial: 'Paciente assintomatica, nodulo descoberto em exame de rotina',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'pouco_urgente',
     sinaisVitais: {
       pressaoSistolica: 125,
       pressaoDiastolica: 82,
@@ -249,6 +353,7 @@ const basePatients: Patient[] = [
       registradoPor: 'user-2',
       registradoEm: new Date(Date.now() - 7.5 * 3600000).toISOString(),
     },
+    observacoesTriagem: 'Paciente estavel, sem desconforto respiratorio ou sinais de urgencia. Encaminhada para preparo pre-operatorio habitual.',
     avaliacaoClinica: {
       id: 'eval-2',
       patientId: 'patient-6',
@@ -276,6 +381,28 @@ const basePatients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 7 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-3', 'exam-4', 'exam-5', 'exam-6'],
+    visitHistory: [
+      {
+        id: 'patient-6-visit-1',
+        entryAt: new Date(Date.now() - 62 * 24 * 3600000).toISOString(),
+        dischargeAt: new Date(Date.now() - 62 * 24 * 3600000 + 5 * 3600000).toISOString(),
+        unit: 'Hospital Central',
+        reason: 'Consulta para investigação de nodulo tireoidiano',
+        receptionNotes: 'Atendimento de retorno apos PAAF externa.',
+        triage: {
+          performedBy: 'user-2',
+          assignedClinicianName: 'Dr. Carlos Mendes',
+          riskClassification: 'nao_urgente',
+          vitalSignsSummary: 'PA 122/80 mmHg | FC 72 bpm | SpO2 99% | Temp 36.5 C',
+        },
+        clinical: {
+          physicianName: 'user-3',
+          hypothesis: 'Nódulo tireoidiano com necessidade de preparo cirurgico',
+          conduct: 'Programado retorno com exames laboratoriais e imagem torácica.',
+        },
+        outcome: 'Retorno ambulatorial agendado',
+      },
+    ],
     labRiskClassification: 'pouco_urgente',
     labRiskNotes: 'Achados laboratoriais sem impacto imediato sobre a estabilidade clinica do caso.',
     labNurseObservation: 'Liberacao realizada sem intercorrencias de bancada.',
@@ -304,6 +431,9 @@ const basePatients: Patient[] = [
     prioridade: 'alta',
     queixaPrincipal: 'Hernia inguinal encarcerada recorrente',
     descricaoInicial: 'Paciente com hernia inguinal direita, episodio previo de encarceramento',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'muito_urgente',
     sinaisVitais: {
       pressaoSistolica: 145,
       pressaoDiastolica: 88,
@@ -318,6 +448,7 @@ const basePatients: Patient[] = [
       registradoPor: 'user-2',
       registradoEm: new Date(Date.now() - 23 * 3600000).toISOString(),
     },
+    observacoesTriagem: 'Paciente com dor moderada e antecedente cardiovascular importante. Prioridade laranja para avaliacao clinica e liberação de exames.',
     avaliacaoClinica: {
       id: 'eval-3',
       patientId: 'patient-7',
@@ -344,7 +475,36 @@ const basePatients: Patient[] = [
       avaliadoPor: 'user-3',
       avaliadoEm: new Date(Date.now() - 22 * 3600000).toISOString(),
     },
+    clinicalRequestsSurgicalRisk: true,
+    clinicalAssignedSurgeonId: 'user-5',
+    clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
     examesSolicitados: ['exam-1', 'exam-2', 'exam-3', 'exam-4', 'exam-5', 'exam-6', 'exam-7', 'exam-9', 'exam-10'],
+    visitHistory: [
+      {
+        id: 'patient-7-visit-1',
+        entryAt: new Date(Date.now() - 180 * 24 * 3600000).toISOString(),
+        dischargeAt: new Date(Date.now() - 179 * 24 * 3600000 + 6 * 3600000).toISOString(),
+        unit: 'Hospital Central',
+        reason: 'Hernia inguinal dolorosa com reducao espontanea',
+        receptionNotes: 'Paciente orientado a procurar cirurgia geral para correção eletiva.',
+        triage: {
+          performedBy: 'user-2',
+          assignedClinicianName: 'Dr. Carlos Mendes',
+          riskClassification: 'urgente',
+          vitalSignsSummary: 'PA 150/90 mmHg | FC 86 bpm | SpO2 95% | Temp 36.7 C',
+          notes: 'Dor controlada apos avaliação inicial.',
+        },
+        clinical: {
+          physicianName: 'user-3',
+          hypothesis: 'Recidiva de hernia inguinal',
+          conduct: 'Solicitado seguimento ambulatorial e cessação do tabagismo.',
+        },
+        medicationsAdministered: [
+          createMedication('Dipirona', '1 g', 'EV', 4325, 'user-3'),
+        ],
+        outcome: 'Alta com orientação e retorno agendado',
+      },
+    ],
     labRiskClassification: 'emergente',
     labRiskNotes: 'Conjunto de achados laboratoriais e cardiologicos elevando o risco assistencial global do paciente.',
     labNurseObservation: 'Comunicacao imediata feita para clinica e cirurgia apos validacao final.',
@@ -370,6 +530,9 @@ const basePatients: Patient[] = [
     prioridade: 'normal',
     queixaPrincipal: 'Mioma uterino sintomatico',
     descricaoInicial: 'Sangramento uterino anormal, anemia',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'urgente',
     sinaisVitais: {
       pressaoSistolica: 118,
       pressaoDiastolica: 75,
@@ -384,6 +547,7 @@ const basePatients: Patient[] = [
       registradoPor: 'user-2',
       registradoEm: new Date(Date.now() - 47 * 3600000).toISOString(),
     },
+    observacoesTriagem: 'Queixa ginecologica com repercussao hematimétrica. Encaminhada para avaliação clínica e posterior parecer cirúrgico.',
     avaliacaoClinica: {
       id: 'eval-4',
       patientId: 'patient-8',
@@ -410,7 +574,35 @@ const basePatients: Patient[] = [
       avaliadoPor: 'user-3',
       avaliadoEm: new Date(Date.now() - 46 * 3600000).toISOString(),
     },
+    clinicalRequestsSurgicalRisk: true,
+    clinicalAssignedSurgeonId: 'user-5',
+    clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
     examesSolicitados: ['exam-1', 'exam-3', 'exam-4', 'exam-5', 'exam-6'],
+    visitHistory: [
+      {
+        id: 'patient-8-visit-1',
+        entryAt: new Date(Date.now() - 140 * 24 * 3600000).toISOString(),
+        dischargeAt: new Date(Date.now() - 140 * 24 * 3600000 + 4 * 3600000).toISOString(),
+        unit: 'Hospital Central',
+        reason: 'Sangramento uterino e tontura',
+        triage: {
+          performedBy: 'user-2',
+          riskClassification: 'pouco_urgente',
+          assignedClinicianName: 'Dr. Carlos Mendes',
+          vitalSignsSummary: 'PA 116/74 mmHg | FC 92 bpm | SpO2 98% | Temp 36.5 C',
+        },
+        clinical: {
+          physicianName: 'user-3',
+          hypothesis: 'Miomatose com sangramento crônico',
+          conduct: 'Prescrito ferro oral e solicitado seguimento ginecológico.',
+        },
+        medicationsAdministered: [
+          createMedication('Soro fisiologico', '500 mL', 'EV', 3360, 'user-3'),
+          createMedication('Acido tranexamico', '1 g', 'EV', 3359.5, 'user-3'),
+        ],
+        outcome: 'Alta com retorno para preparo cirurgico',
+      },
+    ],
     labRiskClassification: 'urgente',
     labRiskNotes: 'Anemia e achados pre-operatorios merecem ajuste antes da manutencao do cronograma cirurgico.',
     labNurseObservation: 'Orientada revisao da conduta clinica antes da confirmacao definitiva do preparo.',
@@ -436,6 +628,9 @@ const basePatients: Patient[] = [
     prioridade: 'baixa',
     queixaPrincipal: 'Apendicectomia eletiva',
     descricaoInicial: 'Apendicite cronica, episodios recorrentes de dor em FID',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'nao_urgente',
     sinaisVitais: {
       pressaoSistolica: 110,
       pressaoDiastolica: 70,
@@ -450,6 +645,7 @@ const basePatients: Patient[] = [
       registradoPor: 'user-2',
       registradoEm: new Date(Date.now() - 71 * 3600000).toISOString(),
     },
+    observacoesTriagem: 'Paciente jovem e estável, mantida em fluxo eletivo.',
     avaliacaoClinica: {
       id: 'eval-5',
       patientId: 'patient-9',
@@ -476,6 +672,9 @@ const basePatients: Patient[] = [
       avaliadoPor: 'user-3',
       avaliadoEm: new Date(Date.now() - 70 * 3600000).toISOString(),
     },
+    clinicalRequestsSurgicalRisk: true,
+    clinicalAssignedSurgeonId: 'user-5',
+    clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
     avaliacaoCirurgica: {
       id: 'surg-1',
       patientId: 'patient-9',
@@ -500,6 +699,30 @@ const basePatients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 48 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-4', 'exam-5'],
+    visitHistory: [
+      {
+        id: 'patient-9-visit-1',
+        entryAt: new Date(Date.now() - 410 * 24 * 3600000).toISOString(),
+        dischargeAt: new Date(Date.now() - 410 * 24 * 3600000 + 7 * 3600000).toISOString(),
+        unit: 'Hospital Central',
+        reason: 'Dor em fossa iliaca direita em investigação',
+        triage: {
+          performedBy: 'user-2',
+          assignedClinicianName: 'Dr. Carlos Mendes',
+          riskClassification: 'pouco_urgente',
+          vitalSignsSummary: 'PA 112/72 mmHg | FC 74 bpm | SpO2 99% | Temp 36.5 C',
+        },
+        clinical: {
+          physicianName: 'user-3',
+          hypothesis: 'Apendicopatia crônica',
+          conduct: 'Solicitada tomografia e seguimento cirúrgico eletivo.',
+        },
+        medicationsAdministered: [
+          createMedication('Paracetamol', '750 mg', 'VO', 9845, 'user-3'),
+        ],
+        outcome: 'Alta com investigação ambulatorial',
+      },
+    ],
     cadastradoPor: 'user-1',
     cadastradoEm: new Date(Date.now() - 72 * 3600000).toISOString(),
     ultimaAtualizacao: new Date(Date.now() - 48 * 3600000).toISOString(),
@@ -525,6 +748,9 @@ const basePatients: Patient[] = [
     prioridade: 'urgente',
     queixaPrincipal: 'Obstrucao intestinal por tumor',
     descricaoInicial: 'Paciente com distensao abdominal, vomitos, ausencia de evacuacao ha 5 dias',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'emergente',
     sinaisVitais: {
       pressaoSistolica: 160,
       pressaoDiastolica: 100,
@@ -539,6 +765,7 @@ const basePatients: Patient[] = [
       registradoPor: 'user-2',
       registradoEm: new Date(Date.now() - 95 * 3600000).toISOString(),
     },
+    observacoesTriagem: 'Paciente com dor intensa, sinais de desidratação e múltiplas comorbidades. Encaminhado imediatamente para avaliação clínica.',
     avaliacaoClinica: {
       id: 'eval-6',
       patientId: 'patient-10',
@@ -565,6 +792,9 @@ const basePatients: Patient[] = [
       avaliadoPor: 'user-3',
       avaliadoEm: new Date(Date.now() - 94 * 3600000).toISOString(),
     },
+    clinicalRequestsSurgicalRisk: true,
+    clinicalAssignedSurgeonId: 'user-5',
+    clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
     avaliacaoCirurgica: {
       id: 'surg-2',
       patientId: 'patient-10',
@@ -591,6 +821,32 @@ const basePatients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 72 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-2', 'exam-3', 'exam-4', 'exam-5', 'exam-6', 'exam-7', 'exam-9', 'exam-10', 'exam-11', 'exam-12'],
+    visitHistory: [
+      {
+        id: 'patient-10-visit-1',
+        entryAt: new Date(Date.now() - 30 * 24 * 3600000).toISOString(),
+        dischargeAt: new Date(Date.now() - 29 * 24 * 3600000 + 10 * 3600000).toISOString(),
+        unit: 'Hospital Central',
+        reason: 'Dor abdominal e constipacao',
+        triage: {
+          performedBy: 'user-2',
+          assignedClinicianName: 'Dr. Carlos Mendes',
+          riskClassification: 'urgente',
+          vitalSignsSummary: 'PA 154/96 mmHg | FC 92 bpm | SpO2 94% | Temp 36.8 C',
+          notes: 'Melhora parcial após hidratação.',
+        },
+        clinical: {
+          physicianName: 'user-3',
+          hypothesis: 'Suboclusao intestinal em investigação',
+          conduct: 'Internação breve, tomografia e retorno programado para definição terapêutica.',
+        },
+        medicationsAdministered: [
+          createMedication('Soro fisiologico', '1000 mL', 'EV', 730, 'user-3'),
+          createMedication('Metoclopramida', '10 mg', 'EV', 729.5, 'user-3'),
+        ],
+        outcome: 'Retorno programado com exames complementares',
+      },
+    ],
     cadastradoPor: 'user-1',
     cadastradoEm: new Date(Date.now() - 96 * 3600000).toISOString(),
     ultimaAtualizacao: new Date(Date.now() - 72 * 3600000).toISOString(),
@@ -615,6 +871,9 @@ const basePatients: Patient[] = [
     prioridade: 'alta',
     queixaPrincipal: 'Hernia incisional volumosa',
     descricaoInicial: 'Hernia incisional pos laparotomia previa',
+    triageAssignedClinicianId: 'user-3',
+    triageAssignedClinicianName: 'Dr. Carlos Mendes',
+    triageRiskClassification: 'urgente',
     sinaisVitais: {
       pressaoSistolica: 170,
       pressaoDiastolica: 105,
@@ -629,6 +888,7 @@ const basePatients: Patient[] = [
       registradoPor: 'user-2',
       registradoEm: new Date(Date.now() - 119 * 3600000).toISOString(),
     },
+    observacoesTriagem: 'Paciente dispneico aos mínimos esforços e com saturação basal reduzida. Fluxo mantido para avaliação clínica e cardiológica.',
     avaliacaoClinica: {
       id: 'eval-7',
       patientId: 'patient-11',
@@ -655,6 +915,9 @@ const basePatients: Patient[] = [
       avaliadoPor: 'user-3',
       avaliadoEm: new Date(Date.now() - 118 * 3600000).toISOString(),
     },
+    clinicalRequestsSurgicalRisk: true,
+    clinicalAssignedSurgeonId: 'user-5',
+    clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
     avaliacaoCirurgica: {
       id: 'surg-3',
       patientId: 'patient-11',
@@ -681,6 +944,31 @@ const basePatients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 96 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-2', 'exam-3', 'exam-4', 'exam-5', 'exam-6', 'exam-7', 'exam-8', 'exam-9', 'exam-10'],
+    visitHistory: [
+      {
+        id: 'patient-11-visit-1',
+        entryAt: new Date(Date.now() - 210 * 24 * 3600000).toISOString(),
+        dischargeAt: new Date(Date.now() - 209 * 24 * 3600000 + 9 * 3600000).toISOString(),
+        unit: 'Hospital Central',
+        reason: 'Piora de dispneia e aumento do volume herniario',
+        triage: {
+          performedBy: 'user-2',
+          assignedClinicianName: 'Dr. Carlos Mendes',
+          riskClassification: 'urgente',
+          vitalSignsSummary: 'PA 165/100 mmHg | FC 94 bpm | SpO2 90% | Temp 36.7 C',
+        },
+        clinical: {
+          physicianName: 'user-3',
+          hypothesis: 'Descompensação clínica em paciente de alto risco',
+          conduct: 'Ajuste medicamentoso e suspensão temporária do preparo cirúrgico.',
+        },
+        medicationsAdministered: [
+          createMedication('Furosemida', '40 mg', 'EV', 5040, 'user-3'),
+          createMedication('Oxigenio suplementar', '2 L/min', 'cateter nasal', 5039.5, 'user-3'),
+        ],
+        outcome: 'Alta após compensação parcial com retorno para reavaliação',
+      },
+    ],
     cadastradoPor: 'user-1',
     cadastradoEm: new Date(Date.now() - 120 * 3600000).toISOString(),
     ultimaAtualizacao: new Date(Date.now() - 96 * 3600000).toISOString(),
@@ -780,6 +1068,7 @@ const basePatients: Patient[] = [
       registradoPor: 'user-2',
       registradoEm: new Date(Date.now() - 6.5 * 3600000).toISOString(),
     },
+    observacoesTriagem: 'Paciente em retorno assistencial para checagem de resultados e definição de conduta pré-operatória.',
     avaliacaoClinica: {
       id: 'eval-8',
       patientId: 'patient-13',
@@ -807,6 +1096,31 @@ const basePatients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 6 * 3600000).toISOString(),
     },
     examesSolicitados: ['exam-1', 'exam-4', 'exam-5'],
+    visitHistory: [
+      {
+        id: 'patient-13-visit-1',
+        entryAt: new Date(Date.now() - 18 * 24 * 3600000).toISOString(),
+        dischargeAt: new Date(Date.now() - 18 * 24 * 3600000 + 7 * 3600000).toISOString(),
+        unit: 'Hospital Central',
+        reason: 'Primeira avaliação para preparo cirúrgico ginecológico',
+        triage: {
+          performedBy: 'user-2',
+          assignedClinicianName: 'Dr. Carlos Mendes',
+          riskClassification: 'pouco_urgente',
+          vitalSignsSummary: 'PA 128/82 mmHg | FC 82 bpm | SpO2 98% | Temp 36.5 C',
+        },
+        clinical: {
+          physicianName: 'user-3',
+          hypothesis: 'Miomatose uterina com anemia crônica',
+          conduct: 'Solicitados hemograma, ECG e coagulograma antes da liberação.',
+        },
+        medicationsAdministered: [
+          createMedication('Sulfato ferroso', '40 mg', 'VO', 430, 'user-3', 'Mantido uso diário por 30 dias'),
+        ],
+        examsSummary: ['Hemograma Completo', 'Coagulograma', 'Eletrocardiograma (ECG)'],
+        outcome: 'Retorno agendado com exames concluídos',
+      },
+    ],
     cadastradoPor: 'user-1',
     cadastradoEm: new Date(Date.now() - 8 * 3600000).toISOString(),
     ultimaAtualizacao: new Date(Date.now() - 2 * 3600000).toISOString(),
@@ -1167,10 +1481,13 @@ function buildExamResults(patientId: string) {
   }, {})
 }
 
-function hydratePatient(patient: Patient): Patient {
+export function hydratePatient(patient: Patient): Patient {
   const triageComorbidities = mapComorbidities(patient)
   const requestedExams = patient.examesSolicitados || []
   const hasExamResults = examRequests.some((exam) => exam.patientId === patient.id)
+  const visitHistory = [...(patient.visitHistory || []), buildCurrentEncounter(patient)].sort(
+    (a, b) => new Date(b.entryAt).getTime() - new Date(a.entryAt).getTime(),
+  )
 
   return {
     ...patient,
@@ -1241,6 +1558,7 @@ function hydratePatient(patient: Patient): Patient {
         }
       : undefined,
     examResults: hasExamResults ? buildExamResults(patient.id) : undefined,
+    visitHistory,
     surgicalRiskAssessment: patient.avaliacaoCirurgica
       ? {
           finalRiskLevel: patient.avaliacaoCirurgica.riscoFinal,

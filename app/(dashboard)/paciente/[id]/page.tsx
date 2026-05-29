@@ -4,9 +4,11 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data-context'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { ArrowLeft, User, Activity, Calculator, Shield, Clock } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
@@ -34,6 +36,7 @@ export default function PatientDetailsPage() {
   const clinicalEval = patient.clinicalEvaluation
   const surgicalAssessment = patient.surgicalRiskAssessment
   const patientExamRequests = getExamRequestsByPatient(patientId)
+  const visitHistory = patient.visitHistory || []
   
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR', {
@@ -60,7 +63,11 @@ export default function PatientDetailsPage() {
     return labels[action] || action
   }
   
-  const getUserName = (userId: string) => {
+  const getUserName = (userId?: string) => {
+    if (!userId) {
+      return 'Nao informado'
+    }
+
     const foundUser = users.find(u => u.id === userId)
     return foundUser?.name || 'Usuario desconhecido'
   }
@@ -90,9 +97,9 @@ export default function PatientDetailsPage() {
                 <User className="h-7 w-7 text-primary" />
               </div>
               <div className="min-w-0">
-                <CardTitle className="break-words text-xl sm:text-2xl">{patient.name}</CardTitle>
+                <CardTitle className="break-words text-xl sm:text-2xl">{patient.nomeCompleto}</CardTitle>
                 <CardDescription className="mt-1 break-words text-sm sm:text-base">
-                  {patient.age} anos | CPF: {patient.cpf}
+                  {patient.idade} anos | CPF: {patient.cpf}
                 </CardDescription>
               </div>
             </div>
@@ -132,7 +139,7 @@ export default function PatientDetailsPage() {
       </Card>
       
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-3 lg:grid-cols-5">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-3 lg:grid-cols-6">
           <TabsTrigger value="summary" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Resumo
           </TabsTrigger>
@@ -144,6 +151,9 @@ export default function PatientDetailsPage() {
           </TabsTrigger>
           <TabsTrigger value="exams" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Exames
+          </TabsTrigger>
+          <TabsTrigger value="visits" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Entradas
           </TabsTrigger>
           <TabsTrigger value="audit" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Historico
@@ -440,6 +450,134 @@ export default function PatientDetailsPage() {
             description="Historico completo de exames deste prontuario, com resultados, prioridade e leitura do laboratorio."
             emptyMessage="Nenhum exame solicitado para este paciente."
           />
+        </TabsContent>
+
+        <TabsContent value="visits">
+          <Card>
+            <CardHeader>
+              <CardTitle>Entradas no Hospital</CardTitle>
+              <CardDescription>
+                {visitHistory.length} registro(s) de passagem assistencial. Abra uma data para ver triagem, atendimento, medicacoes e desfecho.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {visitHistory.length === 0 ? (
+                <div className="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+                  Nenhuma entrada anterior registrada.
+                </div>
+              ) : (
+                <Accordion type="single" collapsible className="w-full rounded-xl border px-4">
+                  {visitHistory.map((visit) => (
+                    <AccordionItem key={visit.id} value={visit.id}>
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex min-w-0 flex-1 flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="font-medium">{new Date(visit.entryAt).toLocaleDateString('pt-BR')}</p>
+                            <p className="text-sm text-muted-foreground">{visit.reason}</p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">{visit.unit}</Badge>
+                            {visit.outcome && <Badge variant="secondary">{visit.outcome}</Badge>}
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground">Entrada</p>
+                            <p className="text-sm">{formatDate(visit.entryAt)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground">Alta / Encerramento</p>
+                            <p className="text-sm">{visit.dischargeAt ? formatDate(visit.dischargeAt) : 'Em acompanhamento'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground">Recepcao</p>
+                            <p className="text-sm">{visit.receptionNotes || 'Sem observacoes adicionais.'}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 xl:grid-cols-3">
+                          <div className="rounded-lg border p-4">
+                            <p className="mb-2 font-medium">Triagem</p>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              <p>Responsavel: {getUserName(visit.triage?.performedBy || '')}</p>
+                              <p>Clinico direcionado: {visit.triage?.assignedClinicianName || 'Nao definido'}</p>
+                              <p>Risco: {visit.triage?.riskClassification || 'Nao classificado'}</p>
+                              <p>ASA: {visit.triage?.asaClassification || 'Nao informado'}</p>
+                              <p>{visit.triage?.vitalSignsSummary || 'Sem sinais vitais consolidados.'}</p>
+                              <p>{visit.triage?.notes || 'Sem observacoes de triagem.'}</p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg border p-4">
+                            <p className="mb-2 font-medium">Atendimento Medico</p>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              <p>Clinico: {visit.clinical?.physicianName ? getUserName(visit.clinical.physicianName) : 'Nao informado'}</p>
+                              <p>Hipotese: {visit.clinical?.hypothesis || 'Nao registrada'}</p>
+                              <p>Conduta: {visit.clinical?.conduct || 'Nao registrada'}</p>
+                              <p>{visit.clinical?.notes || 'Sem observacoes clinicas adicionais.'}</p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg border p-4">
+                            <p className="mb-2 font-medium">Cirurgia / Desfecho</p>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              <p>Cirurgiao: {visit.surgery?.surgeonName ? getUserName(visit.surgery.surgeonName) : 'Nao aplicavel'}</p>
+                              <p>Decisao: {visit.surgery?.decision || 'Sem parecer cirurgico nesta entrada.'}</p>
+                              <p>{visit.surgery?.notes || visit.outcome || 'Sem observacoes cirurgicas.'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 xl:grid-cols-2">
+                          <div className="rounded-lg border p-4">
+                            <p className="mb-2 font-medium">Medicacoes e Intervencoes</p>
+                            {visit.medicationsAdministered && visit.medicationsAdministered.length > 0 ? (
+                              <div className="space-y-3">
+                                {visit.medicationsAdministered.map((medication, index) => (
+                                  <div key={`${visit.id}-med-${index}`} className="rounded-md border bg-muted/30 p-3 text-sm">
+                                    <p className="font-medium">{medication.name}</p>
+                                    <p className="text-muted-foreground">
+                                      {medication.dose || 'Dose nao informada'} {medication.route ? `| ${medication.route}` : ''}
+                                    </p>
+                                    <p className="text-muted-foreground">
+                                      {medication.administeredAt ? formatDate(medication.administeredAt) : 'Horario nao informado'}
+                                    </p>
+                                    <p className="text-muted-foreground">
+                                      Prescrito por: {medication.prescribedBy ? getUserName(medication.prescribedBy) : 'Nao informado'}
+                                    </p>
+                                    {medication.notes && <p className="text-muted-foreground">{medication.notes}</p>}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">Nenhuma medicacao registrada nesta passagem.</p>
+                            )}
+                          </div>
+
+                          <div className="rounded-lg border p-4">
+                            <p className="mb-2 font-medium">Exames e Encaminhamentos</p>
+                            {visit.examsSummary && visit.examsSummary.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {visit.examsSummary.map((exam, index) => (
+                                  <Badge key={`${visit.id}-exam-${index}`} variant="outline">
+                                    {exam}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">Nenhum exame destacado nesta entrada.</p>
+                            )}
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
         
         {/* Audit Tab */}

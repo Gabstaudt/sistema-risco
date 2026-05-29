@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { Patient, PatientStatus, Priority, VitalSigns, ClinicalEvaluation, SurgicalEvaluation, AuditLog, AuditAction, ExamRequest, ExamType, ExamStatus } from './types'
-import { patients as initialPatients, examRequests as initialExamRequests } from './data/patients'
+import { patients as initialPatients, examRequests as initialExamRequests, hydratePatient } from './data/patients'
 import { examTypes as initialExamTypes } from './data/exams'
 import { auditLogs as initialAuditLogs } from './data/audit'
 import { useAuth } from './auth'
@@ -62,6 +62,9 @@ const EXAM_TYPES_KEY = 'hospital-exam-types'
 const EXAM_REQUESTS_KEY = 'hospital-exam-requests'
 const AUDIT_KEY = 'hospital-audit'
 
+const normalizePatient = (patient: Patient) => hydratePatient(patient)
+const normalizePatients = (items: Patient[]) => items.map(normalizePatient)
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [patients, setPatients] = useState<Patient[]>([])
@@ -77,7 +80,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const savedExamRequests = localStorage.getItem(EXAM_REQUESTS_KEY)
     const savedAudit = localStorage.getItem(AUDIT_KEY)
 
-    setPatients(savedPatients ? JSON.parse(savedPatients) : initialPatients)
+    setPatients(savedPatients ? normalizePatients(JSON.parse(savedPatients)) : initialPatients)
     setExamTypes(savedExamTypes ? JSON.parse(savedExamTypes) : initialExamTypes)
     setExamRequests(savedExamRequests ? JSON.parse(savedExamRequests) : initialExamRequests)
     setAuditLogs(savedAudit ? JSON.parse(savedAudit) : initialAuditLogs)
@@ -141,7 +144,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [patients])
 
   const createPatient = useCallback((patientData: Omit<Patient, 'id' | 'prontuario' | 'cadastradoEm' | 'ultimaAtualizacao' | 'ultimoAtualizadoPor'>) => {
-    const newPatient: Patient = {
+    const newPatient: Patient = normalizePatient({
       ...patientData,
       id: generateId('patient'),
       prontuario: `PRONT-${new Date().getFullYear()}-${String(patients.length + 1).padStart(3, '0')}`,
@@ -151,7 +154,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ultimaAtualizacao: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ultimoAtualizadoPor: user?.id || '',
-    }
+    })
     
     setPatients(prev => [...prev, newPatient])
     
@@ -167,7 +170,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updatePatient = useCallback((id: string, updates: Partial<Patient>) => {
     setPatients(prev => prev.map(p => {
       if (p.id === id) {
-        return {
+        return normalizePatient({
           ...p,
           ...updates,
           name: updates.nomeCompleto ?? p.name ?? p.nomeCompleto,
@@ -175,7 +178,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ultimaAtualizacao: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           ultimoAtualizadoPor: user?.id || '',
-        }
+        })
       }
       return p
     }))
