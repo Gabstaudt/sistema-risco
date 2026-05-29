@@ -16,6 +16,8 @@ import { Toaster } from '@/components/ui/toaster'
 import { Loader2, Save, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
+const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
+
 export default function CadastroPage() {
   const router = useRouter()
   const { user } = useAuth()
@@ -28,6 +30,8 @@ export default function CadastroPage() {
     dataNascimento: '',
     sexo: '' as 'M' | 'F' | 'O' | '',
     cpf: '',
+    bloodType: '',
+    allergies: '',
     cartaoSus: '',
     telefone: '',
     endereco: '',
@@ -72,6 +76,11 @@ export default function CadastroPage() {
 
   const dashboardBaseUrl = user?.role === 'triagem' ? '/triagem' : '/recepcao'
   const patientsListUrl = `${dashboardBaseUrl}/pacientes`
+  const parseAllergies = (value: string) =>
+    value
+      .split(/,|\n/)
+      .map((item) => item.trim())
+      .filter(Boolean)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -137,6 +146,8 @@ export default function CadastroPage() {
         ...formData,
         nomeCompleto: normalizedName,
         cpf: formatCpf(formData.cpf),
+        bloodType: formData.bloodType || undefined,
+        allergies: parseAllergies(formData.allergies),
         telefone: formatPhone(formData.telefone),
         contatoEmergencia: formatPhone(formData.contatoEmergencia),
         cartaoSus: formData.cartaoSus.trim(),
@@ -267,6 +278,26 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="bloodType">Tipo Sanguineo</Label>
+                    <Select
+                      value={formData.bloodType}
+                      onValueChange={(value) => setFormData({ ...formData, bloodType: value })}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger id="bloodType">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BLOOD_TYPE_OPTIONS.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="telefone">Telefone *</Label>
                     <Input
                       id="telefone"
@@ -296,6 +327,18 @@ export default function CadastroPage() {
                       value={formData.endereco}
                       onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
                       placeholder="Rua, numero, bairro, cidade/UF"
+                      rows={2}
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 space-y-2">
+                    <Label htmlFor="allergies">Alergias</Label>
+                    <Textarea
+                      id="allergies"
+                      value={formData.allergies}
+                      onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
+                      placeholder="Ex.: dipirona, penicilina, contraste iodado"
                       rows={2}
                       disabled={isLoading}
                     />

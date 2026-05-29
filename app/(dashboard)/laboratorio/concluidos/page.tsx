@@ -17,6 +17,10 @@ const urgencyMeta: Record<LabUrgency, { label: string; className: string }> = {
   nao_urgente: { label: 'Azul - Nao urgente', className: 'bg-sky-100 text-sky-800 border-sky-200' },
 }
 
+function getEffectiveRiskClassification(triageRisk?: LabUrgency, updatedRisk?: LabUrgency) {
+  return updatedRisk || triageRisk || ''
+}
+
 export default function LaboratorioConcluidosPage() {
   const { examRequests, patients } = useData()
   const [search, setSearch] = useState('')
@@ -29,7 +33,7 @@ export default function LaboratorioConcluidosPage() {
         exam,
         patient: patients.find((patient) => patient.id === exam.patientId),
       }))
-      .filter((item) => item.patient && item.patient.labRiskClassification)
+      .filter((item) => item.patient && getEffectiveRiskClassification(item.patient.triageRiskClassification, item.patient.labRiskClassification))
       .filter((item) => item.patient)
       .filter(({ exam, patient }) => {
         const term = search.trim().toLowerCase()
@@ -116,9 +120,9 @@ export default function LaboratorioConcluidosPage() {
 
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                           <span
-                            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${urgencyMeta[patient!.labRiskClassification as LabUrgency].className}`}
+                            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${urgencyMeta[getEffectiveRiskClassification(patient!.triageRiskClassification, patient!.labRiskClassification) as LabUrgency].className}`}
                           >
-                            {urgencyMeta[patient!.labRiskClassification as LabUrgency].label}
+                            {urgencyMeta[getEffectiveRiskClassification(patient!.triageRiskClassification, patient!.labRiskClassification) as LabUrgency].label}
                           </span>
                           <Button variant="outline" onClick={() => setExpandedId(isExpanded ? null : exam.id)}>
                             {isExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}

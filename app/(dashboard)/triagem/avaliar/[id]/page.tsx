@@ -17,6 +17,8 @@ import { ASA_CLASSIFICATIONS, calculateASA } from '@/lib/data/exams'
 import { users } from '@/lib/data/users'
 import type { ASAClassification, LabUrgency } from '@/lib/types'
 
+const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
+
 const urgencyMeta: Record<LabUrgency, { label: string; className: string }> = {
   emergente: { label: 'Vermelho - Emergente', className: 'bg-red-100 text-red-800 border-red-200' },
   muito_urgente: { label: 'Laranja - Muito urgente', className: 'bg-orange-100 text-orange-800 border-orange-200' },
@@ -62,6 +64,8 @@ export default function TriagemAvaliarPage() {
   const [selectedASA, setSelectedASA] = useState<ASAClassification | ''>(
     patient?.triageData?.asaClassification || ''
   )
+  const [bloodType, setBloodType] = useState(patient?.bloodType || '')
+  const [allergiesText, setAllergiesText] = useState((patient?.allergies || []).join(', '))
   const [assignedClinicianId, setAssignedClinicianId] = useState(patient?.triageAssignedClinicianId || '')
   const [triageRiskClassification, setTriageRiskClassification] = useState<LabUrgency | ''>(
     patient?.triageRiskClassification || ''
@@ -71,6 +75,10 @@ export default function TriagemAvaliarPage() {
   
   const suggestedASA = calculateASA(conditions)
   const assignedClinician = clinicians.find((item) => item.id === assignedClinicianId)
+  const parsedAllergies = allergiesText
+    .split(/,|\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
   
   useEffect(() => {
     if (!user) {
@@ -105,6 +113,8 @@ export default function TriagemAvaliarPage() {
     
     updatePatient(patientId, {
       triageData,
+      bloodType: bloodType || undefined,
+      allergies: parsedAllergies,
       triageAssignedClinicianId: assignedClinicianId || undefined,
       triageAssignedClinicianName: assignedClinician?.name || undefined,
       triageRiskClassification: triageRiskClassification || undefined,
@@ -175,6 +185,8 @@ export default function TriagemAvaliarPage() {
               <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                 <p>Queixa inicial: {patient.queixaPrincipal || 'Nao informada'}</p>
                 <p>Relato da recepcao: {patient.descricaoInicial || 'Nao informado'}</p>
+                <p>Tipo sanguineo: {bloodType || patient.bloodType || 'Nao informado'}</p>
+                <p>Alergias: {parsedAllergies.length > 0 ? parsedAllergies.join(', ') : 'Nenhuma registrada'}</p>
               </div>
             </div>
           </div>
@@ -269,6 +281,43 @@ export default function TriagemAvaliarPage() {
                   {calculateBMI()} kg/m²
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+              Dados Adicionais
+            </CardTitle>
+            <CardDescription>Informacoes clinicas basicas que acompanham o paciente nas proximas etapas.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tipo Sanguineo</Label>
+              <Select value={bloodType} onValueChange={setBloodType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo sanguineo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BLOOD_TYPE_OPTIONS.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="triage-allergies">Alergias</Label>
+              <Textarea
+                id="triage-allergies"
+                value={allergiesText}
+                onChange={(e) => setAllergiesText(e.target.value)}
+                placeholder="Ex.: dipirona, penicilina, contraste iodado"
+                rows={3}
+              />
             </div>
           </CardContent>
         </Card>
