@@ -7,16 +7,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, User, Activity, Calculator, FileText, Shield, Clock, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, User, Activity, Calculator, Shield, Clock } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
-import { EXAM_TYPES } from '@/lib/data/exams'
+import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { users } from '@/lib/data/users'
 
 export default function PatientDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
-  const { getPatientById, getPatientAuditLogs } = useData()
+  const { getPatientById, getPatientAuditLogs, getExamRequestsByPatient } = useData()
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
@@ -32,9 +32,8 @@ export default function PatientDetailsPage() {
   
   const triageData = patient.triageData
   const clinicalEval = patient.clinicalEvaluation
-  const examResults = patient.examResults || {}
   const surgicalAssessment = patient.surgicalRiskAssessment
-  const requestedExams = clinicalEval?.requestedExams || []
+  const patientExamRequests = getExamRequestsByPatient(patientId)
   
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR', {
@@ -436,68 +435,11 @@ export default function PatientDetailsPage() {
         
         {/* Exams Tab */}
         <TabsContent value="exams">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Resultados dos Exames
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {requestedExams.length > 0 ? (
-                <div className="space-y-4">
-                  {requestedExams.map(examId => {
-                    const exam = EXAM_TYPES.find(e => e.id === examId)
-                    const result = examResults[examId]
-                    return (
-                      <div 
-                        key={examId}
-                        className={`overflow-hidden rounded-lg border p-4 ${
-                          result?.status === 'alterado' ? 'border-amber-200 bg-amber-50/50' : ''
-                        }`}
-                      >
-                        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="flex min-w-0 items-start gap-2">
-                            {result?.status === 'normal' && (
-                              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-                            )}
-                            {result?.status === 'alterado' && (
-                              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-                            )}
-                            {(!result?.status || result?.status === 'pendente') && (
-                              <Clock className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                            )}
-                            <span className="break-words font-medium">{exam?.name || examId}</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground sm:text-right">{exam?.category}</span>
-                        </div>
-                        {result?.value ? (
-                          <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-2">
-                            <span className="break-words text-lg font-medium">{result.value}</span>
-                            {exam?.unit && (
-                              <span className="text-muted-foreground">{exam.unit}</span>
-                            )}
-                            {exam?.referenceRange && (
-                              <span className="text-xs text-muted-foreground sm:ml-2">
-                                (Ref: {exam.referenceRange})
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-muted-foreground">Resultado pendente</p>
-                        )}
-                        {result?.notes && (
-                          <p className="text-sm text-muted-foreground mt-2">{result.notes}</p>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">Nenhum exame solicitado</p>
-              )}
-            </CardContent>
-          </Card>
+          <PatientExamsHistory
+            examRequests={patientExamRequests}
+            description="Historico completo de exames deste prontuario, com resultados, prioridade e leitura do laboratorio."
+            emptyMessage="Nenhum exame solicitado para este paciente."
+          />
         </TabsContent>
         
         {/* Audit Tab */}

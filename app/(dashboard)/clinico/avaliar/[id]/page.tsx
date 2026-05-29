@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Save, User, FileText, Calculator, Stethoscope } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
+import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { RCRI_CRITERIA, calculateRCRI, VSGCRI_FACTORS, calculateVSGCRI, EXAM_TYPES } from '@/lib/data/exams'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { users } from '@/lib/data/users'
@@ -22,7 +23,7 @@ export default function ClinicoAvaliarPage() {
   const params = useParams()
   const router = useRouter()
   const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
-  const { getPatientById, updatePatient, addAuditLog } = useData()
+  const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog } = useData()
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
@@ -83,6 +84,8 @@ export default function ClinicoAvaliarPage() {
       </div>
     )
   }
+
+  const patientExamRequests = getExamRequestsByPatient(patientId)
   
   const handleSave = async (complete: boolean) => {
     setIsSaving(true)
@@ -468,6 +471,13 @@ export default function ClinicoAvaliarPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <PatientExamsHistory
+        examRequests={patientExamRequests}
+        title="Historico de Exames do Paciente"
+        description="Exames ja solicitados ou concluidos neste prontuario, incluindo resultados e leitura do laboratorio."
+        emptyMessage="Este paciente ainda nao possui exames registrados."
+      />
 
       <Card>
         <CardHeader>
