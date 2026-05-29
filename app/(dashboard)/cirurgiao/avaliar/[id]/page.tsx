@@ -112,35 +112,37 @@ export default function CirurgiaoAvaliarPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-foreground">Avaliacao de Risco Cirurgico</h1>
-          <p className="text-muted-foreground">Analise completa e parecer final</p>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao de Risco Cirurgico</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">Analise completa e parecer final</p>
         </div>
-        <PatientStatusBadge status={patient.status} />
+        <div className="self-start sm:self-auto">
+          <PatientStatusBadge status={patient.status} />
+        </div>
       </div>
       
       {/* Patient Summary Card */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
                 <User className="h-6 w-6 text-primary" />
               </div>
-              <div>
-                <CardTitle className="text-xl">{patient.name}</CardTitle>
-                <CardDescription>
+              <div className="min-w-0">
+                <CardTitle className="break-words text-lg sm:text-xl">{patient.name}</CardTitle>
+                <CardDescription className="break-words">
                   {patient.age} anos | CPF: {patient.cpf}
                 </CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {triageData?.asaClassification && (
                 <ASABadge classification={triageData.asaClassification} />
               )}
@@ -151,12 +153,12 @@ export default function CirurgiaoAvaliarPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Cirurgia</p>
-              <p className="font-medium">{patient.scheduledSurgery}</p>
+              <p className="break-words font-medium">{patient.scheduledSurgery}</p>
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Data Prevista</p>
               <p className="font-medium">
                 {patient.scheduledDate 
@@ -165,27 +167,27 @@ export default function CirurgiaoAvaliarPage() {
                 }
               </p>
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Medico Solicitante</p>
-              <p className="font-medium">{patient.requestingPhysician || 'Nao informado'}</p>
+              <p className="break-words font-medium">{patient.requestingPhysician || 'Nao informado'}</p>
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Tipo Sanguineo</p>
               <p className="font-medium">{bloodType || patient.bloodType || 'Nao informado'}</p>
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Convenio</p>
-              <p className="font-medium">{patient.healthInsurance || 'Particular'}</p>
+              <p className="break-words font-medium">{patient.healthInsurance || 'Particular'}</p>
             </div>
-            <div className="space-y-1 sm:col-span-2 lg:col-span-4">
+            <div className="min-w-0 space-y-1 sm:col-span-2 xl:col-span-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Alergias</p>
-              <p className="font-medium">{parsedAllergies.length > 0 ? parsedAllergies.join(', ') : 'Nenhuma registrada'}</p>
+              <p className="break-words font-medium">{parsedAllergies.length > 0 ? parsedAllergies.join(', ') : 'Nenhuma registrada'}</p>
             </div>
           </div>
         </CardContent>
       </Card>
       
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         {/* Triagem Summary */}
         <Card>
           <CardHeader className="pb-3">
@@ -197,20 +199,20 @@ export default function CirurgiaoAvaliarPage() {
           <CardContent className="space-y-4">
             {triageData ? (
               <>
-                <div className="grid gap-3 grid-cols-2">
-                  <div className="space-y-1">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="min-w-0 space-y-1">
                     <p className="text-xs text-muted-foreground">Pressao Arterial</p>
-                    <p className="font-medium">{triageData.vitalSigns?.bloodPressure || '-'}</p>
+                    <p className="break-words font-medium">{triageData.vitalSigns?.bloodPressure || '-'}</p>
                   </div>
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <p className="text-xs text-muted-foreground">Freq. Cardiaca</p>
                     <p className="font-medium">{triageData.vitalSigns?.heartRate || '-'} bpm</p>
                   </div>
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <p className="text-xs text-muted-foreground">Saturacao O2</p>
                     <p className="font-medium">{triageData.vitalSigns?.oxygenSaturation || '-'}%</p>
                   </div>
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <p className="text-xs text-muted-foreground">IMC</p>
                     <p className="font-medium">
                       {triageData.vitalSigns?.weight && triageData.vitalSigns?.height
@@ -255,7 +257,7 @@ export default function CirurgiaoAvaliarPage() {
                     <Separator />
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Observacoes</p>
-                      <p className="text-sm">{triageData.notes}</p>
+                      <p className="break-words text-sm">{triageData.notes}</p>
                     </div>
                   </>
                 )}
@@ -277,15 +279,15 @@ export default function CirurgiaoAvaliarPage() {
           <CardContent className="space-y-4">
             {clinicalEval ? (
               <>
-                <div className="grid gap-3 grid-cols-2">
-                  <div className="space-y-1">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="min-w-0 space-y-1">
                     <p className="text-xs text-muted-foreground">RCRI Score</p>
                     <p className="font-medium text-lg">{clinicalEval.rcriScore?.score || 0}</p>
                     <p className="text-xs text-muted-foreground">
                       {clinicalEval.rcriScore?.riskPercentage}
                     </p>
                   </div>
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <p className="text-xs text-muted-foreground">VSG-CRI</p>
                     <p className="font-medium text-lg">{clinicalEval.vsgcriScore?.score || 0}</p>
                     <p className="text-xs text-muted-foreground">
@@ -299,7 +301,7 @@ export default function CirurgiaoAvaliarPage() {
                 {clinicalEval.notes && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
-                    <p className="text-sm">{clinicalEval.notes}</p>
+                    <p className="break-words text-sm">{clinicalEval.notes}</p>
                   </div>
                 )}
               </>
@@ -320,7 +322,7 @@ export default function CirurgiaoAvaliarPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {requestedExams.map(examId => {
                 const exam = EXAM_TYPES.find(e => e.id === examId)
                 const result = examResults[examId]
@@ -331,13 +333,13 @@ export default function CirurgiaoAvaliarPage() {
                       result?.status === 'alterado' ? 'border-amber-200 bg-amber-50/50' : ''
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{exam?.name || examId}</span>
+                    <div className="mb-1 flex items-start justify-between gap-2">
+                      <span className="min-w-0 break-words text-sm font-medium">{exam?.name || examId}</span>
                       {result?.status === 'normal' && (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                       )}
                       {result?.status === 'alterado' && (
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                       )}
                     </div>
                     {result?.value ? (
@@ -349,7 +351,7 @@ export default function CirurgiaoAvaliarPage() {
                       <p className="text-sm text-muted-foreground">Pendente</p>
                     )}
                     {result?.notes && (
-                      <p className="text-xs text-muted-foreground mt-1">{result.notes}</p>
+                      <p className="mt-1 break-words text-xs text-muted-foreground">{result.notes}</p>
                     )}
                   </div>
                 )
@@ -405,7 +407,7 @@ export default function CirurgiaoAvaliarPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-2">
               <Label>Classificacao Final de Risco</Label>
               <Select
@@ -464,9 +466,9 @@ export default function CirurgiaoAvaliarPage() {
           
           {finalRisk && recommendation && (
             <div className={`rounded-lg border p-4 ${getRecommendationColor(recommendation)}`}>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <RiskLevelBadge level={finalRisk} />
-                <span className="text-lg font-medium">
+                <span className="break-words text-base font-medium sm:text-lg">
                   {recommendation === 'aprovar' && 'Paciente Aprovado para Cirurgia'}
                   {recommendation === 'adiar' && 'Procedimento Adiado'}
                   {recommendation === 'contraindicar' && 'Cirurgia Contraindicada'}
@@ -485,11 +487,12 @@ export default function CirurgiaoAvaliarPage() {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
+        <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
             Salvar Rascunho
           </Button>
           <Button 
+            className="w-full sm:w-auto"
             onClick={() => handleSave(true)} 
             disabled={isSaving || !finalRisk || !recommendation}
           >
