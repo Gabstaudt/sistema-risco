@@ -80,7 +80,7 @@ function inferTraumaText(patientComplaint?: string, patientDescription?: string,
 export default function LaboratorioRegistrarPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, hasPermission } = useAuth()
+  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { examRequests, getPatientById, updatePatient, updateExamStatus, addAuditLog } = useData()
 
   const resourceId = params.id as string
@@ -116,15 +116,25 @@ export default function LaboratorioRegistrarPage() {
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
+    if (isAuthLoading) return
+
     if (!user) {
-      router.push('/login')
+      router.replace('/login')
       return
     }
 
     if (!hasPermission('register_exam_result')) {
-      router.push('/laboratorio')
+      router.replace('/laboratorio')
     }
-  }, [user, hasPermission, router])
+  }, [user, hasPermission, router, isAuthLoading])
+
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    )
+  }
 
   useEffect(() => {
     if (patient?.examResults) {
