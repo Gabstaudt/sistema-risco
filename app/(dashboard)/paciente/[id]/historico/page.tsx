@@ -10,7 +10,7 @@ import { ArrowLeft, Clock, User, Activity, FileText, FlaskConical, Stethoscope, 
 import Link from 'next/link'
 import { AuditAction, AuditLog, ROLE_LABELS } from '@/lib/types'
 
-const ACTION_CONFIG: Record<AuditAction, { label: string; icon: React.ElementType; color: string }> = {
+const ACTION_CONFIG: Partial<Record<AuditAction, { label: string; icon: React.ElementType; color: string }>> = {
   cadastro_paciente: { label: 'Cadastro de Paciente', icon: User, color: 'bg-blue-100 text-blue-800' },
   edicao_dados_basicos: { label: 'Edicao de Dados', icon: FileText, color: 'bg-gray-100 text-gray-800' },
   encaminhamento_triagem: { label: 'Encaminhamento Triagem', icon: Activity, color: 'bg-cyan-100 text-cyan-800' },
@@ -25,11 +25,14 @@ const ACTION_CONFIG: Record<AuditAction, { label: string; icon: React.ElementTyp
   analise_exame: { label: 'Analise de Exame', icon: FlaskConical, color: 'bg-orange-100 text-orange-800' },
   resultado_exame: { label: 'Resultado de Exame', icon: FlaskConical, color: 'bg-green-100 text-green-800' },
   encaminhamento_laboratorio: { label: 'Encaminhamento Laboratorio', icon: FlaskConical, color: 'bg-teal-100 text-teal-800' },
+  encaminhamento_cardiologia: { label: 'Encaminhamento Cardiologia', icon: Stethoscope, color: 'bg-rose-100 text-rose-800' },
   encaminhamento_cirurgiao: { label: 'Encaminhamento Cirurgiao', icon: Stethoscope, color: 'bg-red-100 text-red-800' },
   calculo_score: { label: 'Calculo de Score', icon: Activity, color: 'bg-violet-100 text-violet-800' },
   classificacao_risco: { label: 'Classificacao de Risco', icon: AlertCircle, color: 'bg-red-100 text-red-800' },
   liberacao_cirurgia: { label: 'Liberacao para Cirurgia', icon: ClipboardCheck, color: 'bg-emerald-100 text-emerald-800' },
   contraindicacao_cirurgia: { label: 'Contraindicacao', icon: AlertCircle, color: 'bg-red-100 text-red-800' },
+  avaliacao_cardiologica_concluida: { label: 'Avaliacao Cardiologica Concluida', icon: ClipboardCheck, color: 'bg-red-100 text-red-800' },
+  avaliacao_cardiologica_atualizada: { label: 'Avaliacao Cardiologica Atualizada', icon: Activity, color: 'bg-rose-100 text-rose-800' },
   geracao_relatorio: { label: 'Geracao de Relatorio', icon: FileText, color: 'bg-gray-100 text-gray-800' },
   login: { label: 'Login', icon: User, color: 'bg-blue-100 text-blue-800' },
   logout: { label: 'Logout', icon: User, color: 'bg-gray-100 text-gray-800' },

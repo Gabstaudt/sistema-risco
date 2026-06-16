@@ -43,11 +43,11 @@ export default function ClinicoAvaliarPage() {
   const [bloodType, setBloodType] = useState(patient?.bloodType || '')
   const [allergiesText, setAllergiesText] = useState((patient?.allergies || []).join(', '))
   const [requestSurgicalRisk, setRequestSurgicalRisk] = useState(patient?.clinicalRequestsSurgicalRisk || false)
-  const [assignedSurgeonId, setAssignedSurgeonId] = useState(patient?.clinicalAssignedSurgeonId || '')
+  const [assignedCardiologistId, setAssignedCardiologistId] = useState(patient?.clinicalAssignedCardiologistId || '')
   const [isSaving, setIsSaving] = useState(false)
-  const surgeons = users.filter((item) => item.role === 'cirurgiao' && item.active)
-  const normalizedSurgeonId = assignedSurgeonId === 'unassigned' ? '' : assignedSurgeonId
-  const assignedSurgeon = surgeons.find((item) => item.id === normalizedSurgeonId)
+  const cardiologists = users.filter((item) => item.role === 'cardiologista' && item.active)
+  const normalizedCardiologistId = assignedCardiologistId === 'unassigned' ? '' : assignedCardiologistId
+  const assignedCardiologist = cardiologists.find((item) => item.id === normalizedCardiologistId)
   const parsedAllergies = allergiesText
     .split(/,|\n/)
     .map((item) => item.trim())
@@ -115,12 +115,12 @@ export default function ClinicoAvaliarPage() {
         ? (selectedExams.length > 0
             ? 'aguardando_exames'
             : requestSurgicalRisk
-              ? 'aguardando_cirurgiao'
+              ? 'aguardando_cardiologista'
               : 'aguardando_resultado')
         : 'em_avaliacao_clinica',
       clinicalRequestsSurgicalRisk: requestSurgicalRisk,
-      clinicalAssignedSurgeonId: normalizedSurgeonId || undefined,
-      clinicalAssignedSurgeonName: assignedSurgeon?.name || undefined,
+      clinicalAssignedCardiologistId: normalizedCardiologistId || undefined,
+      clinicalAssignedCardiologistName: assignedCardiologist?.name || undefined,
       updatedAt: new Date().toISOString(),
     })
     
@@ -129,7 +129,7 @@ export default function ClinicoAvaliarPage() {
       userId: user!.id,
       patientId,
       details: complete 
-        ? `Avaliacao clinica concluida. RCRI: ${rcriScore.score}, VSG-CRI: ${vsgcriScore.riskClass}. Exames solicitados: ${selectedExams.length}. Risco cirurgico: ${requestSurgicalRisk ? `solicitado${assignedSurgeon ? ` para ${assignedSurgeon.name}` : ''}` : 'nao solicitado'}`
+        ? `Avaliacao clinica concluida. RCRI: ${rcriScore.score}, VSG-CRI: ${vsgcriScore.riskClass}. Exames solicitados: ${selectedExams.length}. Avaliacao cardiologica: ${requestSurgicalRisk ? `solicitada${assignedCardiologist ? ` para ${assignedCardiologist.name}` : ''}` : 'nao solicitada'}`
         : 'Dados de avaliacao clinica atualizados',
     })
     
@@ -481,9 +481,9 @@ export default function ClinicoAvaliarPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Encaminhamento para Risco Cirurgico</CardTitle>
+          <CardTitle>Encaminhamento para Cardiologia</CardTitle>
           <CardDescription>
-            O clinico pode solicitar avaliacao do cirurgiao ao final desta etapa e definir um responsavel, se desejar.
+            O clinico pode solicitar a avaliacao cardiologica pre-operatoria ao final desta etapa e definir um responsavel, se desejar.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -495,32 +495,32 @@ export default function ClinicoAvaliarPage() {
             />
             <div className="min-w-0 flex-1">
               <Label htmlFor="request-surgical-risk" className="cursor-pointer text-sm font-medium">
-                Solicitar risco cirurgico ao cirurgiao
+                Solicitar avaliacao ao cardiologista
               </Label>
               <p className="mt-1 text-xs text-muted-foreground">
-                Use esta opcao quando o caso ja deve seguir para avaliacao do cirurgiao apos a etapa clinica.
+                Use esta opcao quando o caso precisa de liberacao cardiologica antes de seguir para o cirurgiao.
               </p>
             </div>
           </div>
 
           {requestSurgicalRisk && (
             <div className="space-y-2">
-              <Label>Cirurgiao Responsavel</Label>
-              <Select value={assignedSurgeonId} onValueChange={setAssignedSurgeonId}>
+              <Label>Cardiologista Responsavel</Label>
+              <Select value={assignedCardiologistId} onValueChange={setAssignedCardiologistId}>
                 <SelectTrigger className="min-h-11">
-                  <SelectValue placeholder="Selecione um cirurgiao ou deixe em aberto" />
+                  <SelectValue placeholder="Selecione um cardiologista ou deixe em aberto" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unassigned">Sem definicao no momento</SelectItem>
-                  {surgeons.map((surgeon) => (
-                    <SelectItem key={surgeon.id} value={surgeon.id}>
-                      {surgeon.name}
+                  {cardiologists.map((cardiologist) => (
+                    <SelectItem key={cardiologist.id} value={cardiologist.id}>
+                      {cardiologist.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                A selecao do medico e opcional. Se nao definir agora, o caso ainda pode seguir para a fila cirurgica.
+                A selecao do medico e opcional. Se nao definir agora, o caso ainda pode seguir para a fila da cardiologia.
               </p>
             </div>
           )}

@@ -1,6 +1,6 @@
 // Tipos base do sistema de Avaliacao de Risco Cirurgico
 
-export type UserRole = 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cirurgiao' | 'admin'
+export type UserRole = 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'cirurgiao' | 'admin'
 
 export interface User {
   id: string
@@ -26,6 +26,8 @@ export type PatientStatus =
   | 'aguardando_laboratorio'
   | 'exames_em_analise'
   | 'exames_concluidos'
+  | 'aguardando_cardiologista'
+  | 'em_avaliacao_cardiologica'
   | 'aguardando_cirurgiao'
   | 'em_avaliacao_cirurgica'
   | 'concluido'
@@ -181,6 +183,19 @@ export interface RiskScores {
   calculadoEm?: string
 }
 
+export interface CardiologyAssessment {
+  surgeryType?: string
+  urgency?: SurgeryUrgency
+  releaseProfile?: 'eletiva' | 'emergencia'
+  damageControlMeasures?: string
+  postoperativeSupport?: 'sem_uti' | 'com_uti'
+  finalRiskLevel?: RiskLevel
+  recommendation?: 'aprovar' | 'adiar' | 'contraindicar'
+  notes?: string
+  completedAt?: string
+  completedBy?: string
+}
+
 export interface SurgicalEvaluation {
   id?: string
   patientId?: string
@@ -276,6 +291,8 @@ export interface Patient {
   triageAssignedClinicianName?: string
   triageRiskClassification?: LabUrgency
   clinicalRequestsSurgicalRisk?: boolean
+  clinicalAssignedCardiologistId?: string
+  clinicalAssignedCardiologistName?: string
   clinicalAssignedSurgeonId?: string
   clinicalAssignedSurgeonName?: string
   sinaisVitais?: VitalSigns
@@ -300,6 +317,7 @@ export interface Patient {
   labRiskNotes?: string
   labNurseObservation?: string
   visitHistory?: PatientEncounter[]
+  cardiologyAssessment?: CardiologyAssessment
   
   // Avaliacao cirurgica
   avaliacaoCirurgica?: SurgicalEvaluation
@@ -334,11 +352,14 @@ export type AuditAction =
   | 'analise_exame'
   | 'resultado_exame'
   | 'encaminhamento_laboratorio'
+  | 'encaminhamento_cardiologia'
   | 'encaminhamento_cirurgiao'
   | 'calculo_score'
   | 'classificacao_risco'
   | 'liberacao_cirurgia'
   | 'contraindicacao_cirurgia'
+  | 'avaliacao_cardiologica_concluida'
+  | 'avaliacao_cardiologica_atualizada'
   | 'geracao_relatorio'
   | 'triagem_concluida'
   | 'triagem_atualizada'
@@ -399,6 +420,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'request_exams',
     'view_exam_results',
     'forward_to_lab',
+    'forward_to_cardiologist',
     'forward_to_surgeon',
     'return_to_triage',
   ],
@@ -408,6 +430,18 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'view_patient_minimal',
     'register_exam_result',
     'update_exam_status',
+  ],
+  cardiologista: [
+    'view_dashboard_cardiologista',
+    'view_patients_list',
+    'view_all_data',
+    'view_clinical_data',
+    'view_exam_results',
+    'classify_cardiac_risk',
+    'approve_for_surgery',
+    'contraindicate_surgery',
+    'forward_to_surgeon',
+    'generate_report',
   ],
   cirurgiao: [
     'view_dashboard_cirurgiao',
@@ -446,6 +480,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   triagem: 'Triagem',
   clinico: 'Medico Clinico',
   laboratorio: 'Laboratorio',
+  cardiologista: 'Cardiologista',
   cirurgiao: 'Cirurgiao',
   admin: 'Administrador',
 }
@@ -462,6 +497,8 @@ export const STATUS_LABELS: Record<PatientStatus, string> = {
   aguardando_laboratorio: 'Aguardando Laboratorio',
   exames_em_analise: 'Exames em Analise',
   exames_concluidos: 'Exames Concluidos',
+  aguardando_cardiologista: 'Aguardando Cardiologista',
+  em_avaliacao_cardiologica: 'Em Avaliacao Cardiologica',
   aguardando_cirurgiao: 'Aguardando Cirurgiao',
   em_avaliacao_cirurgica: 'Em Avaliacao Cirurgica',
   concluido: 'Concluido',

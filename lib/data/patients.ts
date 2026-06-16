@@ -476,8 +476,8 @@ const basePatients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 22 * 3600000).toISOString(),
     },
     clinicalRequestsSurgicalRisk: true,
-    clinicalAssignedSurgeonId: 'user-5',
-    clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
+    clinicalAssignedCardiologistId: 'user-8',
+    clinicalAssignedCardiologistName: 'Dra. Helena Cardoso',
     examesSolicitados: ['exam-1', 'exam-2', 'exam-3', 'exam-4', 'exam-5', 'exam-6', 'exam-7', 'exam-9', 'exam-10'],
     visitHistory: [
       {
@@ -575,8 +575,8 @@ const basePatients: Patient[] = [
       avaliadoEm: new Date(Date.now() - 46 * 3600000).toISOString(),
     },
     clinicalRequestsSurgicalRisk: true,
-    clinicalAssignedSurgeonId: 'user-5',
-    clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
+    clinicalAssignedCardiologistId: 'user-8',
+    clinicalAssignedCardiologistName: 'Dra. Helena Cardoso',
     examesSolicitados: ['exam-1', 'exam-3', 'exam-4', 'exam-5', 'exam-6'],
     visitHistory: [
       {
@@ -675,6 +675,18 @@ const basePatients: Patient[] = [
     clinicalRequestsSurgicalRisk: true,
     clinicalAssignedSurgeonId: 'user-5',
     clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
+    cardiologyAssessment: {
+      surgeryType: 'Apendicectomia videolaparoscopica',
+      urgency: 'eletiva',
+      releaseProfile: 'eletiva',
+      damageControlMeasures: 'Monitorizacao padrao em sala, manutencao de beta-bloqueador e hidratacao habitual.',
+      postoperativeSupport: 'sem_uti',
+      finalRiskLevel: 'baixo',
+      recommendation: 'aprovar',
+      notes: 'Paciente sem limitacoes cardiologicas para o procedimento proposto.',
+      completedAt: new Date(Date.now() - 52 * 3600000).toISOString(),
+      completedBy: 'user-8',
+    },
     avaliacaoCirurgica: {
       id: 'surg-1',
       patientId: 'patient-9',
@@ -795,6 +807,18 @@ const basePatients: Patient[] = [
     clinicalRequestsSurgicalRisk: true,
     clinicalAssignedSurgeonId: 'user-5',
     clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
+    cardiologyAssessment: {
+      surgeryType: 'Laparotomia exploradora',
+      urgency: 'urgencia',
+      releaseProfile: 'emergencia',
+      damageControlMeasures: 'Necessita balanco hidrico estrito, correcao de eletrólitos, acesso central e leito monitorizado.',
+      postoperativeSupport: 'com_uti',
+      finalRiskLevel: 'alto',
+      recommendation: 'adiar',
+      notes: 'Risco cardiovascular elevado no contexto de ICC, DRC e FA cronica. Reavaliar apos estabilizacao hemodinamica.',
+      completedAt: new Date(Date.now() - 92 * 3600000).toISOString(),
+      completedBy: 'user-8',
+    },
     avaliacaoCirurgica: {
       id: 'surg-2',
       patientId: 'patient-10',
@@ -918,6 +942,18 @@ const basePatients: Patient[] = [
     clinicalRequestsSurgicalRisk: true,
     clinicalAssignedSurgeonId: 'user-5',
     clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
+    cardiologyAssessment: {
+      surgeryType: 'Hernioplastia incisional',
+      urgency: 'eletiva',
+      releaseProfile: 'eletiva',
+      damageControlMeasures: 'Controle rigoroso de volume, ajuste de insuficiencia cardiaca e perda ponderal antes de nova discussao.',
+      postoperativeSupport: 'com_uti',
+      finalRiskLevel: 'contraindicado',
+      recommendation: 'contraindicar',
+      notes: 'Insuficiencia cardiaca descompensada recente inviabiliza liberacao para cirurgia eletiva neste momento.',
+      completedAt: new Date(Date.now() - 116 * 3600000).toISOString(),
+      completedBy: 'user-8',
+    },
     avaliacaoCirurgica: {
       id: 'surg-3',
       patientId: 'patient-11',
@@ -1488,9 +1524,22 @@ export function hydratePatient(patient: Patient): Patient {
   const visitHistory = [...(patient.visitHistory || []), buildCurrentEncounter(patient)].sort(
     (a, b) => new Date(b.entryAt).getTime() - new Date(a.entryAt).getTime(),
   )
+  const shouldMoveToCardiology =
+    patient.clinicalRequestsSurgicalRisk &&
+    !patient.cardiologyAssessment &&
+    !patient.surgicalRiskAssessment &&
+    !patient.avaliacaoCirurgica
+
+  const normalizedStatus =
+    shouldMoveToCardiology && patient.status === 'aguardando_cirurgiao'
+      ? 'aguardando_cardiologista'
+      : shouldMoveToCardiology && patient.status === 'em_avaliacao_cirurgica'
+        ? 'em_avaliacao_cardiologica'
+        : patient.status
 
   return {
     ...patient,
+    status: normalizedStatus,
     name: patient.nomeCompleto,
     age: patient.idade,
     scheduledSurgery: patient.avaliacaoClinica?.tipoCirurgia || patient.avaliacaoCirurgica?.tipoCirurgia || patient.queixaPrincipal || 'Procedimento em avaliacao',
@@ -1498,7 +1547,7 @@ export function hydratePatient(patient: Patient): Patient {
     requestingPhysician: patient.avaliacaoClinica?.avaliadoPor || 'Dr. Carlos Mendes',
     healthInsurance: patient.cartaoSus ? 'SUS' : 'Particular',
     allergies: patient.allergies && patient.allergies.length > 0 ? patient.allergies : patient.avaliacaoClinica?.comorbidades?.alergias || [],
-    riskLevel: patient.avaliacaoCirurgica?.riscoFinal,
+    riskLevel: patient.cardiologyAssessment?.finalRiskLevel || patient.avaliacaoCirurgica?.riscoFinal,
     triageData: patient.sinaisVitais
       ? {
           vitalSigns: {

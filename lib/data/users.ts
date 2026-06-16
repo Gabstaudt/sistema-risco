@@ -38,6 +38,15 @@ export const users: User[] = [
     createdAt: '2024-01-15T08:00:00Z',
   },
   {
+    id: 'user-8',
+    email: 'cardiologista@hospital.com',
+    password: '123456',
+    name: 'Dra. Helena Cardoso',
+    role: 'cardiologista',
+    active: true,
+    createdAt: '2024-01-15T08:00:00Z',
+  },
+  {
     id: 'user-5',
     email: 'cirurgiao@hospital.com',
     password: '123456',
