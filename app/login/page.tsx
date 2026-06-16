@@ -52,6 +52,7 @@ export default function LoginPage() {
     { role: 'Triagem', email: 'triagem@hospital.com' },
     { role: 'Clinico', email: 'clinico@hospital.com' },
     { role: 'Laboratorio', email: 'laboratorio@hospital.com' },
+    { role: 'Cardiologista', email: 'cardiologista@hospital.com' },
     { role: 'Cirurgiao', email: 'cirurgiao@hospital.com' },
     { role: 'Admin', email: 'admin@hospital.com' },
   ]
@@ -199,15 +200,16 @@ export default function LoginPage() {
                 <p className="text-sm text-muted-foreground text-center mb-4">
                   Credenciais de demonstracao
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {demoCredentials.map((cred) => (
                     <button
                       key={cred.email}
                       onClick={() => fillDemo(cred.email)}
-                      className="text-xs px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors text-left"
+                      className="rounded-md bg-secondary px-3 py-2 text-left text-xs text-secondary-foreground transition-colors hover:bg-secondary/80"
                       disabled={isLoading}
                     >
-                      <span className="font-medium">{cred.role}</span>
+                      <span className="block font-medium">{cred.role}</span>
+                      <span className="block text-[11px] text-muted-foreground">{cred.email}</span>
                     </button>
                   ))}
                 </div>

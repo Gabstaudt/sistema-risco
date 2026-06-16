@@ -94,7 +94,7 @@ function inferTrauma(patient: Patient) {
 }
 
 function getRequestingSector(patient: Patient) {
-  if (patient.clinicalRequestsSurgicalRisk) return 'Clinica / preparo cirurgico'
+  if (patient.clinicalRequestsSurgicalRisk) return 'Cardiologia pre-operatoria'
   if (patient.avaliacaoClinica) return 'Clinica medica'
   return 'Triagem / pronto atendimento'
 }

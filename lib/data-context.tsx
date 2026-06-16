@@ -42,6 +42,7 @@ interface DataContextType {
     aguardandoTriagem: number
     emAvaliacaoClinica: number
     examesPendentes: number
+    aguardandoCardiologia: number
     aguardandoCirurgiao: number
     liberados: number
     altoRisco: number
@@ -202,6 +203,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       aguardando_laboratorio: 'encaminhamento_laboratorio',
       exames_em_analise: 'analise_exame',
       exames_concluidos: 'resultado_exame',
+      aguardando_cardiologista: 'encaminhamento_cardiologia',
+      em_avaliacao_cardiologica: 'avaliacao_cardiologica_atualizada',
       aguardando_cirurgiao: 'encaminhamento_cirurgiao',
       em_avaliacao_cirurgica: 'calculo_score',
       concluido: 'classificacao_risco',
@@ -272,7 +275,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addAuditLog({
       patientId: id,
       action: 'classificacao_risco',
-      description: `Risco classificado como ${evaluation.riscoFinal.toUpperCase()}`,
+      description: `Risco classificado como ${(evaluation.riscoFinal || 'pendente').toUpperCase()}`,
     })
   }, [updatePatient, addAuditLog])
 
@@ -411,6 +414,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       aguardandoTriagem: patients.filter(p => p.status === 'aguardando_triagem').length,
       emAvaliacaoClinica: patients.filter(p => ['aguardando_clinico', 'em_avaliacao_clinica'].includes(p.status)).length,
       examesPendentes: examRequests.filter(e => e.status !== 'concluido' && e.status !== 'cancelado').length,
+      aguardandoCardiologia: patients.filter(p => ['aguardando_cardiologista', 'em_avaliacao_cardiologica'].includes(p.status)).length,
       aguardandoCirurgiao: patients.filter(p => ['aguardando_cirurgiao', 'em_avaliacao_cirurgica'].includes(p.status)).length,
       liberados: patients.filter(p => p.status === 'liberado').length,
       altoRisco: patients.filter(p => p.status === 'alto_risco').length,

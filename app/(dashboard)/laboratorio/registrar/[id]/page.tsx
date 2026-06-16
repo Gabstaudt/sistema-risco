@@ -215,9 +215,9 @@ export default function LaboratorioRegistrarPage() {
 
   const trauma = inferTraumaText(patient.queixaPrincipal, patient.descricaoInicial, patient.avaliacaoClinica?.hipoteseDiagnostica)
   const clinicalOwner = patient.triageAssignedClinicianName || patient.requestingPhysician || patient.avaliacaoClinica?.avaliadoPor || 'Equipe clinica'
-  const surgicalOwner = patient.clinicalAssignedSurgeonName || 'Nao atribuido'
+  const cardiologyOwner = patient.clinicalAssignedCardiologistName || 'Nao atribuido'
   const nextDestination: PatientStatus =
-    allExamsCompleted && patient.clinicalRequestsSurgicalRisk ? 'aguardando_cirurgiao' : 'aguardando_clinico'
+    allExamsCompleted && patient.clinicalRequestsSurgicalRisk ? 'aguardando_cardiologista' : 'aguardando_clinico'
 
   const criticalAlerts = useMemo(() => {
     const alerts: string[] = []
@@ -294,7 +294,7 @@ export default function LaboratorioRegistrarPage() {
     if (complete && allExamsCompleted) {
       const alertRecipients = [
         `Clinico responsavel: ${clinicalOwner}`,
-        patient.clinicalRequestsSurgicalRisk ? `Cirurgiao de risco: ${surgicalOwner}` : null,
+        patient.clinicalRequestsSurgicalRisk ? `Cardiologista responsavel: ${cardiologyOwner}` : null,
       ].filter(Boolean)
 
       addAuditLog({
@@ -633,15 +633,15 @@ export default function LaboratorioRegistrarPage() {
                 <p className="mt-1 break-words font-medium">{clinicalOwner}</p>
               </div>
               <div className="rounded-xl border bg-muted/20 p-3">
-                <p className="text-muted-foreground">Cirurgiao para risco cirurgico</p>
+                <p className="text-muted-foreground">Cardiologista para liberacao pre-operatoria</p>
                 <p className="mt-1 break-words font-medium">
-                  {patient.clinicalRequestsSurgicalRisk ? surgicalOwner : 'Nao solicitado pelo clinico'}
+                  {patient.clinicalRequestsSurgicalRisk ? cardiologyOwner : 'Nao solicitado pelo clinico'}
                 </p>
               </div>
               <div className="rounded-xl border bg-muted/20 p-3">
                 <p className="text-muted-foreground">Destino ao finalizar</p>
                 <p className="mt-1 font-medium">
-                  {patient.clinicalRequestsSurgicalRisk ? 'Encaminhar para risco cirurgico' : 'Retornar para revisao clinica'}
+                  {patient.clinicalRequestsSurgicalRisk ? 'Encaminhar para cardiologia' : 'Retornar para revisao clinica'}
                 </p>
               </div>
             </CardContent>

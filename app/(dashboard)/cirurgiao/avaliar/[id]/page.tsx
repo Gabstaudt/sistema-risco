@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Save, User, Shield, Activity, Calculator } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
@@ -22,15 +23,13 @@ export default function CirurgiaoAvaliarPage() {
   const router = useRouter()
   const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog } = useData()
-  
+
   const patientId = params.id as string
   const patient = getPatientById(patientId)
-  
-  const [finalRisk, setFinalRisk] = useState<RiskLevel | ''>(
-    patient?.surgicalRiskAssessment?.finalRiskLevel || ''
-  )
+
+  const [finalRisk, setFinalRisk] = useState<RiskLevel | ''>(patient?.surgicalRiskAssessment?.finalRiskLevel || '')
   const [recommendation, setRecommendation] = useState<'aprovar' | 'adiar' | 'contraindicar' | ''>(
-    patient?.surgicalRiskAssessment?.recommendation || ''
+    patient?.surgicalRiskAssessment?.recommendation || '',
   )
   const [bloodType, setBloodType] = useState(patient?.bloodType || '')
   const [allergiesText, setAllergiesText] = useState((patient?.allergies || []).join(', '))
@@ -40,7 +39,7 @@ export default function CirurgiaoAvaliarPage() {
     .split(/,|\n/)
     .map((item) => item.trim())
     .filter(Boolean)
-  
+
   useEffect(() => {
     if (isAuthLoading) return
 
@@ -61,7 +60,7 @@ export default function CirurgiaoAvaliarPage() {
       </div>
     )
   }
-  
+
   if (!patient) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -80,10 +79,10 @@ export default function CirurgiaoAvaliarPage() {
 
     router.push('/cirurgiao')
   }
-  
+
   const handleSave = async (complete: boolean) => {
     setIsSaving(true)
-    
+
     const surgicalRiskAssessment = {
       finalRiskLevel: finalRisk || undefined,
       recommendation: recommendation || undefined,
@@ -91,7 +90,7 @@ export default function CirurgiaoAvaliarPage() {
       completedAt: complete ? new Date().toISOString() : undefined,
       completedBy: complete ? user?.id : undefined,
     }
-    
+
     updatePatient(patientId, {
       surgicalRiskAssessment,
       bloodType: bloodType || undefined,
@@ -100,16 +99,16 @@ export default function CirurgiaoAvaliarPage() {
       riskLevel: finalRisk || patient.riskLevel,
       updatedAt: new Date().toISOString(),
     })
-    
+
     addAuditLog({
       action: complete ? 'avaliacao_cirurgica_concluida' : 'avaliacao_cirurgica_atualizada',
       userId: user!.id,
       patientId,
-      details: complete 
+      details: complete
         ? `Avaliacao cirurgica concluida. Risco Final: ${finalRisk}. Recomendacao: ${recommendation}`
         : 'Dados de avaliacao cirurgica atualizados',
     })
-    
+
     setTimeout(() => {
       setIsSaving(false)
       if (complete) {
@@ -117,21 +116,26 @@ export default function CirurgiaoAvaliarPage() {
       }
     }, 500)
   }
-  
+
   const triageData = patient.triageData
   const clinicalEval = patient.clinicalEvaluation
+  const cardiologyAssessment = patient.cardiologyAssessment
+
   const getRecommendationColor = (rec: string) => {
     switch (rec) {
-      case 'aprovar': return 'text-emerald-600 bg-emerald-50 border-emerald-200'
-      case 'adiar': return 'text-amber-600 bg-amber-50 border-amber-200'
-      case 'contraindicar': return 'text-red-600 bg-red-50 border-red-200'
-      default: return ''
+      case 'aprovar':
+        return 'text-emerald-600 bg-emerald-50 border-emerald-200'
+      case 'adiar':
+        return 'text-amber-600 bg-amber-50 border-amber-200'
+      case 'contraindicar':
+        return 'text-red-600 bg-red-50 border-red-200'
+      default:
+        return ''
     }
   }
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-5 w-5" />
@@ -144,8 +148,7 @@ export default function CirurgiaoAvaliarPage() {
           <PatientStatusBadge status={patient.status} />
         </div>
       </div>
-      
-      {/* Patient Summary Card */}
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -154,19 +157,13 @@ export default function CirurgiaoAvaliarPage() {
                 <User className="h-6 w-6 text-primary" />
               </div>
               <div className="min-w-0">
-                <CardTitle className="break-words text-lg sm:text-xl">{patient.name}</CardTitle>
-                <CardDescription className="break-words">
-                  {patient.age} anos | CPF: {patient.cpf}
-                </CardDescription>
+                <CardTitle className="break-words text-lg sm:text-xl">{patient.nomeCompleto}</CardTitle>
+                <CardDescription className="break-words">{patient.idade} anos | CPF: {patient.cpf}</CardDescription>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {triageData?.asaClassification && (
-                <ASABadge classification={triageData.asaClassification} />
-              )}
-              {clinicalEval?.rcriScore && (
-                <RCRIBadge score={clinicalEval.rcriScore.score} />
-              )}
+              {triageData?.asaClassification && <ASABadge classification={triageData.asaClassification} />}
+              {clinicalEval?.rcriScore && <RCRIBadge score={clinicalEval.rcriScore.score} />}
             </div>
           </div>
         </CardHeader>
@@ -179,10 +176,7 @@ export default function CirurgiaoAvaliarPage() {
             <div className="min-w-0 space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Data Prevista</p>
               <p className="font-medium">
-                {patient.scheduledDate 
-                  ? new Date(patient.scheduledDate).toLocaleDateString('pt-BR')
-                  : 'A definir'
-                }
+                {patient.scheduledDate ? new Date(patient.scheduledDate).toLocaleDateString('pt-BR') : 'A definir'}
               </p>
             </div>
             <div className="min-w-0 space-y-1">
@@ -204,138 +198,272 @@ export default function CirurgiaoAvaliarPage() {
           </div>
         </CardContent>
       </Card>
-      
-      <div className="grid gap-6 xl:grid-cols-2">
-        {/* Triagem Summary */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Activity className="h-4 w-4 text-primary" />
-              Dados da Triagem
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {triageData ? (
-              <>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs text-muted-foreground">Pressao Arterial</p>
-                    <p className="break-words font-medium">{triageData.vitalSigns?.bloodPressure || '-'}</p>
-                  </div>
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs text-muted-foreground">Freq. Cardiaca</p>
-                    <p className="font-medium">{triageData.vitalSigns?.heartRate || '-'} bpm</p>
-                  </div>
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs text-muted-foreground">Saturacao O2</p>
-                    <p className="font-medium">{triageData.vitalSigns?.oxygenSaturation || '-'}%</p>
-                  </div>
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs text-muted-foreground">IMC</p>
-                    <p className="font-medium">
-                      {triageData.vitalSigns?.weight && triageData.vitalSigns?.height
-                        ? (triageData.vitalSigns.weight / Math.pow(triageData.vitalSigns.height / 100, 2)).toFixed(1)
-                        : '-'
-                      } kg/m²
-                    </p>
-                  </div>
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Comorbidades</p>
-                  <div className="flex flex-wrap gap-1">
-                    {triageData.comorbidities?.diabetes && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded">Diabetes</span>
-                    )}
-                    {triageData.comorbidities?.hypertension && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded">Hipertensao</span>
-                    )}
-                    {triageData.comorbidities?.heartDisease && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded">Cardiopatia</span>
-                    )}
-                    {triageData.comorbidities?.respiratoryDisease && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded">Doenca Respiratoria</span>
-                    )}
-                    {triageData.comorbidities?.kidneyDisease && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded">Doenca Renal</span>
-                    )}
-                    {triageData.comorbidities?.smoking && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded">Tabagismo</span>
-                    )}
-                    {!Object.values(triageData.comorbidities || {}).some(v => v === true) && (
-                      <span className="text-xs text-muted-foreground">Nenhuma registrada</span>
-                    )}
-                  </div>
-                </div>
-                
-                {triageData.notes && (
+
+      <Tabs defaultValue="summary" className="space-y-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-5">
+          <TabsTrigger value="summary" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Resumo
+          </TabsTrigger>
+          <TabsTrigger value="triage" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Triagem
+          </TabsTrigger>
+          <TabsTrigger value="clinical" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Avaliacao Clinica
+          </TabsTrigger>
+          <TabsTrigger value="cardiology" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Cardiologia
+          </TabsTrigger>
+          <TabsTrigger value="exams" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Exames
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="summary">
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  Dados da Triagem
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {triageData ? (
                   <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-xs text-muted-foreground">Pressao Arterial</p>
+                        <p className="break-words font-medium">{triageData.vitalSigns?.bloodPressure || '-'}</p>
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-xs text-muted-foreground">Freq. Cardiaca</p>
+                        <p className="font-medium">{triageData.vitalSigns?.heartRate || '-'} bpm</p>
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-xs text-muted-foreground">Saturacao O2</p>
+                        <p className="font-medium">{triageData.vitalSigns?.oxygenSaturation || '-'}%</p>
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-xs text-muted-foreground">IMC</p>
+                        <p className="font-medium">
+                          {triageData.vitalSigns?.weight && triageData.vitalSigns?.height
+                            ? (triageData.vitalSigns.weight / Math.pow(triageData.vitalSigns.height / 100, 2)).toFixed(1)
+                            : '-'}{' '}
+                          kg/mÂ²
+                        </p>
+                      </div>
+                    </div>
                     <Separator />
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Observacoes</p>
-                      <p className="break-words text-sm">{triageData.notes}</p>
+                      <p className="break-words text-sm">{triageData.notes || 'Sem observacoes de triagem.'}</p>
                     </div>
                   </>
+                ) : (
+                  <p className="text-muted-foreground text-sm">Triagem nao realizada</p>
                 )}
-              </>
-            ) : (
-              <p className="text-muted-foreground text-sm">Triagem nao realizada</p>
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* Clinical Evaluation Summary */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Calculator className="h-4 w-4 text-primary" />
-              Avaliacao Clinica
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {clinicalEval ? (
-              <>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs text-muted-foreground">RCRI Score</p>
-                    <p className="font-medium text-lg">{clinicalEval.rcriScore?.score || 0}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {clinicalEval.rcriScore?.riskPercentage}
-                    </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Calculator className="h-4 w-4 text-primary" />
+                  Avaliacao Clinica
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {clinicalEval ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-xs text-muted-foreground">RCRI Score</p>
+                        <p className="font-medium text-lg">{clinicalEval.rcriScore?.score || 0}</p>
+                        <p className="text-xs text-muted-foreground">{clinicalEval.rcriScore?.riskPercentage}</p>
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-xs text-muted-foreground">VSG-CRI</p>
+                        <p className="font-medium text-lg">{clinicalEval.vsgcriScore?.score || 0}</p>
+                        <p className="text-xs text-muted-foreground">{clinicalEval.vsgcriScore?.riskClass}</p>
+                      </div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
+                      <p className="break-words text-sm">{clinicalEval.notes || 'Sem observacoes clinicas.'}</p>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground text-sm">Avaliacao clinica nao realizada</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="triage">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                Dados da Triagem
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {triageData ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Pressao Arterial</p>
+                      <p className="break-words font-medium">{triageData.vitalSigns?.bloodPressure || '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Freq. Cardiaca</p>
+                      <p className="font-medium">{triageData.vitalSigns?.heartRate || '-'} bpm</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Saturacao O2</p>
+                      <p className="font-medium">{triageData.vitalSigns?.oxygenSaturation || '-'}%</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">IMC</p>
+                      <p className="font-medium">
+                        {triageData.vitalSigns?.weight && triageData.vitalSigns?.height
+                          ? (triageData.vitalSigns.weight / Math.pow(triageData.vitalSigns.height / 100, 2)).toFixed(1)
+                          : '-'}{' '}
+                        kg/mÂ²
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs text-muted-foreground">VSG-CRI</p>
-                    <p className="font-medium text-lg">{clinicalEval.vsgcriScore?.score || 0}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {clinicalEval.vsgcriScore?.riskClass}
-                    </p>
+                  <Separator />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Comorbidades</p>
+                    <div className="flex flex-wrap gap-1">
+                      {triageData.comorbidities?.diabetes && <span className="text-xs bg-muted px-2 py-1 rounded">Diabetes</span>}
+                      {triageData.comorbidities?.hypertension && <span className="text-xs bg-muted px-2 py-1 rounded">Hipertensao</span>}
+                      {triageData.comorbidities?.heartDisease && <span className="text-xs bg-muted px-2 py-1 rounded">Cardiopatia</span>}
+                      {triageData.comorbidities?.respiratoryDisease && (
+                        <span className="text-xs bg-muted px-2 py-1 rounded">Doenca Respiratoria</span>
+                      )}
+                      {triageData.comorbidities?.kidneyDisease && <span className="text-xs bg-muted px-2 py-1 rounded">Doenca Renal</span>}
+                      {triageData.comorbidities?.smoking && <span className="text-xs bg-muted px-2 py-1 rounded">Tabagismo</span>}
+                      {!Object.values(triageData.comorbidities || {}).some((v) => v === true) && (
+                        <span className="text-xs text-muted-foreground">Nenhuma registrada</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                
-                <Separator />
-                
-                {clinicalEval.notes && (
+                  <Separator />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Observacoes</p>
+                    <p className="break-words text-sm">{triageData.notes || 'Sem observacoes de triagem.'}</p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-sm">Triagem nao realizada</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="clinical">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-primary" />
+                Avaliacao Clinica
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {clinicalEval ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">RCRI Score</p>
+                      <p className="font-medium text-lg">{clinicalEval.rcriScore?.score || 0}</p>
+                      <p className="text-xs text-muted-foreground">{clinicalEval.rcriScore?.riskPercentage}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">VSG-CRI</p>
+                      <p className="font-medium text-lg">{clinicalEval.vsgcriScore?.score || 0}</p>
+                      <p className="text-xs text-muted-foreground">{clinicalEval.vsgcriScore?.riskClass}</p>
+                    </div>
+                  </div>
+                  <Separator />
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
-                    <p className="break-words text-sm">{clinicalEval.notes}</p>
+                    <p className="break-words text-sm">{clinicalEval.notes || 'Sem observacoes clinicas.'}</p>
                   </div>
-                )}
-              </>
-            ) : (
-              <p className="text-muted-foreground text-sm">Avaliacao clinica nao realizada</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      <PatientExamsHistory
-        examRequests={patientExamRequests}
-        title="Historico Completo de Exames"
-        description="Todos os exames ja executados ou em andamento neste paciente, incluindo leitura do laboratorio."
-        emptyMessage="Este paciente ainda nao possui exames registrados."
-      />
+                </>
+              ) : (
+                <p className="text-muted-foreground text-sm">Avaliacao clinica nao realizada</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cardiology">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                Parecer Cardiologico
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {cardiologyAssessment ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Tipo de Cirurgia</p>
+                      <p className="font-medium">{cardiologyAssessment.surgeryType || patient.scheduledSurgery || '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Urgencia</p>
+                      <p className="font-medium">{cardiologyAssessment.urgency || '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Suporte Pos-Operatorio</p>
+                      <p className="font-medium">{cardiologyAssessment.postoperativeSupport === 'com_uti' ? 'C/ UTI' : cardiologyAssessment.postoperativeSupport === 'sem_uti' ? 'S/ UTI' : '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Risco Final</p>
+                      <p className="font-medium">{cardiologyAssessment.finalRiskLevel || '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Recomendacao</p>
+                      <p className="font-medium">{cardiologyAssessment.recommendation || '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Liberacao</p>
+                      <p className="font-medium">{cardiologyAssessment.releaseProfile || '-'}</p>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Medidas de Controle de Danos</p>
+                    <p className="break-words text-sm">{cardiologyAssessment.damageControlMeasures || 'Sem medidas adicionais registradas.'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Observacoes</p>
+                    <p className="break-words text-sm">{cardiologyAssessment.notes || 'Sem observacoes cardiologicas.'}</p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-sm">Parecer cardiologico ainda nao registrado.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="exams">
+          <PatientExamsHistory
+            examRequests={patientExamRequests}
+            title="Historico Completo de Exames"
+            description="Todos os exames ja executados ou em andamento neste paciente, incluindo leitura do laboratorio."
+            emptyMessage="Este paciente ainda nao possui exames registrados."
+          />
+        </TabsContent>
+      </Tabs>
 
       <Card>
         <CardHeader>
@@ -370,64 +498,35 @@ export default function CirurgiaoAvaliarPage() {
           </div>
         </CardContent>
       </Card>
-      
-      {/* Final Assessment */}
+
       <Card className="border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
             Parecer Final do Risco Cirurgico
           </CardTitle>
-          <CardDescription>
-            Defina a classificacao final de risco e a recomendacao para o procedimento
-          </CardDescription>
+          <CardDescription>Defina a classificacao final de risco e a recomendacao para o procedimento</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-2">
               <Label>Classificacao Final de Risco</Label>
-              <Select
-                value={finalRisk}
-                onValueChange={value => setFinalRisk(value as RiskLevel)}
-              >
+              <Select value={finalRisk} onValueChange={(value) => setFinalRisk(value as RiskLevel)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o nivel de risco" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="baixo">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      Baixo Risco
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="moderado">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-amber-500" />
-                      Risco Moderado
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="alto">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-orange-500" />
-                      Alto Risco
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="critico">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-red-500" />
-                      Risco Critico
-                    </div>
-                  </SelectItem>
+                  <SelectItem value="baixo">Baixo Risco</SelectItem>
+                  <SelectItem value="moderado">Risco Moderado</SelectItem>
+                  <SelectItem value="alto">Alto Risco</SelectItem>
+                  <SelectItem value="critico">Risco Critico</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Recomendacao</Label>
-              <Select
-                value={recommendation}
-                onValueChange={value => setRecommendation(value as typeof recommendation)}
-              >
+              <Select value={recommendation} onValueChange={(value) => setRecommendation(value as typeof recommendation)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a recomendacao" />
                 </SelectTrigger>
@@ -439,7 +538,7 @@ export default function CirurgiaoAvaliarPage() {
               </Select>
             </div>
           </div>
-          
+
           {finalRisk && recommendation && (
             <div className={`rounded-lg border p-4 ${getRecommendationColor(recommendation)}`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -452,13 +551,13 @@ export default function CirurgiaoAvaliarPage() {
               </div>
             </div>
           )}
-          
+
           <div className="space-y-2">
             <Label>Parecer e Observacoes</Label>
             <Textarea
               placeholder="Descreva o parecer clinico, justificativas e recomendacoes especiais..."
               value={notes}
-              onChange={e => setNotes(e.target.value)}
+              onChange={(e) => setNotes(e.target.value)}
               rows={5}
             />
           </div>
@@ -467,11 +566,7 @@ export default function CirurgiaoAvaliarPage() {
           <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
             Salvar Rascunho
           </Button>
-          <Button 
-            className="w-full sm:w-auto"
-            onClick={() => handleSave(true)} 
-            disabled={isSaving || !finalRisk || !recommendation}
-          >
+          <Button className="w-full sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving || !finalRisk || !recommendation}>
             <Save className="mr-2 h-4 w-4" />
             Emitir Parecer Final
           </Button>

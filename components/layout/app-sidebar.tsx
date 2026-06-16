@@ -60,7 +60,16 @@ interface NavGroup {
   items: NavItem[]
 }
 
-const getNavigation = (role: UserRole, stats: { aguardandoTriagem: number; emAvaliacaoClinica: number; examesPendentes: number; aguardandoCirurgiao: number }): NavGroup[] => {
+const getNavigation = (
+  role: UserRole,
+  stats: {
+    aguardandoTriagem: number
+    emAvaliacaoClinica: number
+    examesPendentes: number
+    aguardandoCardiologia: number
+    aguardandoCirurgiao: number
+  },
+): NavGroup[] => {
   const roleNavigation: Record<UserRole, NavGroup[]> = {
     recepcao: [
       {
@@ -128,6 +137,21 @@ const getNavigation = (role: UserRole, stats: { aguardandoTriagem: number; emAva
         items: [
           { title: 'Exames Pendentes', url: '/laboratorio/pendentes', icon: FlaskConical, badge: stats.examesPendentes },
           { title: 'Exames Concluidos', url: '/laboratorio/concluidos', icon: FileText },
+        ],
+      },
+    ],
+    cardiologista: [
+      {
+        title: 'Menu Principal',
+        items: [
+          { title: 'Dashboard', url: '/cardiologista', icon: LayoutDashboard },
+          { title: 'Pacientes', url: '/cardiologista/pacientes', icon: Users },
+        ],
+      },
+      {
+        title: 'Risco Cardiologico',
+        items: [
+          { title: 'Aguardando Avaliacao', url: '/cardiologista/fila', icon: Heart, badge: stats.aguardandoCardiologia },
         ],
       },
     ],
