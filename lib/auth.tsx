@@ -24,6 +24,7 @@ function getRedirectPathForRole(role: UserRole): string {
     clinico: '/clinico',
     laboratorio: '/laboratorio',
     cardiologista: '/cardiologista',
+    anestesista: '/anestesista',
     cirurgiao: '/cirurgiao',
     admin: '/admin',
   }

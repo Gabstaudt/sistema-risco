@@ -13,7 +13,7 @@ export default function CardiologistaDashboard() {
   const { patients, getPatientsByStatus } = useData()
 
   const aguardandoAvaliacao = getPatientsByStatus(['aguardando_cardiologista', 'em_avaliacao_cardiologica'])
-  const encaminhadosAoCirurgiao = getPatientsByStatus('aguardando_cirurgiao')
+  const encaminhadosAoAnestesista = getPatientsByStatus('aguardando_anestesista')
   const altoRisco = getPatientsByStatus('alto_risco')
   const contraindicados = getPatientsByStatus('contraindicado')
 
@@ -51,8 +51,8 @@ export default function CardiologistaDashboard() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard title="Na fila" value={aguardandoAvaliacao.length} description="Aguardando parecer" icon={Users} />
           <StatCard
-            title="Encaminhados ao Cirurgiao"
-            value={encaminhadosAoCirurgiao.length}
+            title="Encaminhados ao Anestesista"
+            value={encaminhadosAoAnestesista.length}
             description="Liberados pela cardiologia"
             icon={CheckCircle}
             iconClassName="bg-emerald-100"

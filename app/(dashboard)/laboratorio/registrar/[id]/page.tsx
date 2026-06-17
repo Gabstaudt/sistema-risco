@@ -217,7 +217,11 @@ export default function LaboratorioRegistrarPage() {
   const clinicalOwner = patient.triageAssignedClinicianName || patient.requestingPhysician || patient.avaliacaoClinica?.avaliadoPor || 'Equipe clinica'
   const cardiologyOwner = patient.clinicalAssignedCardiologistName || 'Nao atribuido'
   const nextDestination: PatientStatus =
-    allExamsCompleted && patient.clinicalRequestsSurgicalRisk ? 'aguardando_cardiologista' : 'aguardando_clinico'
+    allExamsCompleted && patient.anesthesiaAssessment?.requestsAdditionalEvaluation
+      ? 'aguardando_anestesista'
+      : allExamsCompleted && patient.clinicalRequestsSurgicalRisk
+        ? 'aguardando_cardiologista'
+        : 'aguardando_clinico'
 
   const criticalAlerts = useMemo(() => {
     const alerts: string[] = []

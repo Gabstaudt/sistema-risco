@@ -28,6 +28,8 @@ const activeCareStatuses: PatientStatus[] = [
   'exames_concluidos',
   'aguardando_cardiologista',
   'em_avaliacao_cardiologica',
+  'aguardando_anestesista',
+  'em_avaliacao_anestesica',
   'aguardando_cirurgiao',
   'em_avaliacao_cirurgica',
 ]

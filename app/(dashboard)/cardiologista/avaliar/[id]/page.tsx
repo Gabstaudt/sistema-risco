@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/lib/auth'
+import { users } from '@/lib/data/users'
 import { useData } from '@/lib/data-context'
 import type { RiskLevel, SurgeryUrgency } from '@/lib/types'
 import { Activity, ArrowLeft, Heart, Save, ShieldCheck, User } from 'lucide-react'
@@ -40,7 +41,11 @@ export default function CardiologistaAvaliarPage() {
   const [recommendation, setRecommendation] = useState<Recommendation | ''>(cardiologyAssessment?.recommendation || '')
   const [damageControlMeasures, setDamageControlMeasures] = useState(cardiologyAssessment?.damageControlMeasures || '')
   const [notes, setNotes] = useState(cardiologyAssessment?.notes || '')
+  const [assignedAnesthesiologistId, setAssignedAnesthesiologistId] = useState(patient?.cardiologyAssignedAnesthesiologistId || '')
   const [isSaving, setIsSaving] = useState(false)
+  const anesthesiologists = users.filter((item) => item.role === 'anestesista' && item.active)
+  const normalizedAnesthesiologistId = assignedAnesthesiologistId === 'unassigned' ? '' : assignedAnesthesiologistId
+  const assignedAnesthesiologist = anesthesiologists.find((item) => item.id === normalizedAnesthesiologistId)
 
   useEffect(() => {
     if (isAuthLoading) return
@@ -77,7 +82,7 @@ export default function CardiologistaAvaliarPage() {
     const nextStatus =
       complete
         ? recommendation === 'aprovar'
-          ? 'aguardando_cirurgiao'
+          ? 'aguardando_anestesista'
           : recommendation === 'contraindicar'
             ? 'contraindicado'
             : 'alto_risco'
@@ -96,6 +101,8 @@ export default function CardiologistaAvaliarPage() {
         completedAt: complete ? new Date().toISOString() : undefined,
         completedBy: complete ? user?.id : undefined,
       },
+      cardiologyAssignedAnesthesiologistId: normalizedAnesthesiologistId || undefined,
+      cardiologyAssignedAnesthesiologistName: assignedAnesthesiologist?.name || undefined,
       status: nextStatus,
       riskLevel: finalRisk || patient.riskLevel,
       updatedAt: new Date().toISOString(),
@@ -127,7 +134,7 @@ export default function CardiologistaAvaliarPage() {
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao Cardiologica Pre-Operatoria</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">Etapa obrigatoria antes do fluxo do cirurgiao.</p>
+            <p className="text-sm text-muted-foreground sm:text-base">Etapa obrigatoria antes do fluxo da anestesia.</p>
           </div>
           <PatientStatusBadge status={patient.status} />
         </div>
@@ -317,9 +324,26 @@ export default function CardiologistaAvaliarPage() {
                   <SelectValue placeholder="Selecione a recomendacao" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="aprovar">Liberar para cirurgiao</SelectItem>
+                  <SelectItem value="aprovar">Liberar para anestesista</SelectItem>
                   <SelectItem value="adiar">Adiar e reavaliar</SelectItem>
                   <SelectItem value="contraindicar">Contraindicar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 lg:col-span-2">
+              <Label>Anestesista Responsavel</Label>
+              <Select value={assignedAnesthesiologistId} onValueChange={setAssignedAnesthesiologistId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um anestesista ou deixe em aberto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Sem definicao no momento</SelectItem>
+                  {anesthesiologists.map((anesthesiologist) => (
+                    <SelectItem key={anesthesiologist.id} value={anesthesiologist.id}>
+                      {anesthesiologist.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -349,7 +373,7 @@ export default function CardiologistaAvaliarPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              {recommendation === 'aprovar' && 'Paciente segue para a fila do cirurgiao apos a conclusao deste parecer.'}
+              {recommendation === 'aprovar' && 'Paciente segue para a fila do anestesista apos a conclusao deste parecer.'}
               {recommendation === 'adiar' && 'Paciente permanece fora da fila cirurgica ate estabilizacao e nova reavaliacao.'}
               {recommendation === 'contraindicar' && 'Paciente nao deve seguir ao cirurgiao neste momento.'}
             </CardContent>

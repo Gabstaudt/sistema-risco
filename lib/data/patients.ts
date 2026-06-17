@@ -478,6 +478,8 @@ const basePatients: Patient[] = [
     clinicalRequestsSurgicalRisk: true,
     clinicalAssignedCardiologistId: 'user-8',
     clinicalAssignedCardiologistName: 'Dra. Helena Cardoso',
+    cardiologyAssignedAnesthesiologistId: 'user-9',
+    cardiologyAssignedAnesthesiologistName: 'Dr. Rafael Monteiro',
     examesSolicitados: ['exam-1', 'exam-2', 'exam-3', 'exam-4', 'exam-5', 'exam-6', 'exam-7', 'exam-9', 'exam-10'],
     visitHistory: [
       {
@@ -577,6 +579,20 @@ const basePatients: Patient[] = [
     clinicalRequestsSurgicalRisk: true,
     clinicalAssignedCardiologistId: 'user-8',
     clinicalAssignedCardiologistName: 'Dra. Helena Cardoso',
+    cardiologyAssignedAnesthesiologistId: 'user-9',
+    cardiologyAssignedAnesthesiologistName: 'Dr. Rafael Monteiro',
+    cardiologyAssessment: {
+      surgeryType: 'Histerectomia total abdominal',
+      urgency: 'eletiva',
+      releaseProfile: 'eletiva',
+      damageControlMeasures: 'Correcao parcial da anemia, reserva sanguinea e monitorizacao hemodinamica habitual.',
+      postoperativeSupport: 'sem_uti',
+      finalRiskLevel: 'moderado',
+      recommendation: 'aprovar',
+      notes: 'Liberada pela cardiologia, seguir para avaliacao pre-anestesica antes do cirurgiao.',
+      completedAt: new Date(Date.now() - 40 * 3600000).toISOString(),
+      completedBy: 'user-8',
+    },
     examesSolicitados: ['exam-1', 'exam-3', 'exam-4', 'exam-5', 'exam-6'],
     visitHistory: [
       {
@@ -675,6 +691,19 @@ const basePatients: Patient[] = [
     clinicalRequestsSurgicalRisk: true,
     clinicalAssignedSurgeonId: 'user-5',
     clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
+    anesthesiaAssessment: {
+      anestheticHistory: 'Sem intercorrencias anestesicas previas. Nega nausea pos-operatoria importante.',
+      airwayAssessment: 'Mallampati I, boa abertura oral e mobilidade cervical preservada.',
+      asaClassification: 'I',
+      additionalRequests: '',
+      requestsAdditionalEvaluation: false,
+      anesthesiaType: 'Anestesia geral balanceada',
+      fitForAnesthesia: true,
+      recommendation: 'aprovar',
+      notes: 'Apto para anestesia geral sem restricoes adicionais.',
+      completedAt: new Date(Date.now() - 50 * 3600000).toISOString(),
+      completedBy: 'user-9',
+    },
     cardiologyAssessment: {
       surgeryType: 'Apendicectomia videolaparoscopica',
       urgency: 'eletiva',
@@ -807,6 +836,19 @@ const basePatients: Patient[] = [
     clinicalRequestsSurgicalRisk: true,
     clinicalAssignedSurgeonId: 'user-5',
     clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
+    anesthesiaAssessment: {
+      anestheticHistory: 'Procedimento previo com hipotensao transitória em recuperação.',
+      airwayAssessment: 'Mallampati III, obesidade e limitacao discreta de extensao cervical.',
+      asaClassification: 'IV',
+      additionalRequests: 'Necessita nova avaliacao clinica e otimização cardiocirculatória antes de reprogramar anestesia.',
+      requestsAdditionalEvaluation: true,
+      anesthesiaType: 'Anestesia geral com monitorizacao invasiva',
+      fitForAnesthesia: false,
+      recommendation: 'reavaliar',
+      notes: 'Adiar programacao anestesica ate estabilizacao cardiovascular.',
+      completedAt: new Date(Date.now() - 90 * 3600000).toISOString(),
+      completedBy: 'user-9',
+    },
     cardiologyAssessment: {
       surgeryType: 'Laparotomia exploradora',
       urgency: 'urgencia',
@@ -942,6 +984,19 @@ const basePatients: Patient[] = [
     clinicalRequestsSurgicalRisk: true,
     clinicalAssignedSurgeonId: 'user-5',
     clinicalAssignedSurgeonName: 'Dr. Roberto Lima',
+    anesthesiaAssessment: {
+      anestheticHistory: 'Internacao previa com necessidade de suporte ventilatorio prolongado.',
+      airwayAssessment: 'Mallampati IV, mobilidade cervical reduzida e risco alto de via aerea dificil.',
+      asaClassification: 'IV',
+      additionalRequests: 'Contraindicacao mantida ate compensacao clinica e nova discussao multidisciplinar.',
+      requestsAdditionalEvaluation: false,
+      anesthesiaType: 'Nao definida',
+      fitForAnesthesia: false,
+      recommendation: 'contraindicar',
+      notes: 'Sem condicoes anestesicas para cirurgia eletiva no momento.',
+      completedAt: new Date(Date.now() - 114 * 3600000).toISOString(),
+      completedBy: 'user-9',
+    },
     cardiologyAssessment: {
       surgeryType: 'Hernioplastia incisional',
       urgency: 'eletiva',
@@ -1529,12 +1584,21 @@ export function hydratePatient(patient: Patient): Patient {
     !patient.cardiologyAssessment &&
     !patient.surgicalRiskAssessment &&
     !patient.avaliacaoCirurgica
+  const shouldMoveToAnesthesia =
+    patient.cardiologyAssessment?.recommendation === 'aprovar' &&
+    !patient.anesthesiaAssessment &&
+    !patient.surgicalRiskAssessment &&
+    !patient.avaliacaoCirurgica
 
   const normalizedStatus =
     shouldMoveToCardiology && patient.status === 'aguardando_cirurgiao'
       ? 'aguardando_cardiologista'
       : shouldMoveToCardiology && patient.status === 'em_avaliacao_cirurgica'
         ? 'em_avaliacao_cardiologica'
+        : shouldMoveToAnesthesia && patient.status === 'aguardando_cirurgiao'
+          ? 'aguardando_anestesista'
+          : shouldMoveToAnesthesia && patient.status === 'em_avaliacao_cirurgica'
+            ? 'em_avaliacao_anestesica'
         : patient.status
 
   return {
