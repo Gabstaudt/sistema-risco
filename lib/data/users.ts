@@ -47,6 +47,15 @@ export const users: User[] = [
     createdAt: '2024-01-15T08:00:00Z',
   },
   {
+    id: 'user-9',
+    email: 'anestesista@hospital.com',
+    password: '123456',
+    name: 'Dr. Rafael Monteiro',
+    role: 'anestesista',
+    active: true,
+    createdAt: '2024-01-15T08:00:00Z',
+  },
+  {
     id: 'user-5',
     email: 'cirurgiao@hospital.com',
     password: '123456',

@@ -25,6 +25,7 @@ const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
   clinico: { label: 'Clinico', color: 'bg-purple-100 text-purple-700' },
   laboratorio: { label: 'Laboratorio', color: 'bg-amber-100 text-amber-700' },
   cardiologista: { label: 'Cardiologista', color: 'bg-red-100 text-red-700' },
+  anestesista: { label: 'Anestesista', color: 'bg-cyan-100 text-cyan-700' },
   cirurgiao: { label: 'Cirurgiao', color: 'bg-rose-100 text-rose-700' },
   admin: { label: 'Administrador', color: 'bg-slate-100 text-slate-700' },
 }
@@ -229,7 +230,7 @@ export default function UsuariosPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {users.slice(0, 7).map(u => (
+            {users.slice(0, 8).map(u => (
               <div key={u.id} className="rounded-lg border bg-muted/30 p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge className={ROLE_LABELS[u.role].color} variant="secondary">

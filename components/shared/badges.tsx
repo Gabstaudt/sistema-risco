@@ -20,6 +20,8 @@ const statusStyles: Record<PatientStatus, string> = {
   exames_concluidos: 'bg-teal-100 text-teal-800 border-teal-200',
   aguardando_cardiologista: 'bg-orange-100 text-orange-800 border-orange-200',
   em_avaliacao_cardiologica: 'bg-red-100 text-red-800 border-red-200',
+  aguardando_anestesista: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  em_avaliacao_anestesica: 'bg-indigo-100 text-indigo-800 border-indigo-200',
   aguardando_cirurgiao: 'bg-amber-100 text-amber-800 border-amber-200',
   em_avaliacao_cirurgica: 'bg-blue-100 text-blue-800 border-blue-200',
   concluido: 'bg-emerald-100 text-emerald-800 border-emerald-200',

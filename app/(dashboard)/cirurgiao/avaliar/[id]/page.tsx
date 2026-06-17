@@ -120,6 +120,7 @@ export default function CirurgiaoAvaliarPage() {
   const triageData = patient.triageData
   const clinicalEval = patient.clinicalEvaluation
   const cardiologyAssessment = patient.cardiologyAssessment
+  const anesthesiaAssessment = patient.anesthesiaAssessment
 
   const getRecommendationColor = (rec: string) => {
     switch (rec) {
@@ -200,7 +201,7 @@ export default function CirurgiaoAvaliarPage() {
       </Card>
 
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-5">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-6">
           <TabsTrigger value="summary" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Resumo
           </TabsTrigger>
@@ -212,6 +213,9 @@ export default function CirurgiaoAvaliarPage() {
           </TabsTrigger>
           <TabsTrigger value="cardiology" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Cardiologia
+          </TabsTrigger>
+          <TabsTrigger value="anesthesia" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Anestesia
           </TabsTrigger>
           <TabsTrigger value="exams" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Exames
@@ -450,6 +454,66 @@ export default function CirurgiaoAvaliarPage() {
                 </>
               ) : (
                 <p className="text-muted-foreground text-sm">Parecer cardiologico ainda nao registrado.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="anesthesia">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                Parecer Anestesico
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {anesthesiaAssessment ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Historico Anestesico</p>
+                      <p className="font-medium">{anesthesiaAssessment.anestheticHistory || '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Via Aerea</p>
+                      <p className="font-medium">{anesthesiaAssessment.airwayAssessment || '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">ASA</p>
+                      <p className="font-medium">{anesthesiaAssessment.asaClassification || '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Tipo de Anestesia</p>
+                      <p className="font-medium">{anesthesiaAssessment.anesthesiaType || '-'}</p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Apto para Anestesia</p>
+                      <p className="font-medium">
+                        {anesthesiaAssessment.fitForAnesthesia === true
+                          ? 'Sim'
+                          : anesthesiaAssessment.fitForAnesthesia === false
+                            ? 'Nao'
+                            : '-'}
+                      </p>
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">Recomendacao</p>
+                      <p className="font-medium">{anesthesiaAssessment.recommendation || '-'}</p>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Complementos Solicitados</p>
+                    <p className="break-words text-sm">{anesthesiaAssessment.additionalRequests || 'Nenhum complemento solicitado.'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Observacoes</p>
+                    <p className="break-words text-sm">{anesthesiaAssessment.notes || 'Sem observacoes anestesicas.'}</p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-sm">Parecer anestesico ainda nao registrado.</p>
               )}
             </CardContent>
           </Card>

@@ -45,6 +45,7 @@ import {
   TestTube,
   Heart,
   AlertCircle,
+  ShieldPlus,
 } from 'lucide-react'
 
 interface NavItem {
@@ -67,6 +68,7 @@ const getNavigation = (
     emAvaliacaoClinica: number
     examesPendentes: number
     aguardandoCardiologia: number
+    aguardandoAnestesia: number
     aguardandoCirurgiao: number
   },
 ): NavGroup[] => {
@@ -152,6 +154,21 @@ const getNavigation = (
         title: 'Risco Cardiologico',
         items: [
           { title: 'Aguardando Avaliacao', url: '/cardiologista/fila', icon: Heart, badge: stats.aguardandoCardiologia },
+        ],
+      },
+    ],
+    anestesista: [
+      {
+        title: 'Menu Principal',
+        items: [
+          { title: 'Dashboard', url: '/anestesista', icon: LayoutDashboard },
+          { title: 'Pacientes', url: '/anestesista/pacientes', icon: Users },
+        ],
+      },
+      {
+        title: 'Avaliacao Pre-Anestesica',
+        items: [
+          { title: 'Aguardando Avaliacao', url: '/anestesista/fila', icon: ShieldPlus, badge: stats.aguardandoAnestesia },
         ],
       },
     ],

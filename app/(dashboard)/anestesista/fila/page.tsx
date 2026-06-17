@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/shared/badges'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useData } from '@/lib/data-context'
-import { ArrowRight, Clock, FileText, Heart, User } from 'lucide-react'
+import { ArrowRight, Clock, FileText, ShieldPlus, User } from 'lucide-react'
 import type { LabUrgency, Patient } from '@/lib/types'
 
 const urgencyMeta: Record<LabUrgency, { label: string; className: string; rank: number }> = {
@@ -21,10 +21,22 @@ function getUrgency(patient: Patient): LabUrgency {
   return patient.labRiskClassification || patient.triageRiskClassification || 'nao_urgente'
 }
 
-export default function CardiologistaFilaPage() {
-  const { getPatientsByStatus } = useData()
+export default function AnestesistaFilaPage() {
+  const { patients } = useData()
 
-  const queue = getPatientsByStatus(['aguardando_cardiologista', 'em_avaliacao_cardiologica'])
+  const queue = patients
+    .filter((patient) => {
+      if (['aguardando_anestesista', 'em_avaliacao_anestesica'].includes(patient.status)) {
+        return true
+      }
+
+      return (
+        patient.cardiologyAssessment?.recommendation === 'aprovar' &&
+        !patient.anesthesiaAssessment &&
+        !patient.avaliacaoCirurgica &&
+        !patient.surgicalRiskAssessment
+      )
+    })
     .map((patient) => ({ patient, urgency: getUrgency(patient) }))
     .sort((left, right) => {
       const urgencyDiff = urgencyMeta[left.urgency].rank - urgencyMeta[right.urgency].rank
@@ -32,9 +44,7 @@ export default function CardiologistaFilaPage() {
       return new Date(left.patient.dataEntrada).getTime() - new Date(right.patient.dataEntrada).getTime()
     })
 
-  const formatTime = (value: string) =>
-    new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-
+  const formatTime = (value: string) => new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   const getWaitingTime = (value: string) => {
     const diffMinutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000))
     if (diffMinutes < 60) return `${diffMinutes} min`
@@ -46,23 +56,21 @@ export default function CardiologistaFilaPage() {
       <Header breadcrumbs={[{ label: 'Aguardando Avaliacao' }]} />
       <div className="mx-auto flex-1 w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-foreground">Fila da Cardiologia</h1>
-          <p className="text-muted-foreground">
-            Pacientes aguardando liberacao cardiologica pre-operatoria antes do encaminhamento ao anestesista.
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">Fila da Anestesia</h1>
+          <p className="text-muted-foreground">Pacientes liberados pela cardiologia e aguardando avaliacao pre-anestesica.</p>
         </div>
 
         {queue.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
-              Nenhum paciente aguardando avaliacao cardiologica.
+              Nenhum paciente aguardando avaliacao pre-anestesica.
             </CardContent>
           </Card>
         ) : (
           <Card>
             <CardHeader>
               <CardTitle>Fila Prioritaria</CardTitle>
-              <CardDescription>Ordem do mais urgente ao menos urgente.</CardDescription>
+              <CardDescription>Ordem assistencial do mais urgente ao menos urgente.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {queue.map(({ patient, urgency }) => (
@@ -86,15 +94,15 @@ export default function CardiologistaFilaPage() {
                           Entrada as {formatTime(patient.dataEntrada)}
                         </span>
                         <span>Tempo em espera: {getWaitingTime(patient.dataEntrada)}</span>
-                        <span>Clinico: {patient.requestingPhysician || 'Nao informado'}</span>
+                        <span>Cardiologista: {patient.clinicalAssignedCardiologistName || 'Nao informado'}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex w-full flex-col gap-2 lg:w-auto lg:items-end">
                     <Button asChild className="w-full lg:w-auto">
-                      <Link href={`/cardiologista/avaliacao/${patient.id}`}>
-                        <Heart className="mr-2 h-4 w-4" />
+                      <Link href={`/anestesista/avaliacao/${patient.id}`}>
+                        <ShieldPlus className="mr-2 h-4 w-4" />
                         Avaliar
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>

@@ -53,6 +53,7 @@ export default function LoginPage() {
     { role: 'Clinico', email: 'clinico@hospital.com' },
     { role: 'Laboratorio', email: 'laboratorio@hospital.com' },
     { role: 'Cardiologista', email: 'cardiologista@hospital.com' },
+    { role: 'Anestesista', email: 'anestesista@hospital.com' },
     { role: 'Cirurgiao', email: 'cirurgiao@hospital.com' },
     { role: 'Admin', email: 'admin@hospital.com' },
   ]

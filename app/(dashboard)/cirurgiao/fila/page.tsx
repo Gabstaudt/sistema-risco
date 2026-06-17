@@ -238,7 +238,7 @@ export default function CirurgiaoFilaPage() {
                                   Entrada as {formatTime(patient.dataEntrada)}
                                 </span>
                                 <span>Tempo em espera: {getWaitingTime(patient.dataEntrada)}</span>
-                                <span>Cardiologista: {patient.clinicalAssignedCardiologistName || 'Nao definido'}</span>
+                                <span>Anestesista: {patient.cardiologyAssignedAnesthesiologistName || 'Nao definido'}</span>
                               </div>
                             </div>
                           </div>
