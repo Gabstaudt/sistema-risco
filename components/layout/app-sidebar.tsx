@@ -77,7 +77,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/recepcao', icon: LayoutDashboard },
+          { title: 'Início', url: '/recepcao', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/recepcao/pacientes', icon: Users },
           { title: 'Novo Paciente', url: '/recepcao/cadastro', icon: UserPlus },
         ],
@@ -93,7 +93,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/triagem', icon: LayoutDashboard },
+          { title: 'Início', url: '/triagem', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/triagem/pacientes', icon: Users },
           { title: 'Novo Paciente', url: '/triagem/cadastro', icon: UserPlus },
         ],
@@ -109,7 +109,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/clinico', icon: LayoutDashboard },
+          { title: 'Início', url: '/clinico', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/clinico/pacientes', icon: Users },
         ],
       },
@@ -131,12 +131,13 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/laboratorio', icon: LayoutDashboard },
+          { title: 'Início', url: '/laboratorio', icon: LayoutDashboard },
         ],
       },
       {
         title: 'Exames',
         items: [
+          { title: 'Fila de Atendimento', url: '/laboratorio/fila', icon: ClipboardList },
           { title: 'Exames Pendentes', url: '/laboratorio/pendentes', icon: FlaskConical, badge: stats.examesPendentes },
           { title: 'Exames Concluidos', url: '/laboratorio/concluidos', icon: FileText },
         ],
@@ -146,7 +147,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/cardiologista', icon: LayoutDashboard },
+          { title: 'Início', url: '/cardiologista', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/cardiologista/pacientes', icon: Users },
         ],
       },
@@ -161,7 +162,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/anestesista', icon: LayoutDashboard },
+          { title: 'Início', url: '/anestesista', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/anestesista/pacientes', icon: Users },
         ],
       },
@@ -176,7 +177,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/cirurgiao', icon: LayoutDashboard },
+          { title: 'Início', url: '/cirurgiao', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/cirurgiao/pacientes', icon: Users },
         ],
       },
@@ -199,7 +200,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+          { title: 'Início', url: '/admin', icon: LayoutDashboard },
           { title: 'Usuarios', url: '/admin/usuarios', icon: Users },
         ],
       },
@@ -257,6 +258,7 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
                       asChild
+                      className="min-h-12 text-base"
                       isActive={pathname === item.url}
                       tooltip={item.title}
                     >

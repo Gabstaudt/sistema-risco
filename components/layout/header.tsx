@@ -23,7 +23,7 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-card">
-      <SidebarTrigger className="-ml-1" />
+      <SidebarTrigger className="-ml-1 size-12" />
       <Separator orientation="vertical" className="h-4" />
       
       {breadcrumbs && breadcrumbs.length > 0 ? (
