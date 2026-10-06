@@ -1,4 +1,8 @@
+'use client'
+
 import Link from 'next/link'
+import { useAuth } from '@/lib/auth'
+import { canAccessRoute } from '@/lib/permissions'
 import {
   ArrowRight, ClipboardList, FileCheck, FileText, FlaskConical,
   History, Calculator, Stethoscope, UserPlus, Users,
@@ -82,7 +86,9 @@ const homeByRole: Record<UserRole, HomeConfig> = {
 }
 
 export function ProfileHome({ role }: { role: UserRole }) {
-  const { title, actions } = homeByRole[role]
+  const { user } = useAuth()
+  const { title, actions: configuredActions } = homeByRole[role]
+  const actions = configuredActions.filter((action) => canAccessRoute(action.href, user))
 
   return (
     <>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { BrandLogo } from '@/components/shared/brand-logo'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import { canAccessRoute } from '@/lib/permissions'
 import { useData } from '@/lib/data-context'
 import { ROLE_LABELS, type UserRole } from '@/lib/types'
 import {
@@ -227,6 +228,8 @@ export function AppSidebar() {
 
   const stats = getStats()
   const navigation = getNavigation(user.role, stats)
+    .map((group) => ({ ...group, items: group.items.filter((item) => canAccessRoute(item.url, user)) }))
+    .filter((group) => group.items.length > 0)
 
   const getInitials = (name: string) => {
     return name

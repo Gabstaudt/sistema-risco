@@ -1,11 +1,13 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { Patient, PatientStatus, Priority, VitalSigns, ClinicalEvaluation, SurgicalEvaluation, AuditLog, AuditAction, ExamRequest, ExamType, ExamStatus } from './types'
 import { patients as initialPatients, examRequests as initialExamRequests, hydratePatient } from './data/patients'
 import { examTypes as initialExamTypes } from './data/exams'
 import { auditLogs as initialAuditLogs } from './data/audit'
 import { useAuth } from './auth'
+import { projectPatientForUser } from './permissions'
+import { validatePatientBasicEdit, type PatientBasicDraft } from './patient-basic-edit'
 
 interface DataContextType {
   // Pacientes
@@ -15,6 +17,7 @@ interface DataContextType {
   getPatientsByStatus: (status: PatientStatus | PatientStatus[]) => Patient[]
   createPatient: (patient: Omit<Patient, 'id' | 'prontuario' | 'cadastradoEm' | 'ultimaAtualizacao' | 'ultimoAtualizadoPor'>) => Patient
   updatePatient: (id: string, updates: Partial<Patient>) => void
+  updatePatientBasic: (id: string, draft: PatientBasicDraft) => Promise<void>
   updatePatientStatus: (id: string, status: PatientStatus) => void
   registerVitalSigns: (id: string, vitalSigns: VitalSigns) => void
   registerClinicalEvaluation: (id: string, evaluation: Omit<ClinicalEvaluation, 'id' | 'patientId'>) => void
@@ -68,12 +71,20 @@ const normalizePatient = (patient: Patient) => hydratePatient(patient)
 const normalizePatients = (items: Patient[]) => items.map(normalizePatient)
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
+  const { user, hasPermission } = useAuth()
   const [patients, setPatients] = useState<Patient[]>([])
   const [examTypes, setExamTypes] = useState<ExamType[]>([])
   const [examRequests, setExamRequests] = useState<ExamRequest[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
+
+  // Keep full mock records internal; public reads follow the current session permissions.
+  const visiblePatients = useMemo(() => patients.flatMap((patient) => {
+    const visible = projectPatientForUser(patient, user)
+    return visible ? [visible] : []
+  }), [patients, user])
+  const visibleExamRequests = hasPermission('view_exam_results') ? examRequests : []
+  const visibleAuditLogs = hasPermission('view_patient_history') ? auditLogs : []
 
   // Carregar dados do localStorage ou usar dados iniciais
   useEffect(() => {
@@ -137,13 +148,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Pacientes
   const getPatient = useCallback((id: string) => {
-    return patients.find(p => p.id === id)
-  }, [patients])
+    return visiblePatients.find(p => p.id === id)
+  }, [visiblePatients])
 
   const getPatientsByStatus = useCallback((status: PatientStatus | PatientStatus[]) => {
     const statusArray = Array.isArray(status) ? status : [status]
-    return patients.filter(p => statusArray.includes(p.status))
-  }, [patients])
+    return visiblePatients.filter(p => statusArray.includes(p.status))
+  }, [visiblePatients])
 
   const createPatient = useCallback((patientData: Omit<Patient, 'id' | 'prontuario' | 'cadastradoEm' | 'ultimaAtualizacao' | 'ultimoAtualizadoPor'>) => {
     const newPatient: Patient = normalizePatient({
@@ -185,6 +196,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return p
     }))
   }, [user?.id])
+
+  const updatePatientBasic = useCallback(async (id: string, draft: PatientBasicDraft) => {
+    const updates = validatePatientBasicEdit(user, id, draft, patients)
+    // Do not rehydrate clinical snapshots during a registration-only edit.
+    setPatients((current) => current.map((patient) => patient.id === id ? {
+      ...patient,
+      ...updates,
+      name: updates.nomeCompleto ?? patient.name,
+      age: updates.idade ?? patient.age,
+      ultimaAtualizacao: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ultimoAtualizadoPor: user?.id || '',
+    } : patient))
+    addAuditLog({ patientId: id, action: 'edicao_dados_basicos', description: 'Dados de cadastro e entrada atual atualizados.' })
+  }, [user, patients, addAuditLog])
 
   const updatePatientStatus = useCallback((id: string, status: PatientStatus) => {
     const patient = patients.find(p => p.id === id)
@@ -284,17 +310,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Exames
   const getExamRequestsByPatient = useCallback((patientId: string) => {
-    return examRequests.filter(e => e.patientId === patientId)
-  }, [examRequests])
+    return visibleExamRequests.filter(e => e.patientId === patientId)
+  }, [visibleExamRequests])
 
   const getExamRequestsByStatus = useCallback((status: ExamStatus | ExamStatus[]) => {
     const statusArray = Array.isArray(status) ? status : [status]
-    return examRequests.filter(e => statusArray.includes(e.status))
-  }, [examRequests])
+    return visibleExamRequests.filter(e => statusArray.includes(e.status))
+  }, [visibleExamRequests])
 
   const getPendingExams = useCallback(() => {
-    return examRequests.filter(e => e.status !== 'concluido' && e.status !== 'cancelado')
-  }, [examRequests])
+    return visibleExamRequests.filter(e => e.status !== 'concluido' && e.status !== 'cancelado')
+  }, [visibleExamRequests])
 
   const createExamType = useCallback((examTypeData: Omit<ExamType, 'id' | 'createdAt'>) => {
     const newExamType: ExamType = {
@@ -397,10 +423,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Auditoria
   const getAuditLogsByPatient = useCallback((patientId: string) => {
-    return auditLogs
+    return visibleAuditLogs
       .filter(log => log.patientId === patientId)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-  }, [auditLogs])
+  }, [visibleAuditLogs])
 
   const getPatientById = useCallback((id: string) => {
     return getPatient(id)
@@ -413,40 +439,41 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Estatisticas
   const getStats = useCallback(() => {
     return {
-      totalPacientes: patients.length,
-      aguardandoTriagem: patients.filter(p => p.status === 'aguardando_triagem').length,
-      emAvaliacaoClinica: patients.filter(p => ['aguardando_clinico', 'em_avaliacao_clinica'].includes(p.status)).length,
-      examesPendentes: examRequests.filter(e => e.status !== 'concluido' && e.status !== 'cancelado').length,
-      aguardandoCardiologia: patients.filter(p => ['aguardando_cardiologista', 'em_avaliacao_cardiologica'].includes(p.status)).length,
-      aguardandoAnestesia: patients.filter(p => ['aguardando_anestesista', 'em_avaliacao_anestesica'].includes(p.status)).length,
-      aguardandoCirurgiao: patients.filter(p => ['aguardando_cirurgiao', 'em_avaliacao_cirurgica'].includes(p.status)).length,
-      liberados: patients.filter(p => p.status === 'liberado').length,
-      altoRisco: patients.filter(p => p.status === 'alto_risco').length,
-      contraindicados: patients.filter(p => p.status === 'contraindicado').length,
+      totalPacientes: visiblePatients.length,
+      aguardandoTriagem: visiblePatients.filter(p => p.status === 'aguardando_triagem').length,
+      emAvaliacaoClinica: visiblePatients.filter(p => ['aguardando_clinico', 'em_avaliacao_clinica'].includes(p.status)).length,
+      examesPendentes: visibleExamRequests.filter(e => e.status !== 'concluido' && e.status !== 'cancelado').length,
+      aguardandoCardiologia: visiblePatients.filter(p => ['aguardando_cardiologista', 'em_avaliacao_cardiologica'].includes(p.status)).length,
+      aguardandoAnestesia: visiblePatients.filter(p => ['aguardando_anestesista', 'em_avaliacao_anestesica'].includes(p.status)).length,
+      aguardandoCirurgiao: visiblePatients.filter(p => ['aguardando_cirurgiao', 'em_avaliacao_cirurgica'].includes(p.status)).length,
+      liberados: visiblePatients.filter(p => p.status === 'liberado').length,
+      altoRisco: visiblePatients.filter(p => p.status === 'alto_risco').length,
+      contraindicados: visiblePatients.filter(p => p.status === 'contraindicado').length,
     }
-  }, [patients, examRequests])
+  }, [visiblePatients, visibleExamRequests])
 
   return (
     <DataContext.Provider value={{
-      patients,
+      patients: visiblePatients,
       getPatient,
       getPatientById,
       getPatientsByStatus,
       createPatient,
       updatePatient,
+      updatePatientBasic,
       updatePatientStatus,
       registerVitalSigns,
       registerClinicalEvaluation,
       registerSurgicalEvaluation,
-      examTypes,
-      examRequests,
+      examTypes: hasPermission('view_exam_results') ? examTypes : [],
+      examRequests: visibleExamRequests,
       getExamRequestsByPatient,
       getExamRequestsByStatus,
       getPendingExams,
       createExamType,
       requestExams,
       updateExamStatus,
-      auditLogs,
+      auditLogs: visibleAuditLogs,
       getAuditLogsByPatient,
       getPatientAuditLogs,
       addAuditLog,

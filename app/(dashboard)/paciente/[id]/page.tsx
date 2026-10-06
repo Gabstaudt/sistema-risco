@@ -11,18 +11,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { ArrowLeft, User, Activity, Calculator, Shield, Clock } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
+import { PatientBasicDetails } from '@/components/shared/patient-basic-details'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { users } from '@/lib/data/users'
 
 export default function PatientDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const { hasPermission } = useAuth()
+  const canViewTriage = hasPermission('view_triage_data')
+  const canViewClinical = hasPermission('view_clinical_data')
+  const canViewExams = hasPermission('view_exam_results')
+  const canViewHistory = hasPermission('view_patient_history')
+  const canViewVisits = canViewHistory && canViewTriage && canViewClinical && canViewExams
   const { getPatientById, getPatientAuditLogs, getExamRequestsByPatient } = useData()
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
-  const auditLogs = getPatientAuditLogs(patientId)
+  const auditLogs = canViewHistory ? getPatientAuditLogs(patientId) : []
   
   if (!patient) {
     return (
@@ -32,6 +38,10 @@ export default function PatientDetailsPage() {
     )
   }
   
+  if (!canViewTriage && !canViewClinical && !canViewExams && !canViewHistory) {
+    return <PatientBasicDetails patient={patient} />
+  }
+
   const triageData = patient.triageData
   const clinicalEval = patient.clinicalEvaluation
   const surgicalAssessment = patient.surgicalRiskAssessment
@@ -104,8 +114,8 @@ export default function PatientDetailsPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {patient.riskLevel && <RiskLevelBadge level={patient.riskLevel} />}
-              {triageData?.asaClassification && (
+              {canViewClinical && patient.riskLevel && <RiskLevelBadge level={patient.riskLevel} />}
+              {canViewTriage && triageData?.asaClassification && (
                 <ASABadge classification={triageData.asaClassification} />
               )}
             </div>
@@ -138,33 +148,33 @@ export default function PatientDetailsPage() {
         </CardContent>
       </Card>
       
-      <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-3 lg:grid-cols-6">
-          <TabsTrigger value="summary" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+      <Tabs defaultValue={canViewClinical || canViewTriage ? "summary" : canViewExams ? "exams" : "audit"} className="space-y-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:flex sm:flex-wrap">
+          {(canViewClinical || canViewTriage) && (<TabsTrigger value="summary" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Resumo
-          </TabsTrigger>
-          <TabsTrigger value="triage" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+          </TabsTrigger>)}
+          {(canViewTriage) && (<TabsTrigger value="triage" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Triagem
-          </TabsTrigger>
-          <TabsTrigger value="clinical" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+          </TabsTrigger>)}
+          {(canViewClinical) && (<TabsTrigger value="clinical" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Avaliacao Clinica
-          </TabsTrigger>
-          <TabsTrigger value="exams" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+          </TabsTrigger>)}
+          {(canViewExams) && (<TabsTrigger value="exams" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Exames
-          </TabsTrigger>
-          <TabsTrigger value="visits" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+          </TabsTrigger>)}
+          {(canViewVisits) && (<TabsTrigger value="visits" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Entradas
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+          </TabsTrigger>)}
+          {(canViewHistory) && (<TabsTrigger value="audit" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Historico
-          </TabsTrigger>
+          </TabsTrigger>)}
         </TabsList>
         
         {/* Summary Tab */}
-        <TabsContent value="summary">
+        {(canViewClinical || canViewTriage) && (<TabsContent value="summary">
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Risk Summary */}
-            {surgicalAssessment && (
+            {canViewClinical && surgicalAssessment && (
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -190,6 +200,7 @@ export default function PatientDetailsPage() {
               </Card>
             )}
             
+            {canViewClinical && (<>
             {/* Quick Stats */}
             <Card>
               <CardHeader>
@@ -235,6 +246,8 @@ export default function PatientDetailsPage() {
               </CardContent>
             </Card>
             
+            </>)}
+            {canViewTriage && (<>
             {/* Vital Signs */}
             <Card>
               <CardHeader>
@@ -278,11 +291,12 @@ export default function PatientDetailsPage() {
                 )}
               </CardContent>
             </Card>
+            </>)}
           </div>
-        </TabsContent>
+        </TabsContent>)}
         
         {/* Triage Tab */}
-        <TabsContent value="triage">
+        {(canViewTriage) && (<TabsContent value="triage">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -383,10 +397,10 @@ export default function PatientDetailsPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>)}
         
         {/* Clinical Tab */}
-        <TabsContent value="clinical">
+        {(canViewClinical) && (<TabsContent value="clinical">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -441,18 +455,18 @@ export default function PatientDetailsPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>)}
         
         {/* Exams Tab */}
-        <TabsContent value="exams">
+        {(canViewExams) && (<TabsContent value="exams">
           <PatientExamsHistory
             examRequests={patientExamRequests}
             description="Historico completo de exames deste prontuario, com resultados, prioridade e leitura do laboratorio."
             emptyMessage="Nenhum exame solicitado para este paciente."
           />
-        </TabsContent>
+        </TabsContent>)}
 
-        <TabsContent value="visits">
+        {(canViewVisits) && (<TabsContent value="visits">
           <Card>
             <CardHeader>
               <CardTitle>Entradas no Hospital</CardTitle>
@@ -578,10 +592,10 @@ export default function PatientDetailsPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>)}
         
         {/* Audit Tab */}
-        <TabsContent value="audit">
+        {(canViewHistory) && (<TabsContent value="audit">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -619,7 +633,7 @@ export default function PatientDetailsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>)}
       </Tabs>
     </div>
   )

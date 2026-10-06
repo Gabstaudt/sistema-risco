@@ -2,16 +2,17 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useAuth } from '@/lib/auth'
+import { Header } from '@/components/layout/header'
 import { useData } from '@/lib/data-context'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { StatusBadge } from '@/components/shared/badges'
-import { Search, Eye, UserPlus, LogIn, ClipboardPlus } from 'lucide-react'
+import { Search, Eye, UserPlus, LogIn, Calendar, X } from 'lucide-react'
 import type { Patient, PatientStatus } from '@/lib/types'
 
 const activeCareStatuses: PatientStatus[] = [
@@ -41,8 +42,12 @@ type IntakeFormState = {
 
 export default function PacientesPage() {
   const { patients, updatePatient } = useData()
+  const { user, hasPermission } = useAuth()
+  const canRegisterIntake = hasPermission('forward_to_triage')
+  const baseUrl = user?.role === 'triagem' ? '/triagem' : '/recepcao'
 
   const [search, setSearch] = useState('')
+  const [careFilter, setCareFilter] = useState<'all' | 'active' | 'available'>('all')
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [intakeForm, setIntakeForm] = useState<IntakeFormState>({
     queixaPrincipal: '',
@@ -52,16 +57,19 @@ export default function PacientesPage() {
   const filteredPatients = useMemo(() => {
     return patients
       .filter((patient) => {
-        const searchLower = search.toLowerCase()
-        return (
-          search === '' ||
-          patient.nomeCompleto.toLowerCase().includes(searchLower) ||
-          patient.prontuario.toLowerCase().includes(searchLower) ||
-          patient.cpf.includes(search)
-        )
+        const searchLower = search.trim().toLocaleLowerCase('pt-BR')
+        const cpfDigits = search.replace(/\D/g, '')
+        const matchesSearch =
+          !searchLower ||
+          patient.nomeCompleto.toLocaleLowerCase('pt-BR').includes(searchLower) ||
+          patient.prontuario.toLocaleLowerCase('pt-BR').includes(searchLower) ||
+          (cpfDigits.length > 0 && patient.cpf.replace(/\D/g, '').includes(cpfDigits))
+        const active = activeCareStatuses.includes(patient.status)
+        const matchesCare = careFilter === 'all' || (careFilter === 'active' ? active : !active)
+        return matchesSearch && matchesCare
       })
       .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto))
-  }, [patients, search])
+  }, [patients, search, careFilter])
 
   const canCheckIn = (patient: Patient) => !activeCareStatuses.includes(patient.status)
 
@@ -82,7 +90,7 @@ export default function PacientesPage() {
   }
 
   const handleCheckIn = () => {
-    if (!selectedPatient || !intakeForm.queixaPrincipal.trim()) {
+    if (!canRegisterIntake || !selectedPatient || !intakeForm.queixaPrincipal.trim()) {
       return
     }
 
@@ -108,109 +116,111 @@ export default function PacientesPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <h1 className="text-2xl font-bold text-foreground">Entrada de Pacientes</h1>
-          <p className="text-muted-foreground">
-            Busque pacientes ja cadastrados, registre a queixa inicial e encaminhe para a triagem.
-          </p>
+    <>
+      <Header breadcrumbs={[{ label: 'Pacientes' }]} />
+      <div className="w-full min-w-0 flex-1 space-y-4 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-foreground">Pacientes</h1>
+            <p className="text-base text-muted-foreground">Busque um paciente ou registre uma nova entrada.</p>
+          </div>
+          {hasPermission('create_patient') && (<Button asChild className="h-11 w-full px-5 text-sm sm:w-auto">
+            <Link href={`${baseUrl}/cadastro`}>
+              <UserPlus className="mr-2 size-5" aria-hidden="true" />
+              Cadastrar paciente
+            </Link>
+          </Button>)}
         </div>
-        <Button asChild className="w-full sm:w-auto">
-          <Link href="/recepcao/cadastro">
-            <UserPlus className="mr-2 h-4 w-4" />
-            Cadastrar Paciente
-          </Link>
-        </Button>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pacientes Cadastrados</CardTitle>
-          <CardDescription>
-            {filteredPatients.length} paciente(s) encontrado(s). A recepcao so registra dados basicos e encaminha para a triagem.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6">
-            <div className="relative min-w-0 flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, prontuario ou CPF..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-11 pl-10"
-              />
+        <Card className="gap-3 py-4">
+          <CardHeader className="gap-3 px-4">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div className="min-w-0 flex-1">
+              <Label htmlFor="patient-search" className="sr-only">Buscar paciente</Label>
+              <div className="relative">
+                <Search aria-hidden="true" className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="patient-search"
+                  type="search"
+                  placeholder="Nome, prontuário ou CPF"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-11 rounded-lg pl-12 text-base md:text-base"
+                />
+              </div>
             </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border bg-background">
-            <div className="w-full overflow-x-auto">
-              <Table className="min-w-[820px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">Prontuario</TableHead>
-                    <TableHead>Paciente</TableHead>
-                    <TableHead className="whitespace-nowrap">Telefone</TableHead>
-                    <TableHead className="whitespace-nowrap">Ultima Entrada</TableHead>
-                    <TableHead className="whitespace-nowrap">Status</TableHead>
-                    <TableHead className="text-right whitespace-nowrap">Acoes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPatients.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                        Nenhum paciente encontrado
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredPatients.map((patient) => (
-                      <TableRow key={patient.id}>
-                        <TableCell className="whitespace-nowrap font-mono text-sm">{patient.prontuario}</TableCell>
-                        <TableCell className="min-w-[260px]">
-                          <div className="min-w-0">
-                            <p className="truncate font-medium">{patient.nomeCompleto}</p>
-                            <p className="text-xs text-muted-foreground">{patient.cpf}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">{patient.telefone || 'Nao informado'}</TableCell>
-                        <TableCell className="whitespace-nowrap text-sm">{formatDate(patient.dataEntrada)}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={patient.status} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="sm" asChild className="shrink-0">
-                              <Link href={`/paciente/${patient.id}`}>
-                                <Eye className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                            {canCheckIn(patient) ? (
-                              <Button variant="outline" size="sm" className="shrink-0" onClick={() => openIntake(patient)}>
-                                <LogIn className="mr-2 h-4 w-4" />
-                                Dar Entrada
-                              </Button>
-                            ) : (
-                              <Button variant="secondary" size="sm" className="shrink-0" disabled>
-                                <ClipboardPlus className="mr-2 h-4 w-4" />
-                                Em Atendimento
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+            <div role="group" aria-label="Filtrar pacientes por atendimento" className="flex flex-wrap gap-2">
+              {([
+                { value: 'all', label: 'Todos os pacientes' },
+                { value: 'active', label: 'Em atendimento' },
+                { value: 'available', label: 'Disponíveis para entrada' },
+              ] as const).map(({ value, label }) => (
+                <Button key={value} variant={careFilter === value ? 'default' : 'outline'}
+                  aria-pressed={careFilter === value} onClick={() => setCareFilter(value)}
+                  className="min-h-11 h-auto whitespace-normal px-3 py-2 text-sm">
+                  {label}
+                </Button>
+              ))}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+            <CardDescription role="status" aria-live="polite" className="text-sm">
+              {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente encontrado' : 'pacientes encontrados'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4">
+            {filteredPatients.length === 0 ? (
+              <div className="rounded-xl border border-dashed px-4 py-12 text-center">
+                <Search aria-hidden="true" className="mx-auto mb-4 size-8 text-muted-foreground" />
+                <p className="text-lg font-semibold">Nenhum paciente encontrado</p>
+                <p className="mt-2 text-base text-muted-foreground">Tente outro nome, prontuário ou CPF, ou altere o filtro.</p>
+                {(search || careFilter !== 'all') && (
+                  <Button variant="outline" className="mt-5 h-12 text-base" onClick={() => { setSearch(''); setCareFilter('all') }}>
+                    <X aria-hidden="true" className="mr-2 size-4" />Limpar busca e filtros
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <ul aria-label="Pacientes encontrados" className="divide-y overflow-hidden rounded-lg border">
+                {filteredPatients.map((patient) => (
+                  <li key={patient.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 bg-card px-3 py-2 hover:bg-muted/30 sm:px-4 lg:grid-cols-[minmax(0,1fr)_176px_240px] 2xl:grid-cols-[minmax(0,1fr)_210px_176px_240px]">
+                    <div className="min-w-0 space-y-1">
+                      <p className="break-words text-base font-semibold leading-snug text-foreground">{patient.nomeCompleto}</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span>Prontuário <span className="font-mono text-foreground">{patient.prontuario}</span></span>
+                        <span>CPF <span className="font-mono">{patient.cpf}</span></span>
+                      </div>
+                    </div>
+                    <div className="hidden space-y-1 text-xs text-muted-foreground 2xl:block">
+                      <p className="flex items-center gap-2"><Calendar aria-hidden="true" className="size-3.5 shrink-0" /><span>Entrada: {formatDate(patient.dataEntrada)}</span></p>
+                    </div>
+                    <div className="flex min-w-0 justify-end lg:justify-start">
+                      <StatusBadge status={patient.status} className="max-w-full px-2.5 py-1 text-xs" />
+                    </div>
+                    <div className="col-span-2 grid w-full grid-cols-2 gap-2 lg:col-span-1 lg:grid-cols-[104px_128px]">
+                      <Button variant="outline" asChild className="h-11 w-full px-3 text-sm">
+                        <Link href={`/paciente/${patient.id}`} aria-label={`Ver ficha de ${patient.nomeCompleto}`}>
+                          <Eye aria-hidden="true" className="size-4" />Ver ficha
+                        </Link>
+                      </Button>
+                      {canRegisterIntake && canCheckIn(patient) ? (
+                        <Button className="h-11 w-full px-3 text-sm" onClick={() => openIntake(patient)} aria-label={`Dar entrada para ${patient.nomeCompleto}`}>
+                          <LogIn aria-hidden="true" className="size-4" />Dar entrada
+                        </Button>
+                      ) : (
+                        <span className="flex h-11 w-full items-center justify-center rounded-md bg-secondary px-2 text-center text-xs font-medium text-secondary-foreground">
+                          {canCheckIn(patient) ? 'Entrada indisponível' : 'Em atendimento'}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
       <Dialog open={!!selectedPatient} onOpenChange={(open) => !open && closeIntake()}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Dar Entrada e Encaminhar para Triagem</DialogTitle>
             <DialogDescription>
@@ -240,8 +250,9 @@ export default function PacientesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="queixaPrincipal">Queixa Inicial *</Label>
+                <Label className="text-base" htmlFor="queixaPrincipal">Queixa Inicial *</Label>
                 <Input
+                  className="h-14 px-4 text-base md:text-base"
                   id="queixaPrincipal"
                   value={intakeForm.queixaPrincipal}
                   onChange={(e) => setIntakeForm((prev) => ({ ...prev, queixaPrincipal: e.target.value }))}
@@ -250,8 +261,9 @@ export default function PacientesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descricaoInicial">Relato Inicial do Paciente</Label>
+                <Label className="text-base" htmlFor="descricaoInicial">Relato Inicial do Paciente</Label>
                 <Textarea
+                  className="min-h-32 px-4 py-3 text-base md:text-base"
                   id="descricaoInicial"
                   value={intakeForm.descricaoInicial}
                   onChange={(e) => setIntakeForm((prev) => ({ ...prev, descricaoInicial: e.target.value }))}
@@ -263,15 +275,16 @@ export default function PacientesPage() {
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={closeIntake}>
+            <Button type="button" variant="outline" className="h-14 text-base" onClick={closeIntake}>
               Cancelar
             </Button>
-            <Button type="button" onClick={handleCheckIn} disabled={!intakeForm.queixaPrincipal.trim()}>
+            <Button type="button" className="h-14 text-base" onClick={handleCheckIn} disabled={!intakeForm.queixaPrincipal.trim()}>
               Encaminhar para Triagem
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   )
 }

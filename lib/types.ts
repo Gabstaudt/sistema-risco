@@ -8,6 +8,8 @@ export interface User {
   password: string
   name: string
   role: UserRole
+  /** Effective permissions supplied by the backend; [] means no access. */
+  permissions?: string[]
   department?: string
   avatar?: string
   active: boolean

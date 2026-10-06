@@ -1,7 +1,8 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import { User, UserRole, ROLE_PERMISSIONS } from './types'
+import { User, UserRole } from './types'
+import { hasUserPermission } from './permissions'
 import { users as initialUsers } from './data/users'
 
 interface AuthContextType {
@@ -9,6 +10,7 @@ interface AuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectPath?: string }>
   logout: () => void
+  setSession: (user: User | null) => void
   hasPermission: (permission: string) => boolean
   getRedirectPath: () => string
 }
@@ -49,6 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
+  // Backend integration can install its authenticated user and effective permissions here.
+  const setSession = useCallback((sessionUser: User | null) => {
+    setUser(sessionUser)
+    if (sessionUser) localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionUser))
+    else localStorage.removeItem(STORAGE_KEY)
+  }, [])
+
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string; redirectPath?: string }> => {
     // Simular delay de rede
     await new Promise(resolve => setTimeout(resolve, 500))
@@ -63,20 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Email ou senha incorretos' }
     }
 
-    setUser(foundUser)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(foundUser))
+    setSession(foundUser)
     return { success: true, redirectPath: getRedirectPathForRole(foundUser.role) }
-  }, [])
+  }, [setSession])
 
   const logout = useCallback(() => {
-    setUser(null)
-    localStorage.removeItem(STORAGE_KEY)
-  }, [])
+    setSession(null)
+  }, [setSession])
 
   const hasPermission = useCallback((permission: string): boolean => {
-    if (!user) return false
-    const permissions = ROLE_PERMISSIONS[user.role]
-    return permissions.includes(permission)
+    return hasUserPermission(user, permission)
   }, [user])
 
   const getRedirectPath = useCallback((): string => {
@@ -86,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, hasPermission, getRedirectPath }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, setSession, hasPermission, getRedirectPath }}>
       {children}
     </AuthContext.Provider>
   )
