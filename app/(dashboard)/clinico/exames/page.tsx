@@ -71,11 +71,11 @@ export default function ExamesClinicosPage() {
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      Laboratorio: 'bg-blue-100 text-blue-800 border-blue-200',
-      Imagem: 'bg-violet-100 text-violet-800 border-violet-200',
-      Cardiologia: 'bg-red-100 text-red-800 border-red-200',
-      Pneumologia: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-      Outros: 'bg-slate-100 text-slate-800 border-slate-200',
+      Laboratorio: 'bg-secondary text-secondary-foreground border-border',
+      Imagem: 'bg-secondary text-secondary-foreground border-border',
+      Cardiologia: 'bg-secondary text-secondary-foreground border-border',
+      Pneumologia: 'bg-secondary text-secondary-foreground border-border',
+      Outros: 'bg-secondary text-secondary-foreground border-border',
     }
 
     return colors[category] || colors.Outros

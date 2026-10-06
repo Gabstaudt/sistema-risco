@@ -20,14 +20,14 @@ import { users } from '@/lib/data/users'
 import type { UserRole } from '@/lib/types'
 
 const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
-  recepcao: { label: 'Recepcao', color: 'bg-blue-100 text-blue-700' },
-  triagem: { label: 'Triagem', color: 'bg-teal-100 text-teal-700' },
-  clinico: { label: 'Clinico', color: 'bg-purple-100 text-purple-700' },
-  laboratorio: { label: 'Laboratorio', color: 'bg-amber-100 text-amber-700' },
-  cardiologista: { label: 'Cardiologista', color: 'bg-red-100 text-red-700' },
-  anestesista: { label: 'Anestesista', color: 'bg-cyan-100 text-cyan-700' },
-  cirurgiao: { label: 'Cirurgiao', color: 'bg-rose-100 text-rose-700' },
-  admin: { label: 'Administrador', color: 'bg-slate-100 text-slate-700' },
+  recepcao: { label: 'Recepcao', color: 'bg-secondary text-secondary-foreground border-border' },
+  triagem: { label: 'Triagem', color: 'bg-secondary text-secondary-foreground border-border' },
+  clinico: { label: 'Clinico', color: 'bg-secondary text-secondary-foreground border-border' },
+  laboratorio: { label: 'Laboratorio', color: 'bg-secondary text-secondary-foreground border-border' },
+  cardiologista: { label: 'Cardiologista', color: 'bg-secondary text-secondary-foreground border-border' },
+  anestesista: { label: 'Anestesista', color: 'bg-secondary text-secondary-foreground border-border' },
+  cirurgiao: { label: 'Cirurgiao', color: 'bg-secondary text-secondary-foreground border-border' },
+  admin: { label: 'Administrador', color: 'bg-secondary text-secondary-foreground border-border' },
 }
 
 export default function UsuariosPage() {

@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { StatusBadge, RiskBadge } from '@/components/shared/badges'
 import { ArrowLeft, Printer, Download, FileText, CheckCircle, AlertTriangle, XCircle, Heart, Activity, Stethoscope, Calendar, User } from 'lucide-react'
 import Link from 'next/link'
+import { BrandLogo } from '@/components/shared/brand-logo'
 import { RISK_LABELS, STATUS_LABELS, ASAScore } from '@/lib/types'
 
 const ASA_DESCRIPTIONS: Record<ASAScore, string> = {
@@ -125,18 +126,14 @@ export default function RelatorioPage() {
 
       {/* Cabecalho do Relatorio */}
       <Card className="print:shadow-none print:border-2">
-        <CardHeader className="bg-primary/5 print:bg-gray-100">
+        <CardHeader className="border-b-2 border-primary">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center print:bg-gray-200">
-                <Heart className="h-8 w-8 text-primary print:text-gray-700" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">MedRisk Pro</CardTitle>
-                <CardDescription>Sistema de Avaliacao de Risco Cirurgico</CardDescription>
-              </div>
+            <div>
+              <BrandLogo className="w-[260px] print:hidden" />
+              <BrandLogo variant="mono" className="hidden w-[260px] print:inline-flex" />
+              <CardDescription className="px-4">Sistema de Avaliação de Risco Cirúrgico</CardDescription>
             </div>
-            <div className="text-right">
+            <div className="text-right font-mono">
               <p className="text-sm text-muted-foreground">Documento gerado em:</p>
               <p className="font-medium">{formatDate(new Date().toISOString())}</p>
             </div>

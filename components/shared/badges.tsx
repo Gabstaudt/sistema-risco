@@ -7,27 +7,27 @@ interface StatusBadgeProps {
 }
 
 const statusStyles: Record<PatientStatus, string> = {
-  aguardando_triagem: 'bg-amber-100 text-amber-800 border-amber-200',
-  em_triagem: 'bg-blue-100 text-blue-800 border-blue-200',
-  aguardando_avaliacao: 'bg-amber-100 text-amber-800 border-amber-200',
-  aguardando_clinico: 'bg-amber-100 text-amber-800 border-amber-200',
-  em_avaliacao_clinica: 'bg-blue-100 text-blue-800 border-blue-200',
-  aguardando_exames: 'bg-amber-100 text-amber-800 border-amber-200',
-  aguardando_resultado: 'bg-amber-100 text-amber-800 border-amber-200',
-  exames_solicitados: 'bg-purple-100 text-purple-800 border-purple-200',
-  aguardando_laboratorio: 'bg-amber-100 text-amber-800 border-amber-200',
-  exames_em_analise: 'bg-blue-100 text-blue-800 border-blue-200',
-  exames_concluidos: 'bg-teal-100 text-teal-800 border-teal-200',
-  aguardando_cardiologista: 'bg-orange-100 text-orange-800 border-orange-200',
-  em_avaliacao_cardiologica: 'bg-red-100 text-red-800 border-red-200',
-  aguardando_anestesista: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-  em_avaliacao_anestesica: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  aguardando_cirurgiao: 'bg-amber-100 text-amber-800 border-amber-200',
-  em_avaliacao_cirurgica: 'bg-blue-100 text-blue-800 border-blue-200',
-  concluido: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  liberado: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  alto_risco: 'bg-red-100 text-red-800 border-red-200',
-  contraindicado: 'bg-violet-100 text-violet-800 border-violet-200',
+  aguardando_triagem: 'clinical-warning',
+  em_triagem: 'clinical-info',
+  aguardando_avaliacao: 'clinical-warning',
+  aguardando_clinico: 'clinical-warning',
+  em_avaliacao_clinica: 'clinical-info',
+  aguardando_exames: 'clinical-warning',
+  aguardando_resultado: 'clinical-warning',
+  exames_solicitados: 'clinical-info',
+  aguardando_laboratorio: 'clinical-warning',
+  exames_em_analise: 'clinical-info',
+  exames_concluidos: 'clinical-success',
+  aguardando_cardiologista: 'clinical-warning',
+  em_avaliacao_cardiologica: 'clinical-info',
+  aguardando_anestesista: 'clinical-info',
+  em_avaliacao_anestesica: 'clinical-info',
+  aguardando_cirurgiao: 'clinical-warning',
+  em_avaliacao_cirurgica: 'clinical-info',
+  concluido: 'clinical-success',
+  liberado: 'clinical-success',
+  alto_risco: 'clinical-danger',
+  contraindicado: 'clinical-danger',
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
@@ -54,10 +54,10 @@ interface PriorityBadgeProps {
 }
 
 const priorityStyles: Record<Priority, string> = {
-  baixa: 'bg-slate-100 text-slate-700 border-slate-200',
-  normal: 'bg-blue-100 text-blue-800 border-blue-200',
-  alta: 'bg-amber-100 text-amber-800 border-amber-200',
-  urgente: 'bg-red-100 text-red-800 border-red-200',
+  baixa: 'clinical-neutral',
+  normal: 'clinical-info',
+  alta: 'clinical-warning',
+  urgente: 'clinical-danger',
 }
 
 export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
@@ -80,12 +80,12 @@ interface RiskBadgeProps {
 }
 
 const riskStyles: Record<RiskLevel, string> = {
-  baixo: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  moderado: 'bg-amber-100 text-amber-800 border-amber-200',
-  alto: 'bg-red-100 text-red-800 border-red-200',
-  critico: 'bg-rose-100 text-rose-800 border-rose-200',
-  contraindicado: 'bg-violet-100 text-violet-800 border-violet-200',
-  pendente: 'bg-slate-100 text-slate-700 border-slate-200',
+  baixo: 'clinical-success',
+  moderado: 'clinical-warning',
+  alto: 'clinical-danger',
+  critico: 'clinical-danger',
+  contraindicado: 'clinical-danger',
+  pendente: 'clinical-neutral',
 }
 
 export function RiskBadge({ risk, className }: RiskBadgeProps) {
@@ -107,12 +107,12 @@ export function RiskLevelBadge({ level, className }: { level: RiskLevel; classNa
 }
 
 const asaStyles: Record<ASAClassification, string> = {
-  I: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  II: 'bg-blue-100 text-blue-800 border-blue-200',
-  III: 'bg-amber-100 text-amber-800 border-amber-200',
-  IV: 'bg-orange-100 text-orange-800 border-orange-200',
-  V: 'bg-red-100 text-red-800 border-red-200',
-  VI: 'bg-violet-100 text-violet-800 border-violet-200',
+  I: 'clinical-success',
+  II: 'clinical-warning',
+  III: 'clinical-warning',
+  IV: 'clinical-warning',
+  V: 'clinical-danger',
+  VI: 'clinical-danger',
 }
 
 export function ASABadge({ classification, className }: { classification: ASAClassification; className?: string }) {
@@ -130,13 +130,13 @@ export function ASABadge({ classification, className }: { classification: ASACla
 }
 
 const rcriStyles: Record<number, string> = {
-  0: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  1: 'bg-blue-100 text-blue-800 border-blue-200',
-  2: 'bg-amber-100 text-amber-800 border-amber-200',
-  3: 'bg-orange-100 text-orange-800 border-orange-200',
-  4: 'bg-red-100 text-red-800 border-red-200',
-  5: 'bg-red-100 text-red-800 border-red-200',
-  6: 'bg-red-100 text-red-800 border-red-200',
+  0: 'clinical-success',
+  1: 'clinical-warning',
+  2: 'clinical-warning',
+  3: 'clinical-warning',
+  4: 'clinical-danger',
+  5: 'clinical-danger',
+  6: 'clinical-danger',
 }
 
 export function RCRIBadge({ score, className }: { score: number; className?: string }) {

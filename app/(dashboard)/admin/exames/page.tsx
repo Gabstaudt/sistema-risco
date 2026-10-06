@@ -74,11 +74,11 @@ export default function AdminExamesPage() {
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      'Laboratorio': 'bg-blue-100 text-blue-800',
-      'Imagem': 'bg-purple-100 text-purple-800',
-      'Cardiologia': 'bg-red-100 text-red-800',
-      'Pneumologia': 'bg-cyan-100 text-cyan-800',
-      'Outros': 'bg-gray-100 text-gray-800'
+      'Laboratorio': 'bg-secondary text-secondary-foreground border-border',
+      'Imagem': 'bg-secondary text-secondary-foreground border-border',
+      'Cardiologia': 'bg-secondary text-secondary-foreground border-border',
+      'Pneumologia': 'bg-secondary text-secondary-foreground border-border',
+      'Outros': 'bg-secondary text-secondary-foreground border-border'
     }
     return colors[category] || colors['Outros']
   }

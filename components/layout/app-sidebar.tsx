@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { BrandLogo } from '@/components/shared/brand-logo'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data-context'
@@ -29,7 +30,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
-  Activity,
   Users,
   UserPlus,
   ClipboardList,
@@ -238,15 +238,10 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
-        <Link href={`/${user.role}`} className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <Activity className="w-5 h-5 text-sidebar-primary-foreground" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sidebar-foreground">MedRisk Pro</span>
-            <span className="text-xs text-sidebar-foreground/60">{ROLE_LABELS[user.role]}</span>
-          </div>
+      <SidebarHeader className="px-2 py-4">
+        <Link href={`/${user.role}`} className="flex flex-col items-start">
+          <BrandLogo variant="negative" className="w-full max-w-[240px]" />
+          <span className="px-4 text-xs text-sidebar-foreground/75">{ROLE_LABELS[user.role]}</span>
         </Link>
       </SidebarHeader>
 
