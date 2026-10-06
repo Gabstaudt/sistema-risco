@@ -190,11 +190,11 @@ export default function CadastroPage() {
           { label: 'Novo Cadastro' }
         ]} 
       />
-      <div className="flex-1 p-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-4 mb-6">
-            <Button variant="outline" size="icon" asChild>
-              <Link href={patientsListUrl}>
+      <div className="flex min-h-[calc(100svh-3.5rem)] w-full min-w-0 flex-1 flex-col p-4 sm:p-6">
+        <div className="flex w-full min-w-0 flex-1 flex-col">
+          <div className="mb-6 flex items-start gap-4 sm:items-center">
+            <Button variant="outline" size="icon" className="size-14 shrink-0" asChild>
+              <Link href={patientsListUrl} aria-label="Voltar para a lista de pacientes">
                 <ArrowLeft className="w-4 h-4" />
               </Link>
             </Button>
@@ -204,17 +204,18 @@ export default function CadastroPage() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            <Card>
+          <form onSubmit={handleSubmit} className="flex w-full flex-1 flex-col">
+            <Card className="w-full flex-1">
               <CardHeader>
                 <CardTitle>Dados Pessoais</CardTitle>
                 <CardDescription>Cadastro basico e registro da queixa inicial para encaminhamento a triagem</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="space-y-8">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-x-8">
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="nomeCompleto">Nome Completo *</Label>
+                    <Label className="text-base" htmlFor="nomeCompleto">Nome Completo *</Label>
                     <Input
+                      className="h-14 rounded-lg px-4 text-base md:text-base"
                       id="nomeCompleto"
                       value={formData.nomeCompleto}
                       onChange={(e) => setFormData({ ...formData, nomeCompleto: e.target.value })}
@@ -225,8 +226,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
+                    <Label className="text-base" htmlFor="dataNascimento">Data de Nascimento *</Label>
                     <Input
+                      className="h-14 rounded-lg px-4 text-base md:text-base"
                       id="dataNascimento"
                       type="date"
                       value={formData.dataNascimento}
@@ -237,26 +239,27 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="sexo">Sexo *</Label>
+                    <Label className="text-base" htmlFor="sexo">Sexo *</Label>
                     <Select
                       value={formData.sexo}
                       onValueChange={(value) => setFormData({ ...formData, sexo: value as 'M' | 'F' | 'O' })}
                       disabled={isLoading}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="sexo" className="w-full rounded-lg px-4 text-base data-[size=default]:h-14">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="M">Masculino</SelectItem>
-                        <SelectItem value="F">Feminino</SelectItem>
-                        <SelectItem value="O">Outro</SelectItem>
+                        <SelectItem className="min-h-12 py-3 text-base" value="M">Masculino</SelectItem>
+                        <SelectItem className="min-h-12 py-3 text-base" value="F">Feminino</SelectItem>
+                        <SelectItem className="min-h-12 py-3 text-base" value="O">Outro</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="cpf">CPF *</Label>
+                    <Label className="text-base" htmlFor="cpf">CPF *</Label>
                     <Input
+                      className="h-14 rounded-lg px-4 text-base md:text-base"
                       id="cpf"
                       value={formData.cpf}
                       onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })}
@@ -267,8 +270,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="cartaoSus">Cartao SUS</Label>
+                    <Label className="text-base" htmlFor="cartaoSus">Cartao SUS</Label>
                     <Input
+                      className="h-14 rounded-lg px-4 text-base md:text-base"
                       id="cartaoSus"
                       value={formData.cartaoSus}
                       onChange={(e) => setFormData({ ...formData, cartaoSus: e.target.value })}
@@ -278,18 +282,18 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="bloodType">Tipo Sanguineo</Label>
+                    <Label className="text-base" htmlFor="bloodType">Tipo Sanguineo</Label>
                     <Select
                       value={formData.bloodType}
                       onValueChange={(value) => setFormData({ ...formData, bloodType: value })}
                       disabled={isLoading}
                     >
-                      <SelectTrigger id="bloodType">
+                      <SelectTrigger id="bloodType" className="w-full rounded-lg px-4 text-base data-[size=default]:h-14">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
                         {BLOOD_TYPE_OPTIONS.map((type) => (
-                          <SelectItem key={type} value={type}>
+                          <SelectItem className="min-h-12 py-3 text-base" key={type} value={type}>
                             {type}
                           </SelectItem>
                         ))}
@@ -298,8 +302,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="telefone">Telefone *</Label>
+                    <Label className="text-base" htmlFor="telefone">Telefone *</Label>
                     <Input
+                      className="h-14 rounded-lg px-4 text-base md:text-base"
                       id="telefone"
                       value={formData.telefone}
                       onChange={(e) => setFormData({ ...formData, telefone: formatPhone(e.target.value) })}
@@ -310,8 +315,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="contatoEmergencia">Contato de Emergencia</Label>
+                    <Label className="text-base" htmlFor="contatoEmergencia">Contato de Emergencia</Label>
                     <Input
+                      className="h-14 rounded-lg px-4 text-base md:text-base"
                       id="contatoEmergencia"
                       value={formData.contatoEmergencia}
                       onChange={(e) => setFormData({ ...formData, contatoEmergencia: formatPhone(e.target.value) })}
@@ -321,8 +327,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="endereco">Endereco</Label>
+                    <Label className="text-base" htmlFor="endereco">Endereco</Label>
                     <Textarea
+                      className="min-h-28 rounded-lg px-4 py-3 text-base md:text-base"
                       id="endereco"
                       value={formData.endereco}
                       onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
@@ -333,8 +340,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="allergies">Alergias</Label>
+                    <Label className="text-base" htmlFor="allergies">Alergias</Label>
                     <Textarea
+                      className="min-h-28 rounded-lg px-4 py-3 text-base md:text-base"
                       id="allergies"
                       value={formData.allergies}
                       onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
@@ -345,8 +353,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="responsavel">Responsavel/Acompanhante</Label>
+                    <Label className="text-base" htmlFor="responsavel">Responsavel/Acompanhante</Label>
                     <Input
+                      className="h-14 rounded-lg px-4 text-base md:text-base"
                       id="responsavel"
                       value={formData.responsavel}
                       onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
@@ -356,8 +365,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="unidade">Unidade/Hospital</Label>
+                    <Label className="text-base" htmlFor="unidade">Unidade/Hospital</Label>
                     <Input
+                      className="h-14 rounded-lg px-4 text-base md:text-base"
                       id="unidade"
                       value={formData.unidade}
                       onChange={(e) => setFormData({ ...formData, unidade: e.target.value })}
@@ -367,8 +377,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="queixaPrincipal">Queixa Inicial *</Label>
+                    <Label className="text-base" htmlFor="queixaPrincipal">Queixa Inicial *</Label>
                     <Input
+                      className="h-14 rounded-lg px-4 text-base md:text-base"
                       id="queixaPrincipal"
                       value={formData.queixaPrincipal}
                       onChange={(e) => setFormData({ ...formData, queixaPrincipal: e.target.value })}
@@ -379,8 +390,9 @@ export default function CadastroPage() {
                   </div>
 
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="descricaoInicial">Relato Inicial</Label>
+                    <Label className="text-base" htmlFor="descricaoInicial">Relato Inicial</Label>
                     <Textarea
+                      className="min-h-28 rounded-lg px-4 py-3 text-base md:text-base"
                       id="descricaoInicial"
                       value={formData.descricaoInicial}
                       onChange={(e) => setFormData({ ...formData, descricaoInicial: e.target.value })}
@@ -391,11 +403,11 @@ export default function CadastroPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-4 pt-4 border-t">
-                  <Button type="button" variant="outline" asChild>
+                <div className="flex flex-col-reverse gap-4 border-t pt-6 sm:flex-row sm:justify-end">
+                  <Button type="button" variant="outline" className="h-14 w-full px-8 text-base sm:w-auto" asChild>
                     <Link href={patientsListUrl}>Cancelar</Link>
                   </Button>
-                  <Button type="submit" disabled={isLoading}>
+                  <Button type="submit" className="h-14 w-full px-8 text-base sm:w-auto" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
