@@ -173,8 +173,8 @@ export default function ClinicoAvaliarPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {patient.triageData?.asaClassification && (
-                <ASABadge classification={patient.triageData.asaClassification} />
+              {patient.anesthesiaAssessment?.asaClassification && (
+                <ASABadge classification={patient.anesthesiaAssessment.asaClassification} />
               )}
             </div>
           </div>
@@ -546,8 +546,8 @@ export default function ClinicoAvaliarPage() {
         <CardFooter className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-2">
             {rcriScore.score > 0 && <RCRIBadge score={rcriScore.score} />}
-            {patient.triageData?.asaClassification && (
-              <ASABadge classification={patient.triageData.asaClassification} />
+            {patient.anesthesiaAssessment?.asaClassification && (
+              <ASABadge classification={patient.anesthesiaAssessment.asaClassification} />
             )}
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">

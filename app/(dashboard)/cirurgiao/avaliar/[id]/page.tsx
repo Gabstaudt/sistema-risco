@@ -163,7 +163,7 @@ export default function CirurgiaoAvaliarPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {triageData?.asaClassification && <ASABadge classification={triageData.asaClassification} />}
+              {patient.anesthesiaAssessment?.asaClassification && <ASABadge classification={patient.anesthesiaAssessment.asaClassification} />}
               {clinicalEval?.rcriScore && <RCRIBadge score={clinicalEval.rcriScore.score} />}
             </div>
           </div>

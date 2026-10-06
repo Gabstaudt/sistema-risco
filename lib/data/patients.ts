@@ -1612,7 +1612,9 @@ export function hydratePatient(patient: Patient): Patient {
     healthInsurance: patient.cartaoSus ? 'SUS' : 'Particular',
     allergies: patient.allergies && patient.allergies.length > 0 ? patient.allergies : patient.avaliacaoClinica?.comorbidades?.alergias || [],
     riskLevel: patient.cardiologyAssessment?.finalRiskLevel || patient.avaliacaoCirurgica?.riscoFinal,
-    triageData: patient.sinaisVitais
+    triageData: patient.triageData
+      ? { ...patient.triageData, asaClassification: undefined }
+      : patient.sinaisVitais
       ? {
           vitalSigns: {
             bloodPressure:
@@ -1628,14 +1630,6 @@ export function hydratePatient(patient: Patient): Patient {
             ...patient.sinaisVitais,
           },
           comorbidities: triageComorbidities,
-          asaClassification:
-            patient.avaliacaoCirurgica?.scores?.asa === 1 ? 'I' :
-            patient.avaliacaoCirurgica?.scores?.asa === 2 ? 'II' :
-            patient.avaliacaoCirurgica?.scores?.asa === 3 ? 'III' :
-            patient.avaliacaoCirurgica?.scores?.asa === 4 ? 'IV' :
-            patient.avaliacaoCirurgica?.scores?.asa === 5 ? 'V' :
-            patient.avaliacaoCirurgica?.scores?.asa === 6 ? 'VI' :
-            undefined,
           notes: patient.observacoesTriagem || patient.descricaoInicial,
           completedAt: patient.sinaisVitais.registradoEm,
           completedBy: patient.sinaisVitais.registradoPor,

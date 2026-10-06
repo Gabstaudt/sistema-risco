@@ -271,6 +271,16 @@ export interface PatientEncounter {
   outcome?: string
 }
 
+export interface ManchesterClassification {
+  protocol: 'Manchester'
+  priority: LabUrgency
+  flowchart: string
+  discriminator: string
+  targetMinutes: number
+  classifiedAt?: string
+  classifiedBy?: string
+}
+
 export interface Patient {
   id: string
   prontuario: string
@@ -318,6 +328,7 @@ export interface Patient {
   sinaisVitais?: VitalSigns
   observacoesTriagem?: string
   triageData?: {
+    manchester?: ManchesterClassification
     vitalSigns?: VitalSigns
     comorbidities?: Comorbidities
     asaClassification?: ASAClassification

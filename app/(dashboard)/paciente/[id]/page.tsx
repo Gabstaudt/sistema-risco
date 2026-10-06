@@ -39,7 +39,7 @@ export default function PatientDetailsPage() {
   }
   
   if (!canViewTriage && !canViewClinical && !canViewExams && !canViewHistory) {
-    return <PatientBasicDetails patient={patient} />
+    return <PatientBasicDetails key={patient.id} patient={patient} />
   }
 
   const triageData = patient.triageData
@@ -115,8 +115,8 @@ export default function PatientDetailsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {canViewClinical && patient.riskLevel && <RiskLevelBadge level={patient.riskLevel} />}
-              {canViewTriage && triageData?.asaClassification && (
-                <ASABadge classification={triageData.asaClassification} />
+              {canViewClinical && patient.anesthesiaAssessment?.asaClassification && (
+                <ASABadge classification={patient.anesthesiaAssessment!.asaClassification!} />
               )}
             </div>
           </div>
@@ -209,8 +209,8 @@ export default function PatientDetailsPage() {
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-muted-foreground">ASA</span>
-                  {triageData?.asaClassification ? (
-                    <ASABadge classification={triageData.asaClassification} />
+                  {patient.anesthesiaAssessment?.asaClassification ? (
+                    <ASABadge classification={patient.anesthesiaAssessment!.asaClassification!} />
                   ) : (
                     <span className="text-muted-foreground">-</span>
                   )}
@@ -372,16 +372,6 @@ export default function PatientDetailsPage() {
                     )}
                   </div>
                   
-                  {triageData.asaClassification && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-medium mb-3">Classificacao ASA</h4>
-                        <ASABadge classification={triageData.asaClassification} />
-                      </div>
-                    </>
-                  )}
-                  
                   {triageData.notes && (
                     <>
                       <Separator />
@@ -518,7 +508,6 @@ export default function PatientDetailsPage() {
                               <p>Responsavel: {getUserName(visit.triage?.performedBy || '')}</p>
                               <p>Clinico direcionado: {visit.triage?.assignedClinicianName || 'Nao definido'}</p>
                               <p>Risco: {visit.triage?.riskClassification || 'Nao classificado'}</p>
-                              <p>ASA: {visit.triage?.asaClassification || 'Nao informado'}</p>
                               <p>{visit.triage?.vitalSignsSummary || 'Sem sinais vitais consolidados.'}</p>
                               <p>{visit.triage?.notes || 'Sem observacoes de triagem.'}</p>
                             </div>
