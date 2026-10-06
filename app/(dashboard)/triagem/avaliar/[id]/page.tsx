@@ -409,12 +409,12 @@ export default function TriagemAvaliarPage() {
         <CardContent className="space-y-5">
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="manchester-flowchart" className="text-base">Fluxograma utilizado *</Label>
+              <Label htmlFor="manchester-flowchart" className="text-base">Fluxograma utilizado (opcional)</Label>
               <Input id="manchester-flowchart" value={flowchart} onChange={(event) => setFlowchart(event.target.value)}
                 className="h-14 px-4 text-base md:text-base" placeholder="Nome do fluxograma do protocolo institucional" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="manchester-discriminator" className="text-base">Discriminador identificado *</Label>
+              <Label htmlFor="manchester-discriminator" className="text-base">Discriminador identificado (opcional)</Label>
               <Input id="manchester-discriminator" value={discriminator} onChange={(event) => setDiscriminator(event.target.value)}
                 className="h-14 px-4 text-base md:text-base" placeholder="Discriminador que fundamenta a prioridade" />
             </div>
@@ -428,11 +428,22 @@ export default function TriagemAvaliarPage() {
               <SelectContent>
                 {clinicians.map((clinician) => (
                   <SelectItem className="min-h-12 py-3 text-base" key={clinician.id} value={clinician.id}>
-                    {clinician.name}
+                    {clinician.name} · {clinician.consultationRoom?.trim() || 'Sala não informada'}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {assignedClinician && (
+              <div role="status" className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                <p className="text-sm text-muted-foreground">Local de atendimento de {assignedClinician.name}</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {assignedClinician.consultationRoom?.trim() || 'Sala não informada'}
+                </p>
+                {!assignedClinician.consultationRoom?.trim() && (
+                  <p className="mt-1 text-sm text-muted-foreground">Confirme a sala com a equipe antes de direcionar o paciente.</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -481,7 +492,7 @@ export default function TriagemAvaliarPage() {
             type="button"
             className="h-14 w-full px-6 text-base sm:w-auto"
             onClick={() => handleSave(true)}
-            disabled={isSaving || !assignedClinicianId || !triageRiskClassification || !flowchart.trim() || !discriminator.trim()}
+            disabled={isSaving || !assignedClinicianId || !triageRiskClassification}
           >
             <Save className="mr-2 h-4 w-4" />
             Concluir Triagem

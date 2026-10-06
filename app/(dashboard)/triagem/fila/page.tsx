@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/badges'
 import { ArrowRight, Clock, User } from 'lucide-react'
+import { RecentTriagePatients } from '@/components/shared/recent-triage-patients'
 
 export default function TriagemDashboard() {
   const { getPatientsByStatus } = useData()
@@ -83,6 +84,7 @@ export default function TriagemDashboard() {
             )}
           </CardContent>
         </Card>
+        <RecentTriagePatients />
       </div>
     </>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { useAuth } from '@/lib/auth'
 import { canAccessRoute } from '@/lib/permissions'
 import {
@@ -85,7 +86,7 @@ const homeByRole: Record<UserRole, HomeConfig> = {
   },
 }
 
-export function ProfileHome({ role }: { role: UserRole }) {
+export function ProfileHome({ role, children }: { role: UserRole; children?: ReactNode }) {
   const { user } = useAuth()
   const { title, actions: configuredActions } = homeByRole[role]
   const actions = configuredActions.filter((action) => canAccessRoute(action.href, user))
@@ -122,6 +123,7 @@ export function ProfileHome({ role }: { role: UserRole }) {
             </Link>
           ))}
         </nav>
+        {children && <div className="mt-8">{children}</div>}
       </main>
     </>
   )

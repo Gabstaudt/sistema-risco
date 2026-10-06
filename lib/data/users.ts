@@ -25,6 +25,7 @@ export const users: User[] = [
     password: '123456',
     name: 'Dr. Carlos Mendes',
     role: 'clinico',
+    consultationRoom: 'Sala 01',
     active: true,
     createdAt: '2024-01-15T08:00:00Z',
   },

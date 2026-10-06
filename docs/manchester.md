@@ -2,6 +2,8 @@
 
 A triagem registra a decisão do enfermeiro: fluxograma utilizado, discriminador identificado, prioridade e tempo-alvo, com responsável e data da classificação ao concluir. Rascunhos podem permanecer incompletos. Os códigos de prioridade existentes são preservados para as filas atuais.
 
+Fluxograma e discriminador são campos opcionais e podem ficar vazios na conclusão. A prioridade e o clínico responsável continuam obrigatórios para encaminhar o paciente.
+
 Tempos-alvo de atendimento: vermelho imediato; laranja 10 minutos; amarelo 60; verde 120; azul 240. Não são garantia de espera nem instrução para retardar assistência. A aplicação usa a escolha manual do profissional e não infere prioridade por sinais vitais ou comorbidades.
 
 A ASA foi retirada da tela e dos registros de triagem; sua fonte na ficha compartilhada passou a ser `anesthesiaAssessment.asaClassification`. O campo legado de triagem permanece tipado por compatibilidade, mas não é usado nem recriado na hidratação. A avaliação anestésica mantém seu campo de ASA.

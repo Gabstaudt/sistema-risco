@@ -10,8 +10,8 @@ export const MANCHESTER_PRIORITIES: Record<LabUrgency, { label: string; targetMi
 }
 
 export function createManchesterRecord(priority: LabUrgency | '', flowchart: string, discriminator: string, nurseId: string, complete: boolean): ManchesterClassification | undefined {
-  if (complete && (!priority || !flowchart.trim() || !discriminator.trim() || !nurseId)) {
-    throw new Error('Informe o fluxograma, o discriminador e a prioridade de Manchester para concluir a triagem.')
+  if (complete && (!priority || !nurseId)) {
+    throw new Error('Informe a prioridade de Manchester e o enfermeiro responsável para concluir a triagem.')
   }
   if (!priority) return undefined
   return {

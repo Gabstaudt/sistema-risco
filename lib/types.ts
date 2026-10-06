@@ -8,6 +8,8 @@ export interface User {
   password: string
   name: string
   role: UserRole
+  /** Sala atual de atendimento, informada pelo cadastro/serviço de profissionais. */
+  consultationRoom?: string
   /** Effective permissions supplied by the backend; [] means no access. */
   permissions?: string[]
   department?: string
