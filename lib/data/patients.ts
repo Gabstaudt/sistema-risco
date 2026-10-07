@@ -1638,11 +1638,13 @@ export function hydratePatient(patient: Patient): Patient {
     (a, b) => new Date(b.entryAt).getTime() - new Date(a.entryAt).getTime(),
   )
   const shouldMoveToCardiology =
+    !patient.assessmentRequests &&
     patient.clinicalRequestsSurgicalRisk &&
     !patient.cardiologyAssessment &&
     !patient.surgicalRiskAssessment &&
     !patient.avaliacaoCirurgica
   const shouldMoveToAnesthesia =
+    !patient.assessmentRequests &&
     patient.cardiologyAssessment?.recommendation === 'aprovar' &&
     !patient.anesthesiaAssessment &&
     !patient.surgicalRiskAssessment &&
@@ -1724,7 +1726,7 @@ export function hydratePatient(patient: Patient): Patient {
       : undefined),
     examResults: hasExamResults ? buildExamResults(patient.id) : undefined,
     visitHistory,
-    surgicalRiskAssessment: patient.avaliacaoCirurgica
+    surgicalRiskAssessment: patient.surgicalRiskAssessment || (patient.avaliacaoCirurgica
       ? {
           finalRiskLevel: patient.avaliacaoCirurgica.riscoFinal,
           recommendation:
@@ -1737,7 +1739,7 @@ export function hydratePatient(patient: Patient): Patient {
           completedAt: patient.avaliacaoCirurgica.avaliadoEm,
           completedBy: patient.avaliacaoCirurgica.avaliadoPor,
         }
-      : undefined,
+      : undefined),
   }
 }
 

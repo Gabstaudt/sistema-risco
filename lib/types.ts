@@ -100,6 +100,7 @@ export interface Comorbidities {
 }
 
 export interface ClinicalEvaluation {
+  lesionType?: string
   id?: string
   patientId?: string
   rcriScore?: {
@@ -283,7 +284,19 @@ export interface ManchesterClassification {
   classifiedBy?: string
 }
 
+export type AssessmentSpecialty = 'cardiologista' | 'anestesista' | 'cirurgiao'
+export interface SpecialtyAssessmentRequest {
+  specialty: AssessmentSpecialty
+  status: 'draft' | 'pending'
+  requestedAt?: string
+  requestedBy?: string
+  assignedProfessionalId?: string
+  assignedProfessionalName?: string
+}
+
 export interface Patient {
+  assessmentRequests?: SpecialtyAssessmentRequest[]
+  surgicalRiskRequest?: { requestedBy: string; requestedAt: string; requesterRole: 'clinico' | 'cirurgiao' }
   id: string
   prontuario: string
   name?: string
@@ -372,7 +385,8 @@ export interface Patient {
   updatedAt?: string
 }
 
-export type AuditAction = 
+export type AuditAction =
+  | 'solicitacao_avaliacao_especializada'
   | 'cadastro_paciente'
   | 'edicao_dados_basicos'
   | 'encaminhamento_triagem'
@@ -448,6 +462,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_clinical',
   ],
   clinico: [
+    'request_surgical_risk',
+    'request_specialist_assessment',
     'view_dashboard_clinico',
     'view_patients_list',
     'view_clinical_data',
@@ -494,6 +510,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_surgeon',
   ],
   cirurgiao: [
+    'request_surgical_risk',
+    'request_specialist_assessment',
     'view_dashboard_cirurgiao',
     'view_patients_list',
     'view_all_data',

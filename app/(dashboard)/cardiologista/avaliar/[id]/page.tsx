@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { nextAssessmentStatus } from '@/lib/assessment-requests'
 import { Header } from '@/components/layout/header'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { PatientStatusBadge, RiskLevelBadge } from '@/components/shared/badges'
@@ -82,7 +83,7 @@ export default function CardiologistaAvaliarPage() {
     const nextStatus =
       complete
         ? recommendation === 'aprovar'
-          ? 'aguardando_anestesista'
+          ? patient.assessmentRequests ? nextAssessmentStatus({ ...patient, cardiologyAssessment: { ...patient.cardiologyAssessment, completedAt: new Date().toISOString() } }, 'aguardando_resultado') : 'aguardando_anestesista'
           : recommendation === 'contraindicar'
             ? 'contraindicado'
             : 'alto_risco'

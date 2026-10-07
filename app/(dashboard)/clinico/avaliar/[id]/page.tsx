@@ -9,11 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Save, User, FileText, Calculator, Stethoscope } from 'lucide-react'
-import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
+import { ArrowLeft, Save, User, Stethoscope } from 'lucide-react'
+import { PatientStatusBadge, ASABadge } from '@/components/shared/badges'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
-import { RCRI_CRITERIA, calculateRCRI, VSGCRI_FACTORS, calculateVSGCRI, EXAM_TYPES } from '@/lib/data/exams'
+import { Input } from '@/components/ui/input'
+import { AssessmentRequestFields } from '@/components/shared/assessment-request-fields'
+import { buildAssessmentUpdates, getAssessmentDraft, nextAssessmentStatus } from '@/lib/assessment-requests'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { users } from '@/lib/data/users'
 
@@ -23,17 +24,14 @@ export default function ClinicoAvaliarPage() {
   const params = useParams()
   const router = useRouter()
   const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
-  const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog } = useData()
+  const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog, requestExams, examTypes } = useData()
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
   
-  const [rcriCriteria, setRcriCriteria] = useState<string[]>(
-    patient?.clinicalEvaluation?.rcriScore?.criteria || []
-  )
-  const [vsgcriFactors, setVsgcriFactors] = useState<string[]>(
-    patient?.clinicalEvaluation?.vsgcriScore?.factors || []
-  )
+  const [lesionType, setLesionType] = useState(patient?.clinicalEvaluation?.lesionType || '')
+  const [assessmentDraft, setAssessmentDraft] = useState(() => getAssessmentDraft(patient))
+  const [saveError, setSaveError] = useState('')
   const [selectedExams, setSelectedExams] = useState<string[]>(
     patient?.clinicalEvaluation?.requestedExams || []
   )
@@ -42,19 +40,12 @@ export default function ClinicoAvaliarPage() {
   )
   const [bloodType, setBloodType] = useState(patient?.bloodType || '')
   const [allergiesText, setAllergiesText] = useState((patient?.allergies || []).join(', '))
-  const [requestSurgicalRisk, setRequestSurgicalRisk] = useState(patient?.clinicalRequestsSurgicalRisk || false)
-  const [assignedCardiologistId, setAssignedCardiologistId] = useState(patient?.clinicalAssignedCardiologistId || '')
   const [isSaving, setIsSaving] = useState(false)
-  const cardiologists = users.filter((item) => item.role === 'cardiologista' && item.active)
-  const normalizedCardiologistId = assignedCardiologistId === 'unassigned' ? '' : assignedCardiologistId
-  const assignedCardiologist = cardiologists.find((item) => item.id === normalizedCardiologistId)
   const parsedAllergies = allergiesText
     .split(/,|\n/)
     .map((item) => item.trim())
     .filter(Boolean)
   
-  const rcriScore = calculateRCRI(rcriCriteria)
-  const vsgcriScore = calculateVSGCRI(vsgcriFactors)
   
   useEffect(() => {
     if (isAuthLoading) return
@@ -88,19 +79,25 @@ export default function ClinicoAvaliarPage() {
   const patientExamRequests = getExamRequestsByPatient(patientId)
   
   const handleSave = async (complete: boolean) => {
+    if (!user || !hasPermission('clinical_evaluation') || isSaving) return
+    setSaveError('')
+    let assessmentUpdates
+    try {
+      assessmentUpdates = hasPermission('request_specialist_assessment') ? buildAssessmentUpdates(patient, user, assessmentDraft, complete, users) : {}
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar as solicitações.')
+      return
+    }
+    const newExamIds = selectedExams.filter((id) => !patientExamRequests.some((exam) => exam.examTypeId === id && exam.status !== 'cancelado'))
+    if (complete && newExamIds.length > 0 && !hasPermission('request_exams')) {
+      setSaveError('Sem permissão para solicitar exames.')
+      return
+    }
     setIsSaving(true)
-    
+    if (complete && newExamIds.length > 0) requestExams(patientId, newExamIds, clinicalNotes || 'Solicitação na avaliação clínica')
     const clinicalEvaluation = {
-      rcriScore: {
-        score: rcriScore.score,
-        riskPercentage: rcriScore.riskPercentage,
-        criteria: rcriCriteria,
-      },
-      vsgcriScore: {
-        score: vsgcriScore.score,
-        riskClass: vsgcriScore.riskClass,
-        factors: vsgcriFactors,
-      },
+      ...patient.clinicalEvaluation,
+      lesionType: lesionType.trim(),
       requestedExams: selectedExams,
       notes: clinicalNotes,
       completedAt: complete ? new Date().toISOString() : undefined,
@@ -111,16 +108,12 @@ export default function ClinicoAvaliarPage() {
       clinicalEvaluation,
       bloodType: bloodType || undefined,
       allergies: parsedAllergies,
-      status: complete 
-        ? (selectedExams.length > 0
-            ? 'aguardando_exames'
-            : requestSurgicalRisk
-              ? 'aguardando_cardiologista'
-              : 'aguardando_resultado')
+      ...assessmentUpdates,
+      status: complete
+        ? newExamIds.length > 0 || patientExamRequests.some((exam) => !['concluido', 'cancelado'].includes(exam.status))
+          ? 'aguardando_exames'
+          : nextAssessmentStatus({ ...patient, ...assessmentUpdates }, 'aguardando_resultado')
         : 'em_avaliacao_clinica',
-      clinicalRequestsSurgicalRisk: requestSurgicalRisk,
-      clinicalAssignedCardiologistId: normalizedCardiologistId || undefined,
-      clinicalAssignedCardiologistName: assignedCardiologist?.name || undefined,
       updatedAt: new Date().toISOString(),
     })
     
@@ -129,7 +122,7 @@ export default function ClinicoAvaliarPage() {
       userId: user!.id,
       patientId,
       details: complete 
-        ? `Avaliacao clinica concluida. RCRI: ${rcriScore.score}, VSG-CRI: ${vsgcriScore.riskClass}. Exames solicitados: ${selectedExams.length}. Avaliacao cardiologica: ${requestSurgicalRisk ? `solicitada${assignedCardiologist ? ` para ${assignedCardiologist.name}` : ''}` : 'nao solicitada'}`
+        ? `Avaliação clínica concluída. Tipo de lesão: ${lesionType.trim() || 'Não informado'}. Exames solicitados: ${newExamIds.length}. Risco cirúrgico: ${assessmentDraft.requestRisk ? 'solicitado' : 'não solicitado'}. Avaliações: ${assessmentDraft.targets.join(', ') || 'nenhuma'}`
         : 'Dados de avaliacao clinica atualizados',
     })
     
@@ -150,7 +143,7 @@ export default function ClinicoAvaliarPage() {
         </Button>
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao Clinica</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">Calculo de scores de risco e solicitacao de exames</p>
+          <p className="text-sm text-muted-foreground sm:text-base">Avaliação clínica, exames e solicitações de avaliação especializada</p>
         </div>
         <div className="self-start sm:self-auto">
           <PatientStatusBadge status={patient.status} />
@@ -250,6 +243,10 @@ export default function ClinicoAvaliarPage() {
           <CardDescription>Informacoes clinicas basicas compartilhadas com cirurgia e laboratorio.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="clinical-lesion-type">Tipo de lesão</Label>
+            <Input id="clinical-lesion-type" className="h-12 text-base" value={lesionType} onChange={(event) => setLesionType(event.target.value)} placeholder="Descreva o tipo de lesão, se aplicável" />
+          </div>
           <div className="space-y-2">
             <Label>Tipo Sanguineo</Label>
             <Select value={bloodType} onValueChange={setBloodType}>
@@ -278,141 +275,6 @@ export default function ClinicoAvaliarPage() {
         </CardContent>
       </Card>
       
-      <Tabs defaultValue="rcri" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-1 gap-2 bg-transparent p-0 sm:grid-cols-3">
-          <TabsTrigger value="rcri" className="flex h-auto items-center justify-center gap-2 rounded-md border px-3 py-2 text-center whitespace-normal">
-            <Calculator className="h-4 w-4" />
-            RCRI
-          </TabsTrigger>
-          <TabsTrigger value="vsgcri" className="flex h-auto items-center justify-center gap-2 rounded-md border px-3 py-2 text-center whitespace-normal">
-            <Calculator className="h-4 w-4" />
-            VSG-CRI
-          </TabsTrigger>
-          <TabsTrigger value="exams" className="flex h-auto items-center justify-center gap-2 rounded-md border px-3 py-2 text-center whitespace-normal">
-            <FileText className="h-4 w-4" />
-            Exames
-          </TabsTrigger>
-        </TabsList>
-        
-        {/* RCRI Tab */}
-        <TabsContent value="rcri">
-          <Card>
-            <CardHeader>
-              <CardTitle>RCRI - Revised Cardiac Risk Index</CardTitle>
-              <CardDescription>
-                Indice de risco cardiaco revisado de Lee. Selecione os criterios presentes.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {RCRI_CRITERIA.map(criteria => (
-                  <div 
-                    key={criteria.id} 
-                    className="flex items-start space-x-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                  >
-                    <Checkbox
-                      id={criteria.id}
-                      checked={rcriCriteria.includes(criteria.id)}
-                      onCheckedChange={checked => {
-                        if (checked) {
-                          setRcriCriteria([...rcriCriteria, criteria.id])
-                        } else {
-                          setRcriCriteria(rcriCriteria.filter(c => c !== criteria.id))
-                        }
-                      }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <Label htmlFor={criteria.id} className="cursor-pointer text-sm font-medium">
-                        {criteria.name}
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-1">{criteria.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="rounded-lg bg-muted p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Score RCRI</p>
-                    <p className="text-3xl font-bold text-primary">{rcriScore.score}</p>
-                  </div>
-                  <div className="sm:text-right">
-                    <p className="text-sm font-medium">Risco de Evento Cardiaco</p>
-                    <RCRIBadge score={rcriScore.score} />
-                    <p className="text-sm text-muted-foreground mt-1">{rcriScore.riskPercentage}</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* VSG-CRI Tab */}
-        <TabsContent value="vsgcri">
-          <Card>
-            <CardHeader>
-              <CardTitle>VSG-CRI - Vascular Surgery Group Cardiac Risk Index</CardTitle>
-              <CardDescription>
-                Indice de risco cardiaco para cirurgia vascular. Selecione os fatores presentes.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {VSGCRI_FACTORS.map(factor => (
-                  <div 
-                    key={factor.id} 
-                    className="flex items-start space-x-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                  >
-                    <Checkbox
-                      id={factor.id}
-                      checked={vsgcriFactors.includes(factor.id)}
-                      onCheckedChange={checked => {
-                        if (checked) {
-                          setVsgcriFactors([...vsgcriFactors, factor.id])
-                        } else {
-                          setVsgcriFactors(vsgcriFactors.filter(f => f !== factor.id))
-                        }
-                      }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <Label htmlFor={factor.id} className="cursor-pointer text-sm font-medium">
-                        {factor.name}
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-1">{factor.description}</p>
-                    </div>
-                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">
-                      {factor.points} pts
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="rounded-lg bg-muted p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Score VSG-CRI</p>
-                    <p className="text-3xl font-bold text-primary">{vsgcriScore.score}</p>
-                  </div>
-                  <div className="sm:text-right">
-                    <p className="text-sm font-medium">Classificacao de Risco</p>
-                    <div className="mt-1">
-                      <RiskLevelBadge level={
-                        vsgcriScore.riskClass === 'Classe I' ? 'baixo' :
-                        vsgcriScore.riskClass === 'Classe II' ? 'moderado' :
-                        vsgcriScore.riskClass === 'Classe III' ? 'alto' : 'critico'
-                      } />
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">{vsgcriScore.riskClass}</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Exams Tab */}
-        <TabsContent value="exams">
           <Card>
             <CardHeader>
               <CardTitle>Solicitacao de Exames</CardTitle>
@@ -423,11 +285,11 @@ export default function ClinicoAvaliarPage() {
             <CardContent>
               <div className="space-y-4">
                 {Object.entries(
-                  EXAM_TYPES.reduce((acc, exam) => {
+                  examTypes.reduce((acc, exam) => {
                     if (!acc[exam.category]) acc[exam.category] = []
                     acc[exam.category].push(exam)
                     return acc
-                  }, {} as Record<string, typeof EXAM_TYPES>)
+                  }, {} as Record<string, typeof examTypes>)
                 ).map(([category, exams]) => (
                   <div key={category}>
                     <h4 className="font-medium text-sm mb-2 text-muted-foreground uppercase tracking-wide">
@@ -442,6 +304,7 @@ export default function ClinicoAvaliarPage() {
                           <Checkbox
                             id={exam.id}
                             checked={selectedExams.includes(exam.id)}
+                            disabled={!hasPermission('request_exams')}
                             onCheckedChange={checked => {
                               if (checked) {
                                 setSelectedExams([...selectedExams, exam.id])
@@ -469,8 +332,7 @@ export default function ClinicoAvaliarPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+
 
       <PatientExamsHistory
         examRequests={patientExamRequests}
@@ -479,53 +341,8 @@ export default function ClinicoAvaliarPage() {
         emptyMessage="Este paciente ainda nao possui exames registrados."
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Encaminhamento para Cardiologia</CardTitle>
-          <CardDescription>
-            O clinico pode solicitar a avaliacao cardiologica pre-operatoria ao final desta etapa e definir um responsavel, se desejar.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-start space-x-3 rounded-lg border p-3">
-            <Checkbox
-              id="request-surgical-risk"
-              checked={requestSurgicalRisk}
-              onCheckedChange={(checked) => setRequestSurgicalRisk(Boolean(checked))}
-            />
-            <div className="min-w-0 flex-1">
-              <Label htmlFor="request-surgical-risk" className="cursor-pointer text-sm font-medium">
-                Solicitar avaliacao ao cardiologista
-              </Label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Use esta opcao quando o caso precisa de liberacao cardiologica antes de seguir para o cirurgiao.
-              </p>
-            </div>
-          </div>
-
-          {requestSurgicalRisk && (
-            <div className="space-y-2">
-              <Label>Cardiologista Responsavel</Label>
-              <Select value={assignedCardiologistId} onValueChange={setAssignedCardiologistId}>
-                <SelectTrigger className="min-h-11">
-                  <SelectValue placeholder="Selecione um cardiologista ou deixe em aberto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Sem definicao no momento</SelectItem>
-                  {cardiologists.map((cardiologist) => (
-                    <SelectItem key={cardiologist.id} value={cardiologist.id}>
-                      {cardiologist.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                A selecao do medico e opcional. Se nao definir agora, o caso ainda pode seguir para a fila da cardiologia.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {hasPermission('request_specialist_assessment') && <AssessmentRequestFields value={assessmentDraft} onChange={setAssessmentDraft} patient={patient} />}
+      {saveError && <p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{saveError}</p>}
       
       {/* Observacoes */}
       <Card>
@@ -545,7 +362,6 @@ export default function ClinicoAvaliarPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-2">
-            {rcriScore.score > 0 && <RCRIBadge score={rcriScore.score} />}
             {patient.anesthesiaAssessment?.asaClassification && (
               <ASABadge classification={patient.anesthesiaAssessment.asaClassification} />
             )}

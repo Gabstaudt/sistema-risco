@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { hasPendingAssessment } from '@/lib/assessment-requests'
 import { Header } from '@/components/layout/header'
 import { StatusBadge } from '@/components/shared/badges'
 import { Button } from '@/components/ui/button'
@@ -26,7 +27,7 @@ export default function AnestesistaFilaPage() {
 
   const queue = patients
     .filter((patient) => {
-      if (['aguardando_anestesista', 'em_avaliacao_anestesica'].includes(patient.status)) {
+      if (hasPendingAssessment(patient, 'anestesista') || ['aguardando_anestesista', 'em_avaliacao_anestesica'].includes(patient.status)) {
         return true
       }
 

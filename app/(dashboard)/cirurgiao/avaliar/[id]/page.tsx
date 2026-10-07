@@ -15,6 +15,9 @@ import { ArrowLeft, Save, User, Shield, Activity, Calculator } from 'lucide-reac
 import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import type { RiskLevel } from '@/lib/types'
+import { users } from '@/lib/data/users'
+import { AssessmentRequestFields } from '@/components/shared/assessment-request-fields'
+import { buildAssessmentUpdates, getAssessmentDraft, nextAssessmentStatus, type AssessmentDraft } from '@/lib/assessment-requests'
 
 const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
 
@@ -35,6 +38,8 @@ export default function CirurgiaoAvaliarPage() {
   const [allergiesText, setAllergiesText] = useState((patient?.allergies || []).join(', '))
   const [notes, setNotes] = useState(patient?.surgicalRiskAssessment?.notes || '')
   const [isSaving, setIsSaving] = useState(false)
+  const [assessmentDraft, setAssessmentDraft] = useState<AssessmentDraft>(() => { const draft = getAssessmentDraft(patient); return { ...draft, targets: draft.targets.filter((item) => item !== 'cirurgiao') } })
+  const [requestMessage, setRequestMessage] = useState('')
   const parsedAllergies = allergiesText
     .split(/,|\n/)
     .map((item) => item.trim())
@@ -95,7 +100,7 @@ export default function CirurgiaoAvaliarPage() {
       surgicalRiskAssessment,
       bloodType: bloodType || undefined,
       allergies: parsedAllergies,
-      status: complete ? 'concluido' : 'em_avaliacao_cirurgica',
+      status: complete ? nextAssessmentStatus({ ...patient, surgicalRiskAssessment }, 'concluido') : 'em_avaliacao_cirurgica',
       riskLevel: finalRisk || patient.riskLevel,
       updatedAt: new Date().toISOString(),
     })
@@ -115,6 +120,19 @@ export default function CirurgiaoAvaliarPage() {
         router.push('/cirurgiao')
       }
     }, 500)
+  }
+
+  const handleRequestAssessments = () => {
+    if (!user || isSaving) return
+    setRequestMessage('')
+    try {
+      const updates = buildAssessmentUpdates(patient, user, assessmentDraft, true, users)
+      updatePatient(patientId, { ...updates, status: nextAssessmentStatus({ ...patient, ...updates }, patient.status) })
+      addAuditLog({ action: 'solicitacao_avaliacao_especializada', userId: user.id, patientId, details: `Solicitação pelo cirurgião. Risco cirúrgico: ${assessmentDraft.requestRisk ? 'sim' : 'não'}. Especialidades: ${assessmentDraft.targets.join(', ')}` })
+      setRequestMessage('Solicitações enviadas às filas das especialidades.')
+    } catch (error) {
+      setRequestMessage(error instanceof Error ? error.message : 'Não foi possível enviar a solicitação.')
+    }
   }
 
   const triageData = patient.triageData
@@ -528,6 +546,12 @@ export default function CirurgiaoAvaliarPage() {
           />
         </TabsContent>
       </Tabs>
+
+      {hasPermission('request_specialist_assessment') && <div className="space-y-3">
+        <AssessmentRequestFields value={assessmentDraft} onChange={setAssessmentDraft} patient={patient} surgeon />
+        {requestMessage && <p role="status" className="rounded-lg border p-3 text-sm">{requestMessage}</p>}
+        <Button onClick={handleRequestAssessments} disabled={isSaving || assessmentDraft.targets.length === 0}>Enviar solicitações de avaliação</Button>
+      </div>}
 
       <Card>
         <CardHeader>

@@ -69,7 +69,7 @@ export function projectPatientForUser(patient: Patient, user: User | null): Pati
   const clinical = hasUserPermission(user, 'view_clinical_data')
   const exams = hasUserPermission(user, 'view_exam_results')
   if (triage) fields.push('sinaisVitais', 'observacoesTriagem', 'triageData', 'triageAssignedClinicianId', 'triageAssignedClinicianName', 'triageRiskClassification')
-  if (clinical) fields.push('scheduledSurgery', 'scheduledDate', 'requestingPhysician', 'riskLevel', 'avaliacaoClinica', 'clinicalEvaluation', 'avaliacaoCirurgica', 'surgicalRiskAssessment', 'cardiologyAssessment', 'anesthesiaAssessment', 'clinicalRequestsSurgicalRisk', 'clinicalAssignedCardiologistId', 'clinicalAssignedCardiologistName', 'cardiologyAssignedAnesthesiologistId', 'cardiologyAssignedAnesthesiologistName', 'clinicalAssignedSurgeonId', 'clinicalAssignedSurgeonName')
+  if (clinical) fields.push('assessmentRequests', 'surgicalRiskRequest', 'scheduledSurgery', 'scheduledDate', 'requestingPhysician', 'riskLevel', 'avaliacaoClinica', 'clinicalEvaluation', 'avaliacaoCirurgica', 'surgicalRiskAssessment', 'cardiologyAssessment', 'anesthesiaAssessment', 'clinicalRequestsSurgicalRisk', 'clinicalAssignedCardiologistId', 'clinicalAssignedCardiologistName', 'cardiologyAssignedAnesthesiologistId', 'cardiologyAssignedAnesthesiologistName', 'clinicalAssignedSurgeonId', 'clinicalAssignedSurgeonName')
   if (exams) fields.push('examResults', 'labRiskClassification', 'labRiskNotes', 'labNurseObservation')
   // A visit contains clinical snapshots: history alone does not grant access to them.
   if (hasUserPermission(user, 'view_patient_history') && triage && clinical && exams) fields.push('visitHistory')

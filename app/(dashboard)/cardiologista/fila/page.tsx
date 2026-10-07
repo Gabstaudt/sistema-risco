@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { hasPendingAssessment } from '@/lib/assessment-requests'
 import { Header } from '@/components/layout/header'
 import { StatusBadge } from '@/components/shared/badges'
 import { Button } from '@/components/ui/button'
@@ -22,9 +23,9 @@ function getUrgency(patient: Patient): LabUrgency {
 }
 
 export default function CardiologistaFilaPage() {
-  const { getPatientsByStatus } = useData()
+  const { patients } = useData()
 
-  const queue = getPatientsByStatus(['aguardando_cardiologista', 'em_avaliacao_cardiologica'])
+  const queue = patients.filter((patient) => ['aguardando_cardiologista', 'em_avaliacao_cardiologica'].includes(patient.status) || hasPendingAssessment(patient, 'cardiologista'))
     .map((patient) => ({ patient, urgency: getUrgency(patient) }))
     .sort((left, right) => {
       const urgencyDiff = urgencyMeta[left.urgency].rank - urgencyMeta[right.urgency].rank

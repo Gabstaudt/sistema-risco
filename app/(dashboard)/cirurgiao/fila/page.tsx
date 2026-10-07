@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { hasPendingAssessment } from '@/lib/assessment-requests'
 import { Header } from '@/components/layout/header'
 import { useData } from '@/lib/data-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -78,9 +79,9 @@ function getSurgeryUrgency(patient: Patient): LabUrgency {
 }
 
 export default function CirurgiaoFilaPage() {
-  const { getPatientsByStatus } = useData()
+  const { patients } = useData()
 
-  const waitingPatients = getPatientsByStatus(['aguardando_cirurgiao', 'em_avaliacao_cirurgica'])
+  const waitingPatients = patients.filter((patient) => ['aguardando_cirurgiao', 'em_avaliacao_cirurgica'].includes(patient.status) || hasPendingAssessment(patient, 'cirurgiao'))
 
   const queue: QueueItem[] = waitingPatients
     .map((patient) => ({

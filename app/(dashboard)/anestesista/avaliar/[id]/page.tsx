@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { nextAssessmentStatus } from '@/lib/assessment-requests'
 import { Header } from '@/components/layout/header'
 import { ASABadge, PatientStatusBadge } from '@/components/shared/badges'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
@@ -81,7 +82,7 @@ export default function AnestesistaAvaliarPage() {
         ? needsAdditionalEvaluation
           ? 'aguardando_exames'
           : recommendation === 'aprovar' && fitForAnesthesia
-            ? 'aguardando_cirurgiao'
+            ? patient.assessmentRequests ? nextAssessmentStatus({ ...patient, anesthesiaAssessment: { ...patient.anesthesiaAssessment, completedAt: new Date().toISOString() } }, 'aguardando_resultado') : 'aguardando_cirurgiao'
             : recommendation === 'contraindicar' || fitForAnesthesia === false
               ? 'contraindicado'
               : 'alto_risco'
