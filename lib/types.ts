@@ -309,6 +309,7 @@ export interface Patient {
   contatoEmergencia?: string
   unidade: string
   dataEntrada: string
+  dischargeAt?: string
   
   // Status do fluxo
   status: PatientStatus

@@ -49,24 +49,27 @@ function buildCurrentEncounter(patient: Patient): PatientEncounter {
   return {
     id: `${patient.id}-visit-current`,
     entryAt: patient.dataEntrada,
+    dischargeAt: patient.dischargeAt,
     unit: patient.unidade,
     reason: patient.queixaPrincipal || patient.scheduledSurgery || 'Admissao hospitalar',
     receptionNotes: patient.descricaoInicial,
-    triage: patient.sinaisVitais || patient.observacoesTriagem || patient.triageRiskClassification
+    triage: patient.triageData || patient.sinaisVitais || patient.observacoesTriagem || patient.triageRiskClassification
       ? {
-          performedBy: patient.sinaisVitais?.registradoPor,
+          performedBy: patient.triageData?.completedBy || patient.sinaisVitais?.registradoPor,
           assignedClinicianName: patient.triageAssignedClinicianName,
           riskClassification: patient.triageRiskClassification,
-          vitalSignsSummary: summarizeVitalSigns(patient),
-          notes: patient.observacoesTriagem,
+          vitalSignsSummary: patient.triageData?.vitalSigns
+            ? [patient.triageData.vitalSigns.bloodPressure && `PA ${patient.triageData.vitalSigns.bloodPressure} mmHg`, patient.triageData.vitalSigns.heartRate && `FC ${patient.triageData.vitalSigns.heartRate} bpm`, patient.triageData.vitalSigns.oxygenSaturation && `SpO2 ${patient.triageData.vitalSigns.oxygenSaturation}%`].filter(Boolean).join(' | ')
+            : summarizeVitalSigns(patient),
+          notes: patient.triageData?.notes || patient.observacoesTriagem,
         }
       : undefined,
-    clinical: patient.avaliacaoClinica
+    clinical: patient.clinicalEvaluation || patient.avaliacaoClinica
       ? {
-          physicianName: patient.avaliacaoClinica.avaliadoPor,
-          hypothesis: patient.avaliacaoClinica.hipoteseDiagnostica,
-          conduct: patient.avaliacaoClinica.observacoesMedicas,
-          notes: patient.avaliacaoClinica.historicoClinico,
+          physicianName: patient.clinicalEvaluation?.completedBy || patient.avaliacaoClinica?.avaliadoPor,
+          hypothesis: patient.clinicalEvaluation?.hipoteseDiagnostica || patient.avaliacaoClinica?.hipoteseDiagnostica,
+          conduct: patient.clinicalEvaluation?.notes || patient.avaliacaoClinica?.observacoesMedicas,
+          notes: patient.avaliacaoClinica?.historicoClinico,
         }
       : undefined,
     surgery: patient.avaliacaoCirurgica
@@ -1219,6 +1222,53 @@ const basePatients: Patient[] = [
   },
 ]
 
+// Exemplos de entradas encerradas, separados dos pacientes nas filas ativas.
+const mockNow = Date.now()
+basePatients[0].visitHistory = [
+  {
+    id: 'patient-1-visit-return',
+    entryAt: new Date(mockNow - 7 * 86400000).toISOString(),
+    dischargeAt: new Date(mockNow - 7 * 86400000 + 3 * 3600000).toISOString(),
+    unit: 'Hospital Central', reason: 'Retorno ambulatorial',
+    receptionNotes: 'Retorno para reavaliação e orientação de seguimento.',
+    triage: { performedBy: 'user-2', assignedClinicianName: 'Dr. Carlos Mendes', riskClassification: 'pouco_urgente', vitalSignsSummary: 'PA 130/80 mmHg | FC 78 bpm | SpO2 98%' },
+    clinical: { physicianName: 'user-3', hypothesis: 'Paciente estável na reavaliação', conduct: 'Orientado seguimento ambulatorial.' },
+    outcome: 'Alta após reavaliação, com seguimento ambulatorial',
+  },
+  {
+    id: 'patient-1-visit-observation',
+    entryAt: new Date(mockNow - 30 * 86400000).toISOString(),
+    dischargeAt: new Date(mockNow - 30 * 86400000 + 8 * 3600000).toISOString(),
+    unit: 'Hospital Central', reason: 'Avaliação clínica em observação',
+    triage: { performedBy: 'user-2', assignedClinicianName: 'Dr. Carlos Mendes', riskClassification: 'urgente', vitalSignsSummary: 'PA 140/90 mmHg | FC 90 bpm | SpO2 97%' },
+    clinical: { physicianName: 'user-3', conduct: 'Observação clínica, reavaliação e orientação de retorno.' },
+    outcome: 'Alta após observação, com retorno agendado',
+  },
+]
+
+basePatients.push({
+  ...basePatients[0],
+  id: 'patient-14', prontuario: 'PRONT-2024-014', nomeCompleto: 'Mariana Costa Almeida',
+  cpf: '147.258.369-00', dataNascimento: '1990-04-12', idade: calcularIdade('1990-04-12'), sexo: 'F',
+  responsavel: undefined, allergies: [], telefone: '(11) 99999-1414',
+  dataEntrada: new Date(mockNow - 5 * 3600000).toISOString(),
+  dischargeAt: new Date(mockNow - 2 * 3600000).toISOString(),
+  status: 'concluido', prioridade: 'normal', queixaPrincipal: 'Reavaliação clínica',
+  descricaoInicial: 'Atendimento finalizado após avaliação e orientações de seguimento.',
+  examesSolicitados: [], triageAssignedClinicianId: 'user-3', triageAssignedClinicianName: 'Dr. Carlos Mendes',
+  triageRiskClassification: 'pouco_urgente',
+  triageData: {
+    vitalSigns: { bloodPressure: '120/80', heartRate: 76, oxygenSaturation: 98, temperature: 36.5 },
+    notes: 'Paciente encaminhada ao clínico.', completedBy: 'user-2', completedAt: new Date(mockNow - 4.5 * 3600000).toISOString(),
+  },
+  clinicalEvaluation: { hipoteseDiagnostica: 'Reavaliação sem intercorrências', notes: 'Alta com orientações e seguimento ambulatorial.', completedBy: 'user-3', completedAt: new Date(mockNow - 2 * 3600000).toISOString() },
+  visitHistory: [{
+    id: 'patient-14-visit-current', entryAt: new Date(mockNow - 5 * 3600000).toISOString(),
+    unit: 'Hospital Central', reason: 'Reavaliação clínica', outcome: 'Alta com orientações e seguimento ambulatorial',
+  }],
+  cadastradoEm: new Date(mockNow - 5 * 3600000).toISOString(), ultimaAtualizacao: new Date(mockNow - 2 * 3600000).toISOString(), ultimoAtualizadoPor: 'user-3',
+})
+
 // Exames solicitados
 export const examRequests: ExamRequest[] = [
   // Paciente 5 - exames solicitados
@@ -1576,7 +1626,15 @@ export function hydratePatient(patient: Patient): Patient {
   const triageComorbidities = mapComorbidities(patient)
   const requestedExams = patient.examesSolicitados || []
   const hasExamResults = examRequests.some((exam) => exam.patientId === patient.id)
-  const visitHistory = [...(patient.visitHistory || []), buildCurrentEncounter(patient)].sort(
+  const currentId = `${patient.id}-visit-current`
+  const previousCurrent = patient.visitHistory?.find((visit) => visit.id === currentId)
+  const currentEncounter = {
+    ...previousCurrent,
+    ...buildCurrentEncounter(patient),
+    medicationsAdministered: previousCurrent?.medicationsAdministered || [],
+    outcome: patient.dischargeAt ? previousCurrent?.outcome || 'Alta após atendimento médico' : patient.status,
+  }
+  const visitHistory = [...(patient.visitHistory || []).filter((visit) => visit.id !== currentId), currentEncounter].sort(
     (a, b) => new Date(b.entryAt).getTime() - new Date(a.entryAt).getTime(),
   )
   const shouldMoveToCardiology =
@@ -1635,7 +1693,7 @@ export function hydratePatient(patient: Patient): Patient {
           completedBy: patient.sinaisVitais.registradoPor,
         }
       : undefined,
-    clinicalEvaluation: patient.avaliacaoClinica
+    clinicalEvaluation: patient.clinicalEvaluation || (patient.avaliacaoClinica
       ? {
           ...patient.avaliacaoClinica,
           requestedExams,
@@ -1663,7 +1721,7 @@ export function hydratePatient(patient: Patient): Patient {
           completedAt: patient.avaliacaoClinica.avaliadoEm,
           completedBy: patient.avaliacaoClinica.avaliadoPor,
         }
-      : undefined,
+      : undefined),
     examResults: hasExamResults ? buildExamResults(patient.id) : undefined,
     visitHistory,
     surgicalRiskAssessment: patient.avaliacaoCirurgica

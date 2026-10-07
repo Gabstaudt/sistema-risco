@@ -84,7 +84,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return visible ? [visible] : []
   }), [patients, user])
   const visibleExamRequests = hasPermission('view_exam_results') ? examRequests : []
-  const visibleAuditLogs = hasPermission('view_patient_history') ? auditLogs : []
+  const visibleAuditLogs = hasPermission('view_patient_audit') ? auditLogs : []
 
   // Carregar dados do localStorage ou usar dados iniciais
   useEffect(() => {
@@ -93,7 +93,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const savedExamRequests = localStorage.getItem(EXAM_REQUESTS_KEY)
     const savedAudit = localStorage.getItem(AUDIT_KEY)
 
-    setPatients(savedPatients ? normalizePatients(JSON.parse(savedPatients)) : initialPatients)
+    if (savedPatients) {
+      const saved: Patient[] = JSON.parse(savedPatients)
+      const merged = saved.map((patient) => {
+        const seed = initialPatients.find((item) => item.id === patient.id)
+        const existing = patient.visitHistory || []
+        const missingVisits = (seed?.visitHistory || []).filter((visit) =>
+          visit.id !== `${patient.id}-visit-current` && !existing.some((item) => item.id === visit.id))
+        return { ...patient, visitHistory: [...existing, ...missingVisits] }
+      })
+      setPatients(normalizePatients([...merged, ...initialPatients.filter((seed) => !saved.some((patient) => patient.id === seed.id))]))
+    } else {
+      setPatients(initialPatients)
+    }
     setExamTypes(savedExamTypes ? JSON.parse(savedExamTypes) : initialExamTypes)
     setExamRequests(savedExamRequests ? JSON.parse(savedExamRequests) : initialExamRequests)
     setAuditLogs(savedAudit ? JSON.parse(savedAudit) : initialAuditLogs)

@@ -2,7 +2,7 @@ import { ROLE_PERMISSIONS, type Patient, type User, type UserRole } from './type
 
 export const PATIENT_VIEW_PERMISSIONS = [
   'view_patient_basic', 'view_triage_data', 'view_clinical_data',
-  'view_exam_results', 'view_patient_history',
+  'view_exam_results', 'view_patient_history', 'view_patient_audit',
 ] as const
 
 /** An explicit backend list (including []) replaces all local defaults. */
@@ -10,7 +10,9 @@ export function getUserPermissions(user: User | null): readonly string[] {
   if (!user || !user.active || !Object.hasOwn(ROLE_PERMISSIONS, user.role)) return []
   if (user.permissions !== undefined) return Array.isArray(user.permissions) ? user.permissions : []
   const defaults = ROLE_PERMISSIONS[user.role] || []
-  const patientViews = user.role === 'recepcao' ? ['view_patient_basic'] : PATIENT_VIEW_PERMISSIONS
+  const patientViews = user.role === 'recepcao' ? ['view_patient_basic']
+    : user.role === 'triagem' ? PATIENT_VIEW_PERMISSIONS.filter((permission) => permission !== 'view_patient_audit')
+    : PATIENT_VIEW_PERMISSIONS
   return [...defaults, ...patientViews]
 }
 
@@ -33,7 +35,7 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
   if (section === 'paciente') {
     if (!hasUserPermission(user, 'view_patient_basic')) return false
     return segments.length === 2 ||
-      (segments.length === 3 && segments[2] === 'historico' && hasUserPermission(user, 'view_patient_history'))
+      (segments.length === 3 && segments[2] === 'historico' && hasUserPermission(user, 'view_patient_audit'))
   }
   const role = sectionRoles[section]
   if (!role || !hasUserPermission(user, `view_dashboard_${role}`)) return false
@@ -58,7 +60,7 @@ export function projectPatientForUser(patient: Patient, user: User | null): Pati
   if (!hasUserPermission(user, 'view_patient_basic')) return undefined
   const basicFields = [
     'id', 'prontuario', 'nomeCompleto', 'name', 'dataNascimento', 'idade', 'age', 'sexo', 'cpf',
-    'cartaoSus', 'telefone', 'endereco', 'responsavel', 'contatoEmergencia', 'unidade', 'dataEntrada',
+    'cartaoSus', 'telefone', 'endereco', 'responsavel', 'contatoEmergencia', 'unidade', 'dataEntrada', 'dischargeAt',
     'healthInsurance', 'bloodType', 'allergies', 'queixaPrincipal', 'descricaoInicial',
     'cadastradoPor', 'cadastradoEm', 'ultimaAtualizacao', 'ultimoAtualizadoPor', 'updatedAt',
   ] as const

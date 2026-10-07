@@ -26,7 +26,7 @@ export function PatientBasicDetails({ patient }: { patient: Patient }) {
   return (
     <>
       <Header breadcrumbs={[{ label: 'Pacientes', href: `/${user?.role}/pacientes` }, { label: 'Cadastro' }]} />
-      <div className="w-full space-y-5 p-4 sm:p-6">
+      <div className="min-h-[calc(100svh-4rem)] w-full flex-1 space-y-5 p-4 sm:p-6">
         <div className="flex items-center gap-4">
           <Button variant="outline" className="size-11 shrink-0" asChild>
             <Link href={`/${user?.role}/pacientes`} aria-label="Voltar para a lista de pacientes"><ArrowLeft className="size-5" /></Link>

@@ -69,11 +69,23 @@ test('other profiles retain their existing local patient views', () => {
     const user = session(role)
     assert.equal(canAccessRoute(`/${role}`, user), true)
     assert.equal(canAccessRoute('/paciente/patient-1', user), true)
-    assert.equal(canAccessRoute('/paciente/patient-1/historico', user), true)
+    assert.equal(canAccessRoute('/paciente/patient-1/historico', user), role !== 'triagem')
     const projected = projectPatientForUser(patients[0], user)!
     assert.deepEqual(projected.triageData, patients[0].triageData)
     assert.deepEqual(projected.visitHistory, patients[0].visitHistory)
   }
+})
+
+test('triage can view hospital encounters but cannot read system execution history', () => {
+  const nurse = session('triagem')
+  assert.equal(hasUserPermission(nurse, 'view_patient_history'), true)
+  assert.equal(hasUserPermission(nurse, 'view_patient_audit'), false)
+  assert.equal(canAccessRoute('/paciente/patient-1/historico', nurse), false)
+  assert.ok(projectPatientForUser(patients[0], nurse)?.visitHistory)
+  const encountersOnly = { ...nurse, permissions: ['view_patient_basic', 'view_patient_history'] }
+  assert.equal(canAccessRoute('/paciente/patient-1/historico', encountersOnly), false)
+  const explicitlyGranted = { ...nurse, permissions: ['view_patient_basic', 'view_patient_audit'] }
+  assert.equal(canAccessRoute('/paciente/patient-1/historico', explicitlyGranted), true)
 })
 
 test('anonymous, inactive and unknown sessions fail closed', () => {

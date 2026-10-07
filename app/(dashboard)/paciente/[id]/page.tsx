@@ -14,6 +14,8 @@ import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/compo
 import { PatientBasicDetails } from '@/components/shared/patient-basic-details'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { users } from '@/lib/data/users'
+import { STATUS_LABELS } from '@/lib/types'
+import { MANCHESTER_PRIORITIES } from '@/lib/manchester'
 
 export default function PatientDetailsPage() {
   const params = useParams()
@@ -23,12 +25,13 @@ export default function PatientDetailsPage() {
   const canViewClinical = hasPermission('view_clinical_data')
   const canViewExams = hasPermission('view_exam_results')
   const canViewHistory = hasPermission('view_patient_history')
+  const canViewAudit = hasPermission('view_patient_audit')
   const canViewVisits = canViewHistory && canViewTriage && canViewClinical && canViewExams
   const { getPatientById, getPatientAuditLogs, getExamRequestsByPatient } = useData()
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
-  const auditLogs = canViewHistory ? getPatientAuditLogs(patientId) : []
+  const auditLogs = canViewAudit ? getPatientAuditLogs(patientId) : []
   
   if (!patient) {
     return (
@@ -46,7 +49,10 @@ export default function PatientDetailsPage() {
   const clinicalEval = patient.clinicalEvaluation
   const surgicalAssessment = patient.surgicalRiskAssessment
   const patientExamRequests = getExamRequestsByPatient(patientId)
-  const visitHistory = patient.visitHistory || []
+  const visitHistory = [...(patient.visitHistory || [])].sort((a, b) => Date.parse(b.entryAt) - Date.parse(a.entryAt))
+  const closedVisits = visitHistory.filter((visit) => visit.dischargeAt).length
+  const getOutcomeLabel = (outcome?: string) => outcome && outcome in STATUS_LABELS
+    ? STATUS_LABELS[outcome as keyof typeof STATUS_LABELS] : outcome || 'Desfecho ainda não registrado'
   
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR', {
@@ -79,11 +85,11 @@ export default function PatientDetailsPage() {
     }
 
     const foundUser = users.find(u => u.id === userId)
-    return foundUser?.name || 'Usuario desconhecido'
+    return foundUser?.name || userId
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
@@ -148,7 +154,7 @@ export default function PatientDetailsPage() {
         </CardContent>
       </Card>
       
-      <Tabs defaultValue={canViewClinical || canViewTriage ? "summary" : canViewExams ? "exams" : "audit"} className="space-y-4">
+      <Tabs defaultValue={canViewClinical || canViewTriage ? "summary" : canViewExams ? "exams" : "visits"} className="flex-1 space-y-4">
         <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:flex sm:flex-wrap">
           {(canViewClinical || canViewTriage) && (<TabsTrigger value="summary" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
             Resumo
@@ -163,10 +169,10 @@ export default function PatientDetailsPage() {
             Exames
           </TabsTrigger>)}
           {(canViewVisits) && (<TabsTrigger value="visits" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
-            Entradas
+            Entradas no hospital
           </TabsTrigger>)}
-          {(canViewHistory) && (<TabsTrigger value="audit" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
-            Historico
+          {(canViewAudit) && (<TabsTrigger value="audit" className="h-auto whitespace-normal rounded-md border px-3 py-2 text-center">
+            Histórico de execução
           </TabsTrigger>)}
         </TabsList>
         
@@ -461,7 +467,7 @@ export default function PatientDetailsPage() {
             <CardHeader>
               <CardTitle>Entradas no Hospital</CardTitle>
               <CardDescription>
-                {visitHistory.length} registro(s) de passagem assistencial. Abra uma data para ver triagem, atendimento, medicacoes e desfecho.
+                {visitHistory.length} entrada(s) · {closedVisits} atendimento(s) finalizado(s). Do mais recente ao mais antigo.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -470,22 +476,26 @@ export default function PatientDetailsPage() {
                   Nenhuma entrada anterior registrada.
                 </div>
               ) : (
-                <Accordion type="single" collapsible className="w-full rounded-xl border px-4">
+                <Accordion type="single" collapsible defaultValue={visitHistory[0]?.id} className="w-full rounded-xl border px-4">
                   {visitHistory.map((visit) => (
                     <AccordionItem key={visit.id} value={visit.id}>
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex min-w-0 flex-1 flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between">
                           <div className="min-w-0">
-                            <p className="font-medium">{new Date(visit.entryAt).toLocaleDateString('pt-BR')}</p>
-                            <p className="text-sm text-muted-foreground">{visit.reason}</p>
+                            <p className="font-medium">{formatDate(visit.entryAt)}</p>
+                            <p className="break-words text-sm text-muted-foreground">{visit.reason}</p>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">{visit.unit}</Badge>
-                            {visit.outcome && <Badge variant="secondary">{visit.outcome}</Badge>}
+                            <Badge variant={visit.dischargeAt ? 'secondary' : 'outline'}>{visit.dischargeAt ? 'Atendimento finalizado' : 'Em atendimento'}</Badge>
                           </div>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="space-y-4">
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                          <p className="text-sm font-medium">{visit.dischargeAt ? 'Desfecho do atendimento' : 'Situação atual'}</p>
+                          <p className="mt-1 break-words text-sm text-muted-foreground">{getOutcomeLabel(visit.outcome)}</p>
+                        </div>
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                           <div>
                             <p className="text-xs uppercase tracking-wide text-muted-foreground">Entrada</p>
@@ -507,7 +517,7 @@ export default function PatientDetailsPage() {
                             <div className="space-y-2 text-sm text-muted-foreground">
                               <p>Responsavel: {getUserName(visit.triage?.performedBy || '')}</p>
                               <p>Clinico direcionado: {visit.triage?.assignedClinicianName || 'Nao definido'}</p>
-                              <p>Risco: {visit.triage?.riskClassification || 'Nao classificado'}</p>
+                              <p>Prioridade: {visit.triage?.riskClassification ? MANCHESTER_PRIORITIES[visit.triage.riskClassification].label : 'Não classificada'}</p>
                               <p>{visit.triage?.vitalSignsSummary || 'Sem sinais vitais consolidados.'}</p>
                               <p>{visit.triage?.notes || 'Sem observacoes de triagem.'}</p>
                             </div>
@@ -584,7 +594,7 @@ export default function PatientDetailsPage() {
         </TabsContent>)}
         
         {/* Audit Tab */}
-        {(canViewHistory) && (<TabsContent value="audit">
+        {(canViewAudit) && (<TabsContent value="audit">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
