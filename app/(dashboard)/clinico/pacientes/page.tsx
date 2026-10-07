@@ -9,9 +9,18 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { StatusBadge, PriorityBadge } from '@/components/shared/badges'
-import { STATUS_LABELS, PRIORITY_LABELS } from '@/lib/types'
+import { StatusBadge } from '@/components/shared/badges'
+import { STATUS_LABELS } from '@/lib/types'
 import { Search, Eye, Stethoscope, Filter } from 'lucide-react'
+import { getPatientManchesterPriority, MANCHESTER_PRIORITIES } from '@/lib/manchester'
+import type { Patient } from '@/lib/types'
+
+function ClassificationBadge({ patient }: { patient: Patient }) {
+  const priority = getPatientManchesterPriority(patient)
+  if (!priority) return <span className="text-xs text-muted-foreground">Sem classificação</span>
+  const meta = MANCHESTER_PRIORITIES[priority]
+  return <span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium ${meta.className}`}>{meta.label}</span>
+}
 
 export default function ClinicoPacientesPage() {
   const { patients } = useData()
@@ -30,7 +39,7 @@ export default function ClinicoPacientesPage() {
           patient.cpf.includes(search)
 
         const matchesStatus = statusFilter === 'all' || patient.status === statusFilter
-        const matchesPriority = priorityFilter === 'all' || patient.prioridade === priorityFilter
+        const matchesPriority = priorityFilter === 'all' || getPatientManchesterPriority(patient) === priorityFilter
 
         return matchesSearch && matchesStatus && matchesPriority
       })
@@ -91,14 +100,14 @@ export default function ClinicoPacientesPage() {
                   </SelectContent>
                 </Select>
                 <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger aria-label="Filtrar por prioridade" className="h-11 w-full sm:min-w-[170px]">
+                  <SelectTrigger aria-label="Filtrar por classificação de Manchester" className="h-11 w-full sm:min-w-[170px]">
                     <SelectValue placeholder="Prioridade" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>
-                    {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+                    {Object.entries(MANCHESTER_PRIORITIES).map(([value, meta]) => (
                       <SelectItem key={value} value={value}>
-                        {label}
+                        {meta.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -115,7 +124,7 @@ export default function ClinicoPacientesPage() {
                       <p className="break-words font-medium">{patient.nomeCompleto}</p>
                       <p className="text-xs text-muted-foreground">{patient.prontuario} · {patient.idade} anos</p>
                     </div>
-                    <PriorityBadge priority={patient.prioridade} />
+                    <ClassificationBadge patient={patient} />
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <StatusBadge status={patient.status} />
@@ -137,7 +146,7 @@ export default function ClinicoPacientesPage() {
                       <TableHead>Paciente</TableHead>
                       <TableHead className="whitespace-nowrap">Idade</TableHead>
                       <TableHead className="whitespace-nowrap">Entrada</TableHead>
-                      <TableHead className="whitespace-nowrap">Prioridade</TableHead>
+                      <TableHead className="whitespace-nowrap">Manchester</TableHead>
                       <TableHead className="w-44 whitespace-nowrap">Status</TableHead>
                       <TableHead className="w-56 text-right whitespace-nowrap">Ações</TableHead>
                     </TableRow>
@@ -161,7 +170,7 @@ export default function ClinicoPacientesPage() {
                           <TableCell className="whitespace-nowrap">{patient.idade} anos</TableCell>
                           <TableCell className="whitespace-nowrap text-sm">{formatDate(patient.dataEntrada)}</TableCell>
                           <TableCell>
-                            <PriorityBadge priority={patient.prioridade} />
+                            <ClassificationBadge patient={patient} />
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={patient.status} />

@@ -17,6 +17,8 @@ import { AssessmentRequestFields } from '@/components/shared/assessment-request-
 import { buildAssessmentUpdates, getAssessmentDraft, nextAssessmentStatus } from '@/lib/assessment-requests'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { users } from '@/lib/data/users'
+import { editManchesterPriority, getPatientManchesterPriority, MANCHESTER_PRIORITIES } from '@/lib/manchester'
+import type { LabUrgency } from '@/lib/types'
 
 const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
 
@@ -28,6 +30,7 @@ export default function ClinicoAvaliarPage() {
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
+  const [priority, setPriority] = useState<LabUrgency | ''>(() => getPatientManchesterPriority(patient) || '')
   
   const [lesionType, setLesionType] = useState(patient?.clinicalEvaluation?.lesionType || '')
   const [assessmentDraft, setAssessmentDraft] = useState(() => getAssessmentDraft(patient))
@@ -82,7 +85,9 @@ export default function ClinicoAvaliarPage() {
     if (!user || !hasPermission('clinical_evaluation') || isSaving) return
     setSaveError('')
     let assessmentUpdates
+    let classificationUpdates
     try {
+      classificationUpdates = editManchesterPriority(patient, priority, user)
       assessmentUpdates = hasPermission('request_specialist_assessment') ? buildAssessmentUpdates(patient, user, assessmentDraft, complete, users) : {}
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar as solicitações.')
@@ -109,6 +114,7 @@ export default function ClinicoAvaliarPage() {
       bloodType: bloodType || undefined,
       allergies: parsedAllergies,
       ...assessmentUpdates,
+      ...classificationUpdates,
       status: complete
         ? newExamIds.length > 0 || patientExamRequests.some((exam) => !['concluido', 'cancelado'].includes(exam.status))
           ? 'aguardando_exames'
@@ -116,6 +122,9 @@ export default function ClinicoAvaliarPage() {
         : 'em_avaliacao_clinica',
       updatedAt: new Date().toISOString(),
     })
+    if (classificationUpdates.triageRiskClassification) {
+      addAuditLog({ action: 'classificacao_risco', userId: user.id, patientId, details: `Classificação Manchester editada pelo clínico: ${MANCHESTER_PRIORITIES[getPatientManchesterPriority(patient)!].label} → ${MANCHESTER_PRIORITIES[classificationUpdates.triageRiskClassification].label}` })
+    }
     
     addAuditLog({
       action: complete ? 'avaliacao_clinica_concluida' : 'avaliacao_clinica_atualizada',
@@ -235,6 +244,26 @@ export default function ClinicoAvaliarPage() {
             </div>
           </CardContent>
         )}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Classificação de Manchester</CardTitle>
+          <CardDescription>Classificação recebida da triagem. Você pode editar a prioridade durante a avaliação.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {getPatientManchesterPriority(patient) ? (
+            <div role="group" aria-label="Editar classificação de Manchester" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {(Object.entries(MANCHESTER_PRIORITIES) as Array<[LabUrgency, typeof MANCHESTER_PRIORITIES[LabUrgency]]>).map(([value, meta]) => (
+                <button key={value} type="button" aria-pressed={priority === value} onClick={() => setPriority(value)} disabled={!hasPermission('clinical_evaluation')}
+                  className={`min-h-14 rounded-lg border px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${meta.className} ${priority === value ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
+                  <span className="block font-semibold">{meta.label}</span>
+                  <span className="mt-1 block text-sm">{meta.timeLabel}</span>
+                </button>
+              ))}
+            </div>
+          ) : <p className="text-sm text-muted-foreground">Classificação ainda não registrada pela triagem.</p>}
+        </CardContent>
       </Card>
 
       <Card>

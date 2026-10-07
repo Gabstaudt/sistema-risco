@@ -17,3 +17,7 @@ A ASA foi retirada da tela e dos registros de triagem; sua fonte na ficha compar
 ## Integração clínica
 
 O registro não implementa os algoritmos oficiais do protocolo. Fluxogramas e discriminadores são informados pelo enfermeiro a partir do material adotado pelo hospital. Para oferecer seleção validada ou classificação assistida, integrar o catálogo oficial vigente e validar o fluxo com a equipe de enfermagem. O backend deve validar a autorização do profissional, a correspondência entre fluxograma/discriminador/prioridade e a versão do protocolo institucional.
+
+## Edição pelo clínico
+
+Lista, fila e avaliação clínica usam a mesma classificação registrada pela triagem. O clínico pode editar uma classificação existente; não cria um segundo registro. A edição sincroniza a prioridade e o tempo-alvo, preserva autor/data originais e registra `updatedBy`/`updatedAt`. A alteração também gera auditoria.

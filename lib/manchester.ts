@@ -1,4 +1,5 @@
-import type { LabUrgency, ManchesterClassification } from './types'
+import type { LabUrgency, ManchesterClassification, Patient, User } from './types'
+import { hasUserPermission } from './permissions'
 
 // Priority/time references: docs/manchester.md. This is a recording model, not a classification engine.
 export const MANCHESTER_PRIORITIES: Record<LabUrgency, { label: string; targetMinutes: number; timeLabel: string; className: string }> = {
@@ -19,5 +20,35 @@ export function createManchesterRecord(priority: LabUrgency | '', flowchart: str
     targetMinutes: MANCHESTER_PRIORITIES[priority].targetMinutes,
     classifiedAt: complete ? new Date().toISOString() : undefined,
     classifiedBy: complete ? nurseId : undefined,
+  }
+}
+
+export function getPatientManchesterPriority(patient?: Patient): LabUrgency | undefined {
+  return patient?.triageData?.manchester?.priority || patient?.triageRiskClassification
+}
+
+/** Updates the same triage classification while preserving its nursing author and findings. */
+export function editManchesterPriority(patient: Patient, priority: LabUrgency | '', user: User): Partial<Patient> {
+  const current = getPatientManchesterPriority(patient)
+  if (priority === current || (!current && !priority)) return {}
+  if (user.role !== 'clinico' || !hasUserPermission(user, 'clinical_evaluation')) throw new Error('Sem permissão para editar a classificação.')
+  if (!current) throw new Error('A classificação precisa ser registrada primeiro pela triagem.')
+  if (!priority || !Object.hasOwn(MANCHESTER_PRIORITIES, priority)) throw new Error('Selecione uma prioridade válida de Manchester.')
+  const previous = patient.triageData?.manchester
+  return {
+    triageRiskClassification: priority,
+    prioridade: priority === 'emergente' || priority === 'muito_urgente' ? 'urgente' : priority === 'urgente' ? 'alta' : 'normal',
+    triageData: {
+      ...patient.triageData,
+      manchester: {
+        ...previous,
+        protocol: 'Manchester', priority,
+        flowchart: previous?.flowchart || '', discriminator: previous?.discriminator || '',
+        targetMinutes: MANCHESTER_PRIORITIES[priority].targetMinutes,
+        classifiedAt: previous?.classifiedAt || patient.triageData?.completedAt,
+        classifiedBy: previous?.classifiedBy || patient.triageData?.completedBy,
+        updatedAt: new Date().toISOString(), updatedBy: user.id,
+      },
+    },
   }
 }

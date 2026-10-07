@@ -88,9 +88,6 @@ export default function ExamesClinicosPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-1">
             <h1 className="text-2xl font-bold text-foreground">Tipos de Exames</h1>
-            <p className="max-w-3xl text-muted-foreground">
-              Cadastre e consulte os exames disponiveis para solicitacao clinica sem comprometer o fluxo da tela.
-            </p>
           </div>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

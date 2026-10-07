@@ -282,6 +282,8 @@ export interface ManchesterClassification {
   targetMinutes: number
   classifiedAt?: string
   classifiedBy?: string
+  updatedAt?: string
+  updatedBy?: string
 }
 
 export type AssessmentSpecialty = 'cardiologista' | 'anestesista' | 'cirurgiao'

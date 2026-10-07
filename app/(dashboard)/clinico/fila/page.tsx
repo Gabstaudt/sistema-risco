@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/badges'
 import { ArrowRight, Clock, FileText, Stethoscope, User } from 'lucide-react'
 import type { LabUrgency, Patient } from '@/lib/types'
+import { getPatientManchesterPriority, MANCHESTER_PRIORITIES } from '@/lib/manchester'
 
 const urgencyMeta: Record<
   LabUrgency,
@@ -63,7 +64,7 @@ type QueueItem = {
 }
 
 function getPatientUrgency(patient: Patient): LabUrgency {
-  return patient.triageRiskClassification || 'nao_urgente'
+  return getPatientManchesterPriority(patient) || 'nao_urgente'
 }
 
 export default function ClinicoDashboard() {
@@ -186,7 +187,7 @@ export default function ClinicoDashboard() {
                       <div>
                         <CardTitle className="flex items-center gap-2">
                           <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${meta.badgeClassName}`}>
-                            {meta.label}
+                            {MANCHESTER_PRIORITIES[urgency].label}
                           </span>
                         </CardTitle>
                       </div>
