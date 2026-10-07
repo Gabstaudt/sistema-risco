@@ -135,7 +135,7 @@ export default function ClinicoAvaliarPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen w-full min-w-0 flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
@@ -245,12 +245,12 @@ export default function ClinicoAvaliarPage() {
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="clinical-lesion-type">Tipo de lesão</Label>
-            <Input id="clinical-lesion-type" className="h-12 text-base" value={lesionType} onChange={(event) => setLesionType(event.target.value)} placeholder="Descreva o tipo de lesão, se aplicável" />
+            <Input id="clinical-lesion-type" className="h-12 text-base md:text-base" value={lesionType} onChange={(event) => setLesionType(event.target.value)} placeholder="Descreva o tipo de lesão, se aplicável" />
           </div>
           <div className="space-y-2">
             <Label>Tipo Sanguineo</Label>
             <Select value={bloodType} onValueChange={setBloodType}>
-              <SelectTrigger>
+              <SelectTrigger className="h-12 w-full">
                 <SelectValue placeholder="Selecione o tipo sanguineo" />
               </SelectTrigger>
               <SelectContent>
@@ -265,6 +265,7 @@ export default function ClinicoAvaliarPage() {
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="clinical-allergies">Alergias</Label>
             <Textarea
+              className="min-h-28 text-base md:text-base"
               id="clinical-allergies"
               placeholder="Ex.: dipirona, penicilina, contraste iodado"
               value={allergiesText}
@@ -354,23 +355,24 @@ export default function ClinicoAvaliarPage() {
         </CardHeader>
         <CardContent>
           <Textarea
+              className="min-h-28 text-base md:text-base"
             placeholder="Adicione observacoes clinicas relevantes, recomendacoes e consideracoes..."
             value={clinicalNotes}
             onChange={e => setClinicalNotes(e.target.value)}
             rows={4}
           />
         </CardContent>
-        <CardFooter className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <CardFooter className="sticky bottom-0 z-10 flex flex-col gap-4 border-t bg-card py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-2">
             {patient.anesthesiaAssessment?.asaClassification && (
               <ASABadge classification={patient.anesthesiaAssessment.asaClassification} />
             )}
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
+            <Button className="h-12 w-full px-6 text-base sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
               Salvar Rascunho
             </Button>
-            <Button className="w-full sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving}>
+            <Button className="h-12 w-full px-6 text-base sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving}>
               <Save className="mr-2 h-4 w-4" />
               Concluir Avaliacao
             </Button>

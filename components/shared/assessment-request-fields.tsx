@@ -29,7 +29,7 @@ export function AssessmentRequestFields({ value, onChange, patient, surgeon = fa
               <div key={specialty} className="space-y-3 rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <Checkbox id={`request-${specialty}`} checked={selected} disabled={pending} onCheckedChange={(checked) => onChange({ ...value, targets: checked ? [...value.targets, specialty] : value.targets.filter((item) => item !== specialty) })} />
-                  <Label htmlFor={`request-${specialty}`} className="cursor-pointer text-base">Solicitar {ASSESSMENT_LABELS[specialty]}</Label>
+                  <Label htmlFor={`request-${specialty}`} className="cursor-pointer text-base">Solicitar avaliação de {ASSESSMENT_LABELS[specialty]}</Label>
                 </div>
                 {pending && <p className="text-sm text-muted-foreground">Avaliação já solicitada e aguardando atendimento.</p>}
                 {selected && <div className="space-y-2">

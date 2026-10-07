@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { Header } from '@/components/layout/header'
 import { useData } from '@/lib/data-context'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/badges'
-import { ArrowRight, Clock, FileText, ShieldAlert, Stethoscope, User } from 'lucide-react'
+import { ArrowRight, Clock, FileText, Stethoscope, User } from 'lucide-react'
 import type { LabUrgency, Patient } from '@/lib/types'
 
 const urgencyMeta: Record<
@@ -14,8 +14,6 @@ const urgencyMeta: Record<
   {
     label: string
     shortLabel: string
-    description: string
-    cardClassName: string
     badgeClassName: string
     accentClassName: string
     rank: number
@@ -24,8 +22,6 @@ const urgencyMeta: Record<
   emergente: {
     label: 'Vermelho - Emergente',
     shortLabel: 'Vermelho',
-    description: 'Atendimento imediato. Maior gravidade na escala de risco.',
-    cardClassName: 'border-red-200 bg-red-50/60',
     badgeClassName: 'bg-red-100 text-red-800 border-red-200',
     accentClassName: 'border-l-red-500',
     rank: 0,
@@ -33,8 +29,6 @@ const urgencyMeta: Record<
   muito_urgente: {
     label: 'Laranja - Muito urgente',
     shortLabel: 'Laranja',
-    description: 'Casos muito urgentes, atendidos logo apos os emergentes.',
-    cardClassName: 'border-orange-200 bg-orange-50/60',
     badgeClassName: 'bg-orange-100 text-orange-800 border-orange-200',
     accentClassName: 'border-l-orange-500',
     rank: 1,
@@ -42,8 +36,6 @@ const urgencyMeta: Record<
   urgente: {
     label: 'Amarelo - Urgente',
     shortLabel: 'Amarelo',
-    description: 'Necessita avaliacao prioritaria, mas sem risco imediato de morte.',
-    cardClassName: 'border-yellow-200 bg-yellow-50/60',
     badgeClassName: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     accentClassName: 'border-l-yellow-500',
     rank: 2,
@@ -51,8 +43,6 @@ const urgencyMeta: Record<
   pouco_urgente: {
     label: 'Verde - Pouco urgente',
     shortLabel: 'Verde',
-    description: 'Paciente estavel, com possibilidade de aguardar atendimento.',
-    cardClassName: 'border-emerald-200 bg-emerald-50/60',
     badgeClassName: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     accentClassName: 'border-l-emerald-500',
     rank: 3,
@@ -60,8 +50,6 @@ const urgencyMeta: Record<
   nao_urgente: {
     label: 'Azul - Nao urgente',
     shortLabel: 'Azul',
-    description: 'Menor gravidade na escala classica hospitalar.',
-    cardClassName: 'border-sky-200 bg-sky-50/60',
     badgeClassName: 'bg-sky-100 text-sky-800 border-sky-200',
     accentClassName: 'border-l-sky-500',
     rank: 4,
@@ -152,13 +140,10 @@ export default function ClinicoDashboard() {
   return (
     <>
       <Header breadcrumbs={[{ label: 'Aguardando Avaliacao' }]} />
-      <div className="mx-auto flex-1 w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="flex-1 w-full min-w-0 space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Fila de Aguardando Avaliacao</h1>
-          <p className="max-w-4xl text-muted-foreground">
-            Ordenacao clinica pela escala hospitalar classica: vermelho, laranja, amarelo, verde e azul. Dentro de
-            cada cor, a ordem de chegada e preservada.
-          </p>
+
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -172,7 +157,6 @@ export default function ClinicoDashboard() {
             <CardContent className="p-4">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Vermelho e laranja</p>
               <p className="mt-1 text-2xl font-semibold">{highPriorityCount}</p>
-              <p className="text-sm text-muted-foreground">casos que sobem para o topo</p>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-slate-400">
@@ -184,25 +168,6 @@ export default function ClinicoDashboard() {
             </CardContent>
           </Card>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-primary" />
-              Regra de Classificacao
-            </CardTitle>
-            <CardDescription>A fila segue exatamente a prioridade assistencial por cor.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            {groupedQueue.map(({ urgency, meta }) => (
-              <div key={urgency} className={`rounded-xl border p-4 ${meta.cardClassName}`}>
-                <p className="font-medium">{meta.shortLabel}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{meta.description}</p>
-                <p className="mt-3 text-2xl font-semibold">{queue.filter((item) => item.urgency === urgency).length}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
 
         {queue.length === 0 ? (
           <Card>
@@ -224,7 +189,6 @@ export default function ClinicoDashboard() {
                             {meta.label}
                           </span>
                         </CardTitle>
-                        <CardDescription className="mt-2">{meta.description}</CardDescription>
                       </div>
                       <span className="text-sm text-muted-foreground">{items.length} paciente(s) neste nivel</span>
                     </div>

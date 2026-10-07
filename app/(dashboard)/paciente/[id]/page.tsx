@@ -436,6 +436,12 @@ export default function PatientDetailsPage() {
                     </div>
                   </div>
                   
+                  {clinicalEval.lesionType && (
+                    <div>
+                      <h4 className="mb-2 font-medium">Tipo de lesão</h4>
+                      <p className="break-words text-muted-foreground">{clinicalEval.lesionType}</p>
+                    </div>
+                  )}
                   {clinicalEval.notes && (
                     <>
                       <Separator />

@@ -32,6 +32,7 @@ export default function AnestesistaFilaPage() {
       }
 
       return (
+        !patient.assessmentRequests &&
         patient.cardiologyAssessment?.recommendation === 'aprovar' &&
         !patient.anesthesiaAssessment &&
         !patient.avaliacaoCirurgica &&

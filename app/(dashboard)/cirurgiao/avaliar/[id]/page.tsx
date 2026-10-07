@@ -311,6 +311,7 @@ export default function CirurgiaoAvaliarPage() {
                     </div>
                     <Separator />
                     <div>
+                      <p className="mb-2 break-words text-sm"><span className="font-medium">Tipo de lesão:</span> {clinicalEval.lesionType || 'Não informado'}</p>
                       <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
                       <p className="break-words text-sm">{clinicalEval.notes || 'Sem observacoes clinicas.'}</p>
                     </div>
@@ -412,7 +413,8 @@ export default function CirurgiaoAvaliarPage() {
                   </div>
                   <Separator />
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
+                    <p className="mb-2 break-words text-sm"><span className="font-medium">Tipo de lesão:</span> {clinicalEval.lesionType || 'Não informado'}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
                     <p className="break-words text-sm">{clinicalEval.notes || 'Sem observacoes clinicas.'}</p>
                   </div>
                 </>
