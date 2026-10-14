@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data-context'
@@ -21,9 +21,13 @@ const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as
 export default function CadastroPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { patients, createPatient } = useData()
+  const { patients, tickets, createPatient } = useData()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [ticketId, setTicketId] = useState('')
+  useEffect(() => { setTicketId(new URLSearchParams(window.location.search).get('senha') || '') }, [])
+  const ticket = tickets.find(item => item.id === ticketId)
+  const canRegister = user?.role !== 'recepcao' || Boolean(ticket && ticket.stage === 'chamada_recepcao' && ticket.calledBy === user.id)
 
   const [formData, setFormData] = useState({
     nomeCompleto: '',
@@ -41,6 +45,15 @@ export default function CadastroPage() {
     queixaPrincipal: '',
     descricaoInicial: '',
   })
+
+  const matchedPatient = formData.cpf.replace(/\D/g, '').length === 11
+    ? patients.find(patient => patient.cpf.replace(/\D/g, '') === formData.cpf.replace(/\D/g, ''))
+    : undefined
+  useEffect(() => {
+    if (user?.role === 'recepcao' && canRegister && matchedPatient && ticket?.id) {
+      router.replace(`/recepcao/entrada/${matchedPatient.id}?senha=${ticket.id}`)
+    }
+  }, [user?.role, canRegister, matchedPatient?.id, ticket?.id, router])
 
   const calcularIdade = (dataNascimento: string): number => {
     const hoje = new Date()
@@ -84,6 +97,7 @@ export default function CadastroPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!canRegister) return
 
     const normalizedName = formData.nomeCompleto.trim()
     const normalizedCpf = formData.cpf.replace(/\D/g, '')
@@ -142,7 +156,8 @@ export default function CadastroPage() {
     setIsLoading(true)
 
     try {
-      const newPatient = createPatient({
+      const newPatient = await createPatient({
+        ticketId: ticket?.id,
         ...formData,
         nomeCompleto: normalizedName,
         cpf: formatCpf(formData.cpf),
@@ -170,11 +185,11 @@ export default function CadastroPage() {
         description: `${newPatient.nomeCompleto} foi cadastrado e enviado para a triagem.`,
       })
 
-      router.push(patientsListUrl)
-    } catch {
+      router.push(user?.role === 'recepcao' ? '/recepcao/fila' : '/triagem')
+    } catch (error) {
       toast({
         title: 'Erro',
-        description: 'Ocorreu um erro ao cadastrar o paciente.',
+        description: error instanceof Error ? error.message : 'Ocorreu um erro ao cadastrar o paciente.',
         variant: 'destructive',
       })
     } finally {
@@ -204,6 +219,9 @@ export default function CadastroPage() {
             </div>
           </div>
 
+          {user?.role === 'recepcao' && <div className="rounded-lg border bg-primary/5 p-4">
+            {canRegister ? <p className="font-semibold">Senha {ticket?.number} · Cadastro e encaminhamento à triagem</p> : <><p className="mb-3">Chame uma senha na recepção antes de cadastrar o paciente.</p><Button asChild><Link href="/recepcao/fila">Abrir fila de senhas</Link></Button></>}
+          </div>}
           <form onSubmit={handleSubmit} className="flex w-full flex-1 flex-col">
             <Card className="w-full flex-1">
               <CardHeader>
@@ -221,7 +239,7 @@ export default function CadastroPage() {
                       onChange={(e) => setFormData({ ...formData, nomeCompleto: e.target.value })}
                       placeholder="Nome completo do paciente"
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -234,7 +252,7 @@ export default function CadastroPage() {
                       value={formData.dataNascimento}
                       onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -243,7 +261,7 @@ export default function CadastroPage() {
                     <Select
                       value={formData.sexo}
                       onValueChange={(value) => setFormData({ ...formData, sexo: value as 'M' | 'F' | 'O' })}
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     >
                       <SelectTrigger id="sexo" className="w-full rounded-lg px-4 text-base data-[size=default]:h-14">
                         <SelectValue placeholder="Selecione" />
@@ -265,7 +283,7 @@ export default function CadastroPage() {
                       onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })}
                       placeholder="000.000.000-00"
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -277,7 +295,7 @@ export default function CadastroPage() {
                       value={formData.cartaoSus}
                       onChange={(e) => setFormData({ ...formData, cartaoSus: e.target.value })}
                       placeholder="000 0000 0000 0000"
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -286,7 +304,7 @@ export default function CadastroPage() {
                     <Select
                       value={formData.bloodType}
                       onValueChange={(value) => setFormData({ ...formData, bloodType: value })}
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     >
                       <SelectTrigger id="bloodType" className="w-full rounded-lg px-4 text-base data-[size=default]:h-14">
                         <SelectValue placeholder="Selecione" />
@@ -310,7 +328,7 @@ export default function CadastroPage() {
                       onChange={(e) => setFormData({ ...formData, telefone: formatPhone(e.target.value) })}
                       placeholder="(00) 00000-0000"
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -322,7 +340,7 @@ export default function CadastroPage() {
                       value={formData.contatoEmergencia}
                       onChange={(e) => setFormData({ ...formData, contatoEmergencia: formatPhone(e.target.value) })}
                       placeholder="(00) 00000-0000"
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -335,7 +353,7 @@ export default function CadastroPage() {
                       onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
                       placeholder="Rua, numero, bairro, cidade/UF"
                       rows={2}
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -348,7 +366,7 @@ export default function CadastroPage() {
                       onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
                       placeholder="Ex.: dipirona, penicilina, contraste iodado"
                       rows={2}
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -360,7 +378,7 @@ export default function CadastroPage() {
                       value={formData.responsavel}
                       onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
                       placeholder="Nome do responsavel"
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -372,7 +390,7 @@ export default function CadastroPage() {
                       value={formData.unidade}
                       onChange={(e) => setFormData({ ...formData, unidade: e.target.value })}
                       placeholder="Hospital Central"
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -385,7 +403,7 @@ export default function CadastroPage() {
                       onChange={(e) => setFormData({ ...formData, queixaPrincipal: e.target.value })}
                       placeholder="Ex.: falta de ar, dor abdominal, tontura"
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
 
@@ -398,7 +416,7 @@ export default function CadastroPage() {
                       onChange={(e) => setFormData({ ...formData, descricaoInicial: e.target.value })}
                       placeholder="Descreva brevemente o que o paciente relata na recepcao."
                       rows={3}
-                      disabled={isLoading}
+                      disabled={isLoading || !canRegister}
                     />
                   </div>
                 </div>
@@ -407,7 +425,7 @@ export default function CadastroPage() {
                   <Button type="button" variant="outline" className="h-14 w-full px-8 text-base sm:w-auto" asChild>
                     <Link href={patientsListUrl}>Cancelar</Link>
                   </Button>
-                  <Button type="submit" className="h-14 w-full px-8 text-base sm:w-auto" disabled={isLoading}>
+                  <Button type="submit" className="h-14 w-full px-8 text-base sm:w-auto" disabled={isLoading || !canRegister}>
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />

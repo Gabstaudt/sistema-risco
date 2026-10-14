@@ -118,7 +118,7 @@ export default function PatientDetailsPage() {
               <div className="min-w-0">
                 <CardTitle className="break-words text-xl sm:text-2xl">{patient.nomeCompleto}</CardTitle>
                 <CardDescription className="mt-1 break-words text-sm sm:text-base">
-                  {patient.idade} anos · Prontuário: {patient.prontuario}
+                  {patient.idade} anos · Prontuário: {patient.prontuario}{patient.ticketNumber ? ` · Senha: ${patient.ticketNumber}` : ''}
                 </CardDescription>
               </div>
             </div>

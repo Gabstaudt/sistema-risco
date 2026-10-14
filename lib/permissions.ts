@@ -42,7 +42,8 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
   if (!page) return true
   if (page === 'cadastro') return hasUserPermission(user, 'create_patient')
   if (page === 'pacientes') return hasUserPermission(user, 'view_patients_list') && hasUserPermission(user, 'view_patient_basic')
-  if (section === 'recepcao') return page === 'fila' && hasUserPermission(user, 'view_patients_list')
+  if (section === 'recepcao' && page === 'entrada') return hasUserPermission(user, 'manage_reception_queue') && hasUserPermission(user, 'view_patient_basic')
+  if (section === 'recepcao') return page === 'fila' && hasUserPermission(user, 'manage_reception_queue')
   if (section === 'admin') {
     const adminPermissions: Record<string, string> = {
       usuarios: 'manage_users', exames: 'create_exam_type', auditoria: 'view_audit', cirurgias: 'view_surgery_audit', configuracoes: 'system_settings',
@@ -60,7 +61,7 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
 export function projectPatientForUser(patient: Patient, user: User | null): Patient | undefined {
   if (!hasUserPermission(user, 'view_patient_basic')) return undefined
   const basicFields = [
-    'id', 'prontuario', 'nomeCompleto', 'name', 'dataNascimento', 'idade', 'age', 'sexo', 'cpf',
+    'id', 'prontuario', 'ticketId', 'ticketNumber', 'nomeCompleto', 'name', 'dataNascimento', 'idade', 'age', 'sexo', 'cpf',
     'cartaoSus', 'telefone', 'endereco', 'responsavel', 'contatoEmergencia', 'unidade', 'dataEntrada', 'dischargeAt',
     'healthInsurance', 'bloodType', 'allergies', 'queixaPrincipal', 'descricaoInicial',
     'cadastradoPor', 'cadastradoEm', 'ultimaAtualizacao', 'ultimoAtualizadoPor', 'updatedAt',

@@ -66,6 +66,7 @@ const getNavigation = (
   role: UserRole,
   stats: {
     aguardandoTriagem: number
+    aguardandoRecepcao: number
     emAvaliacaoClinica: number
     examesPendentes: number
     aguardandoCardiologia: number
@@ -80,13 +81,12 @@ const getNavigation = (
         items: [
           { title: 'Início', url: '/recepcao', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/recepcao/pacientes', icon: Users },
-          { title: 'Novo Paciente', url: '/recepcao/cadastro', icon: UserPlus },
         ],
       },
       {
         title: 'Fila',
         items: [
-          { title: 'Aguardando Triagem', url: '/recepcao/fila', icon: ClipboardList, badge: stats.aguardandoTriagem },
+          { title: 'Senhas e encaminhamentos', url: '/recepcao/fila', icon: ClipboardList, badge: stats.aguardandoRecepcao },
         ],
       },
     ],
@@ -224,12 +224,12 @@ const getNavigation = (
 export function AppSidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
-  const { getStats } = useData()
+  const { getStats, tickets } = useData()
   
   if (!user) return null
 
   const stats = getStats()
-  const navigation = getNavigation(user.role, stats)
+  const navigation = getNavigation(user.role, { ...stats, aguardandoRecepcao: tickets.filter(ticket => ticket.stage === 'aguardando_recepcao').length, aguardandoTriagem: user.role === 'triagem' ? tickets.filter(ticket => ticket.stage === 'aguardando_triagem').length : stats.aguardandoTriagem })
     .map((group) => ({ ...group, items: group.items.filter((item) => canAccessRoute(item.url, user)) }))
     .filter((group) => group.items.length > 0)
 

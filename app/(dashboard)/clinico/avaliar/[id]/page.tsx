@@ -93,7 +93,7 @@ export default function ClinicoAvaliarPage() {
       setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar as solicitações.')
       return
     }
-    const newExamIds = selectedExams.filter((id) => !patientExamRequests.some((exam) => exam.examTypeId === id && exam.status !== 'cancelado'))
+    const newExamIds = selectedExams.filter((id) => !patientExamRequests.some((exam) => exam.examTypeId === id && exam.status !== 'cancelado' && (!patient.ticketId || Date.parse(exam.solicitadoEm) >= Date.parse(patient.dataEntrada))))
     if (complete && newExamIds.length > 0 && !hasPermission('request_exams')) {
       setSaveError('Sem permissão para solicitar exames.')
       return
@@ -116,7 +116,7 @@ export default function ClinicoAvaliarPage() {
       ...assessmentUpdates,
       ...classificationUpdates,
       status: complete
-        ? newExamIds.length > 0 || patientExamRequests.some((exam) => !['concluido', 'cancelado'].includes(exam.status))
+        ? newExamIds.length > 0 || patientExamRequests.some((exam) => !['concluido', 'cancelado'].includes(exam.status) && (!patient.ticketId || Date.parse(exam.solicitadoEm) >= Date.parse(patient.dataEntrada)))
           ? 'aguardando_exames'
           : nextAssessmentStatus({ ...patient, ...assessmentUpdates }, 'aguardando_resultado')
         : 'em_avaliacao_clinica',

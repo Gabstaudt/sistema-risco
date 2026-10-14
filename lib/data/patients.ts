@@ -1605,8 +1605,8 @@ function mapComorbidities(patient: Patient) {
   }
 }
 
-function buildExamResults(patientId: string) {
-  const patientExamRequests = examRequests.filter((exam) => exam.patientId === patientId)
+function buildExamResults(patientId: string, entryAt?: string) {
+  const patientExamRequests = examRequests.filter((exam) => exam.patientId === patientId && (!entryAt || Date.parse(exam.solicitadoEm) >= Date.parse(entryAt)))
 
   return patientExamRequests.reduce<Record<string, ExamResult>>((acc, exam) => {
     acc[exam.examTypeId] = {
@@ -1625,7 +1625,7 @@ function buildExamResults(patientId: string) {
 export function hydratePatient(patient: Patient): Patient {
   const triageComorbidities = mapComorbidities(patient)
   const requestedExams = patient.examesSolicitados || []
-  const hasExamResults = examRequests.some((exam) => exam.patientId === patient.id)
+  const hasExamResults = examRequests.some((exam) => exam.patientId === patient.id && (!patient.ticketId || Date.parse(exam.solicitadoEm) >= Date.parse(patient.dataEntrada)))
   const currentId = `${patient.id}-visit-current`
   const previousCurrent = patient.visitHistory?.find((visit) => visit.id === currentId)
   const currentEncounter = {
@@ -1724,7 +1724,7 @@ export function hydratePatient(patient: Patient): Patient {
           completedBy: patient.avaliacaoClinica.avaliadoPor,
         }
       : undefined),
-    examResults: hasExamResults ? buildExamResults(patient.id) : undefined,
+    examResults: hasExamResults ? buildExamResults(patient.id, patient.ticketId ? patient.dataEntrada : undefined) : undefined,
     visitHistory,
     surgicalRiskAssessment: patient.surgicalRiskAssessment || (patient.avaliacaoCirurgica
       ? {

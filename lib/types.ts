@@ -261,6 +261,7 @@ export interface AdministeredMedication {
 }
 
 export interface PatientEncounter {
+  clinicalSnapshot?: Pick<Patient, 'clinicalEvaluation' | 'cardiologyAssessment' | 'anesthesiaAssessment' | 'surgicalRiskAssessment' | 'triageData' | 'examResults' | 'avaliacaoClinica' | 'avaliacaoCirurgica'>
   id: string
   entryAt: string
   dischargeAt?: string
@@ -314,6 +315,8 @@ export interface SpecialtyAssessmentRequest {
 }
 
 export interface Patient {
+  ticketId?: string
+  ticketNumber?: string
   surgeryRecords?: SurgeryRecord[]
   assessmentRequests?: SpecialtyAssessmentRequest[]
   surgicalRiskRequest?: { requestedBy: string; requestedAt: string; requesterRole: 'clinico' | 'cirurgiao' }
@@ -406,6 +409,10 @@ export interface Patient {
 }
 
 export type AuditAction =
+  | 'senha_ausente'
+  | 'senha_retornada'
+  | 'senha_chamada'
+  | 'senha_encaminhada'
   | 'cirurgia_registrada'
   | 'cirurgia_atualizada'
   | 'solicitacao_avaliacao_especializada'
@@ -464,6 +471,7 @@ export interface AuditLog {
 // Permissoes por perfil
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   recepcao: [
+    'manage_reception_queue',
     'view_dashboard_recepcao',
     'view_patients_list',
     'create_patient',
@@ -472,6 +480,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_triage',
   ],
   triagem: [
+    'call_triage_ticket',
     'view_dashboard_triagem',
     'view_patients_list',
     'create_patient',

@@ -26,7 +26,7 @@ const homeByRole: Record<UserRole, HomeConfig> = {
   recepcao: {
     title: 'Recepção',
     actions: [
-      { label: 'Cadastrar paciente', description: 'Iniciar um novo atendimento', href: '/recepcao/cadastro', icon: UserPlus },
+      { label: 'Chamar senha', description: 'Receber e encaminhar pacientes', href: '/recepcao/fila', icon: ClipboardList },
       { label: 'Buscar paciente', description: 'Consultar um cadastro', href: '/recepcao/pacientes', icon: Users },
     ],
   },

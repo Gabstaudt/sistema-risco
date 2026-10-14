@@ -25,7 +25,7 @@ export default function TriagemAvaliarPage() {
   const params = useParams()
   const router = useRouter()
   const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
-  const { getPatientById, updatePatient, addAuditLog } = useData()
+  const { getPatientById, updatePatient, addAuditLog, tickets } = useData()
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
@@ -105,6 +105,10 @@ export default function TriagemAvaliarPage() {
   const handleSave = async (complete: boolean) => {
     if (!user || !hasPermission('register_vital_signs')) return
     setSaveError('')
+    if (patient.ticketId && !tickets.some(ticket => ticket.id === patient.ticketId && ticket.stage === 'em_triagem' && ticket.calledBy === user.id)) {
+      setSaveError('Chame a senha e inicie o atendimento pela fila da triagem antes de salvar.')
+      return
+    }
     let manchester
     try {
       manchester = createManchesterRecord(triageRiskClassification, flowchart, discriminator, user.id, complete)
@@ -468,6 +472,7 @@ export default function TriagemAvaliarPage() {
         </CardContent>
       </Card>
       
+      {patient.ticketNumber && <p className="rounded-lg border bg-primary/5 p-4 font-semibold">Senha do paciente: {patient.ticketNumber}</p>}
       {/* Observacoes */}
       <Card>
         <CardHeader>
