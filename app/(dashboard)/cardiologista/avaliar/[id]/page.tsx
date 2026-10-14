@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { nextAssessmentStatus } from '@/lib/assessment-requests'
+import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
 import { Header } from '@/components/layout/header'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { PatientStatusBadge, RiskLevelBadge } from '@/components/shared/badges'
@@ -34,6 +35,9 @@ export default function CardiologistaAvaliarPage() {
   const cardiologyAssessment = patient?.cardiologyAssessment
   const clinicalEvaluation = patient?.clinicalEvaluation
 
+  const [riskScores, setRiskScores] = useState(() => getCardiologyScores(patient))
+  const [specialistReferral, setSpecialistReferral] = useState(cardiologyAssessment?.specialistReferral || '')
+  const [saveError, setSaveError] = useState('')
   const [surgeryType, setSurgeryType] = useState(cardiologyAssessment?.surgeryType || clinicalEvaluation?.tipoCirurgia || patient?.scheduledSurgery || '')
   const [urgency, setUrgency] = useState<SurgeryUrgency>(cardiologyAssessment?.urgency || clinicalEvaluation?.urgencia || 'eletiva')
   const [releaseProfile, setReleaseProfile] = useState<ReleaseProfile>(cardiologyAssessment?.releaseProfile || 'eletiva')
@@ -78,6 +82,12 @@ export default function CardiologistaAvaliarPage() {
   }
 
   const handleSave = async (complete: boolean) => {
+    if (!user || !hasPermission('classify_cardiac_risk') || isSaving) return
+    setSaveError('')
+    if (complete && riskScores.acp?.interpretation === 'Alto risco' && !specialistReferral.trim()) {
+      setSaveError('Registre o encaminhamento especializado ou o suporte de maior complexidade para o ACP de alto risco.')
+      return
+    }
     setIsSaving(true)
 
     const nextStatus =
@@ -91,6 +101,9 @@ export default function CardiologistaAvaliarPage() {
 
     updatePatient(patientId, {
       cardiologyAssessment: {
+        ...patient.cardiologyAssessment,
+        riskScores,
+        specialistReferral: specialistReferral.trim(),
         surgeryType: surgeryType || patient.scheduledSurgery,
         urgency,
         releaseProfile,
@@ -165,17 +178,13 @@ export default function CardiologistaAvaliarPage() {
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Clinico Solicitante</p>
                 <p className="font-medium">{patient.requestingPhysician || 'Nao informado'}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">RCRI</p>
-                <p className="font-medium">{clinicalEvaluation?.rcriScore?.score ?? 0}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">VSG-CRI</p>
-                <p className="font-medium">{clinicalEvaluation?.vsgcriScore?.riskClass || 'Nao calculado'}</p>
-              </div>
             </div>
           </CardContent>
         </Card>
+
+        <CardiologyRiskScores value={riskScores} onChange={setRiskScores} />
+        {riskScores.acp?.interpretation === 'Alto risco' && <Card><CardHeader><CardTitle>Encaminhamento — ACP alto risco</CardTitle></CardHeader><CardContent className="space-y-2"><Label htmlFor="cardio-specialist-referral">Parecer especializado / suporte de maior complexidade *</Label><Textarea id="cardio-specialist-referral" value={specialistReferral} onChange={event => setSpecialistReferral(event.target.value)} rows={3} /></CardContent></Card>}
+        {saveError && <p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{saveError}</p>}
 
         <Tabs defaultValue="resumo" className="space-y-4">
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-4">

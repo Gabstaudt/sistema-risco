@@ -186,6 +186,7 @@ const getNavigation = (
         title: 'Avaliacoes',
         items: [
           { title: 'Aguardando Avaliacao', url: '/cirurgiao/fila', icon: Syringe, badge: stats.aguardandoCirurgiao },
+          { title: 'Cirurgia e pós-operatório', url: '/cirurgiao/acompanhamento', icon: ClipboardList },
           { title: 'Calculadora de Risco', url: '/cirurgiao/calculadora', icon: Heart },
         ],
       },
@@ -209,6 +210,7 @@ const getNavigation = (
         title: 'Sistema',
         items: [
           { title: 'Tipos de Exames', url: '/admin/exames', icon: TestTube },
+          { title: 'Cirurgias por tipo', url: '/admin/cirurgias', icon: Syringe },
           { title: 'Auditoria', url: '/admin/auditoria', icon: History },
           { title: 'Configuracoes', url: '/admin/configuracoes', icon: Settings },
         ],

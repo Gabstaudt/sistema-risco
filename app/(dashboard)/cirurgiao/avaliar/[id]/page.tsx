@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
@@ -12,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Save, User, Shield, Activity, Calculator } from 'lucide-react'
-import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
+import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/shared/badges'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import type { RiskLevel } from '@/lib/types'
 import { users } from '@/lib/data/users'
@@ -182,7 +184,6 @@ export default function CirurgiaoAvaliarPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {patient.anesthesiaAssessment?.asaClassification && <ASABadge classification={patient.anesthesiaAssessment.asaClassification} />}
-              {clinicalEval?.rcriScore && <RCRIBadge score={clinicalEval.rcriScore.score} />}
             </div>
           </div>
         </CardHeader>
@@ -297,19 +298,7 @@ export default function CirurgiaoAvaliarPage() {
               <CardContent className="space-y-4">
                 {clinicalEval ? (
                   <>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="min-w-0 space-y-1">
-                        <p className="text-xs text-muted-foreground">RCRI Score</p>
-                        <p className="font-medium text-lg">{clinicalEval.rcriScore?.score || 0}</p>
-                        <p className="text-xs text-muted-foreground">{clinicalEval.rcriScore?.riskPercentage}</p>
-                      </div>
-                      <div className="min-w-0 space-y-1">
-                        <p className="text-xs text-muted-foreground">VSG-CRI</p>
-                        <p className="font-medium text-lg">{clinicalEval.vsgcriScore?.score || 0}</p>
-                        <p className="text-xs text-muted-foreground">{clinicalEval.vsgcriScore?.riskClass}</p>
-                      </div>
-                    </div>
-                    <Separator />
+
                     <div>
                       <p className="mb-2 break-words text-sm"><span className="font-medium">Tipo de lesão:</span> {clinicalEval.lesionType || 'Não informado'}</p>
                       <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
@@ -399,19 +388,7 @@ export default function CirurgiaoAvaliarPage() {
             <CardContent className="space-y-4">
               {clinicalEval ? (
                 <>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-xs text-muted-foreground">RCRI Score</p>
-                      <p className="font-medium text-lg">{clinicalEval.rcriScore?.score || 0}</p>
-                      <p className="text-xs text-muted-foreground">{clinicalEval.rcriScore?.riskPercentage}</p>
-                    </div>
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-xs text-muted-foreground">VSG-CRI</p>
-                      <p className="font-medium text-lg">{clinicalEval.vsgcriScore?.score || 0}</p>
-                      <p className="text-xs text-muted-foreground">{clinicalEval.vsgcriScore?.riskClass}</p>
-                    </div>
-                  </div>
-                  <Separator />
+
                   <div>
                     <p className="mb-2 break-words text-sm"><span className="font-medium">Tipo de lesão:</span> {clinicalEval.lesionType || 'Não informado'}</p>
                       <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
@@ -548,6 +525,9 @@ export default function CirurgiaoAvaliarPage() {
           />
         </TabsContent>
       </Tabs>
+
+      <CardiologyRiskScores value={getCardiologyScores(patient)} />
+      {hasPermission('record_surgery') && <Button asChild className="h-12"><Link href={`/cirurgiao/acompanhamento/${patient.id}`}>Registrar cirurgia e pós-operatório</Link></Button>}
 
       {hasPermission('request_specialist_assessment') && <div className="space-y-3">
         <AssessmentRequestFields value={assessmentDraft} onChange={setAssessmentDraft} patient={patient} surgeon />

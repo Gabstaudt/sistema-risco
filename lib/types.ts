@@ -191,6 +191,8 @@ export interface RiskScores {
 }
 
 export interface CardiologyAssessment {
+  specialistReferral?: string
+  riskScores?: Partial<Record<'rcri' | 'vsgcri' | 'emapo' | 'acp', { result: string; interpretation: string }>>
   surgeryType?: string
   urgency?: SurgeryUrgency
   releaseProfile?: 'eletiva' | 'emergencia'
@@ -201,6 +203,21 @@ export interface CardiologyAssessment {
   notes?: string
   completedAt?: string
   completedBy?: string
+}
+
+export interface SurgeryRecord {
+  id: string
+  procedureType: string
+  segment: string
+  status: 'planejada' | 'realizada' | 'cancelada'
+  performedAt?: string
+  notes: string
+  postoperativeNotes: string
+  postoperativeOutcome: 'em_acompanhamento' | 'alta' | 'retorno' | 'internacao'
+  createdAt: string
+  createdBy: string
+  updatedAt: string
+  updatedBy: string
 }
 
 export interface AnesthesiaAssessment {
@@ -297,6 +314,7 @@ export interface SpecialtyAssessmentRequest {
 }
 
 export interface Patient {
+  surgeryRecords?: SurgeryRecord[]
   assessmentRequests?: SpecialtyAssessmentRequest[]
   surgicalRiskRequest?: { requestedBy: string; requestedAt: string; requesterRole: 'clinico' | 'cirurgiao' }
   id: string
@@ -388,6 +406,8 @@ export interface Patient {
 }
 
 export type AuditAction =
+  | 'cirurgia_registrada'
+  | 'cirurgia_atualizada'
   | 'solicitacao_avaliacao_especializada'
   | 'cadastro_paciente'
   | 'edicao_dados_basicos'
@@ -512,6 +532,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_surgeon',
   ],
   cirurgiao: [
+    'record_surgery',
     'request_surgical_risk',
     'request_specialist_assessment',
     'view_dashboard_cirurgiao',
@@ -531,6 +552,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'return_to_lab',
   ],
   admin: [
+    'view_surgery_audit',
     'view_dashboard_admin',
     'view_all_data',
     'view_patients_list',

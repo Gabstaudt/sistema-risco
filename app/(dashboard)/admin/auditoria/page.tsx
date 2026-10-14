@@ -89,7 +89,7 @@ export default function AuditoriaPage() {
   useEffect(() => {
     if (isAuthLoading) return
 
-    if (!user || !hasPermission('admin.auditoria')) {
+    if (!user || !hasPermission('view_audit')) {
       router.replace('/login')
     }
   }, [user, hasPermission, router, isAuthLoading])

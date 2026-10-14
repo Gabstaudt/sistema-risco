@@ -72,12 +72,9 @@ export default function ClinicoResultadosPage() {
   return (
     <>
       <Header breadcrumbs={[{ label: 'Resultados de Exames' }]} />
-      <div className="mx-auto flex-1 w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100svh-4rem)] min-w-0 flex-1 w-full space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Resultados de Exames</h1>
-          <p className="max-w-3xl text-muted-foreground">
-            Consulta global dos exames de qualquer paciente, com leitura do resultado e acesso rapido ao prontuario.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

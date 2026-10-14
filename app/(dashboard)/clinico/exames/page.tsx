@@ -84,7 +84,7 @@ export default function ExamesClinicosPage() {
   return (
     <>
       <Header breadcrumbs={[{ label: 'Tipos de Exames' }]} />
-      <div className="mx-auto flex-1 w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100svh-4rem)] min-w-0 flex-1 w-full space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-1">
             <h1 className="text-2xl font-bold text-foreground">Tipos de Exames</h1>
