@@ -51,10 +51,9 @@ export default function CirurgiaoPacientesPage() {
   return (
     <>
       <Header breadcrumbs={[{ label: 'Pacientes' }]} />
-      <div className="mx-auto flex-1 w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100svh-4rem)] min-w-0 w-full flex-1 space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Pacientes do Cirurgiao</h1>
-          <p className="text-muted-foreground">Visualize, filtre e acesse rapidamente os casos do fluxo cirurgico.</p>
         </div>
 
         <Card>

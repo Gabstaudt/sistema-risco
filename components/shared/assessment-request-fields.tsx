@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -14,7 +14,6 @@ export function AssessmentRequestFields({ value, onChange, patient, surgeon = fa
     <Card>
       <CardHeader>
         <CardTitle>Solicitações de avaliação</CardTitle>
-        {surgeon && <CardDescription>Solicite o risco cirúrgico e selecione as especialidades que devem avaliar o paciente. O profissional responsável é opcional.</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="flex items-center gap-3 rounded-lg border p-4">

@@ -1,431 +1,104 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { useAuth } from '@/lib/auth'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { Header } from '@/components/layout/header'
 import { useData } from '@/lib/data-context'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Search, 
-  Filter, 
-  Clock, 
-  User, 
-  FileText, 
-  Activity,
-  Shield,
-  FlaskConical,
-  UserPlus,
-  ChevronLeft,
-  ChevronRight,
-  Download
-} from 'lucide-react'
+import { useAuth } from '@/lib/auth'
 import { users } from '@/lib/data/users'
+import { ROLE_LABELS, type AuditLog } from '@/lib/types'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Download } from 'lucide-react'
 
-const ACTION_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  'paciente_cadastrado': { 
-    label: 'Paciente Cadastrado', 
-    icon: <UserPlus className="h-4 w-4" />,
-    color: 'text-blue-600 bg-blue-50 border-blue-200'
-  },
-  'triagem_concluida': { 
-    label: 'Triagem Concluida', 
-    icon: <Activity className="h-4 w-4" />,
-    color: 'text-emerald-600 bg-emerald-50 border-emerald-200'
-  },
-  'triagem_atualizada': { 
-    label: 'Triagem Atualizada', 
-    icon: <Activity className="h-4 w-4" />,
-    color: 'text-teal-600 bg-teal-50 border-teal-200'
-  },
-  'avaliacao_clinica_concluida': { 
-    label: 'Avaliacao Clinica Concluida', 
-    icon: <FileText className="h-4 w-4" />,
-    color: 'text-purple-600 bg-purple-50 border-purple-200'
-  },
-  'avaliacao_clinica_atualizada': { 
-    label: 'Avaliacao Clinica Atualizada', 
-    icon: <FileText className="h-4 w-4" />,
-    color: 'text-violet-600 bg-violet-50 border-violet-200'
-  },
-  'exames_registrados': { 
-    label: 'Exames Registrados', 
-    icon: <FlaskConical className="h-4 w-4" />,
-    color: 'text-amber-600 bg-amber-50 border-amber-200'
-  },
-  'exames_atualizados': { 
-    label: 'Exames Atualizados', 
-    icon: <FlaskConical className="h-4 w-4" />,
-    color: 'text-orange-600 bg-orange-50 border-orange-200'
-  },
-  'avaliacao_cirurgica_concluida': { 
-    label: 'Avaliacao Cirurgica Concluida', 
-    icon: <Shield className="h-4 w-4" />,
-    color: 'text-rose-600 bg-rose-50 border-rose-200'
-  },
-  'avaliacao_cirurgica_atualizada': { 
-    label: 'Avaliacao Cirurgica Atualizada', 
-    icon: <Shield className="h-4 w-4" />,
-    color: 'text-pink-600 bg-pink-50 border-pink-200'
-  },
+const ACTION_LABELS: Record<string, string> = {
+  cadastro_paciente: 'Cadastro de paciente', paciente_cadastrado: 'Cadastro de paciente', edicao_dados_basicos: 'Edição de cadastro',
+  encaminhamento_triagem: 'Encaminhamento à triagem', registro_sinais_vitais: 'Registro de sinais vitais', alteracao_sinais_vitais: 'Alteração de sinais vitais', registro_queixa: 'Registro de queixa',
+  encaminhamento_clinico: 'Encaminhamento ao clínico', avaliacao_clinica: 'Avaliação clínica', avaliacao_clinica_concluida: 'Avaliação clínica concluída', avaliacao_clinica_atualizada: 'Avaliação clínica atualizada',
+  cadastro_exame: 'Cadastro de tipo de exame', solicitacao_exame: 'Solicitação de exames', coleta_exame: 'Coleta de exame', analise_exame: 'Realização de exame', resultado_exame: 'Resultado de exame', exames_registrados: 'Exames registrados', exames_atualizados: 'Exames atualizados',
+  encaminhamento_laboratorio: 'Encaminhamento ao laboratório', encaminhamento_cardiologia: 'Encaminhamento à cardiologia', encaminhamento_anestesia: 'Encaminhamento à anestesia', encaminhamento_cirurgiao: 'Encaminhamento ao cirurgião',
+  calculo_score: 'Cálculo de score', classificacao_risco: 'Classificação de risco', liberacao_cirurgia: 'Liberação para cirurgia', contraindicacao_cirurgia: 'Contraindicação de cirurgia',
+  avaliacao_cardiologica_concluida: 'Avaliação cardiológica concluída', avaliacao_cardiologica_atualizada: 'Avaliação cardiológica atualizada', avaliacao_anestesica_concluida: 'Avaliação anestésica concluída', avaliacao_anestesica_atualizada: 'Avaliação anestésica atualizada', avaliacao_cirurgica_concluida: 'Avaliação cirúrgica concluída', avaliacao_cirurgica_atualizada: 'Avaliação cirúrgica atualizada',
+  geracao_relatorio: 'Geração de relatório', triagem_concluida: 'Triagem concluída', triagem_atualizada: 'Triagem atualizada', login: 'Entrada no sistema', logout: 'Saída do sistema',
+  senha_ausente: 'Ausência na chamada', senha_retornada: 'Retorno à fila', senha_chamada: 'Chamada de senha', senha_encaminhada: 'Encaminhamento de senha',
+  medicacao_solicitada: 'Medicação solicitada', medicacao_administrada: 'Medicação administrada', cirurgia_registrada: 'Cirurgia registrada', cirurgia_atualizada: 'Cirurgia atualizada', solicitacao_avaliacao_especializada: 'Avaliação especializada solicitada',
 }
-
-const ITEMS_PER_PAGE = 15
+const PAGE_SIZE = 20
+const actionLabel = (action: string) => ACTION_LABELS[action] || action.replaceAll('_', ' ')
+const logText = (log: AuditLog) => log.details || log.description || ''
+// Quoting alone does not prevent spreadsheet formula execution.
+const csvCell = (value: string) => `"${(/^[\s]*[=+\-@]/.test(value) ? "'" + value : value).replaceAll('"', '""')}"`
 
 export default function AuditoriaPage() {
-  const router = useRouter()
-  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
-  const { auditLogs, patients } = useData()
-  
+  const { hasPermission, isLoading } = useAuth()
+  const { auditLogs, patients, isDataReady } = useData()
   const [search, setSearch] = useState('')
-  const [actionFilter, setActionFilter] = useState<string>('all')
-  const [userFilter, setUserFilter] = useState<string>('all')
-  const [dateFilter, setDateFilter] = useState<string>('all')
-  const [currentPage, setCurrentPage] = useState(1)
-  
-  useEffect(() => {
-    if (isAuthLoading) return
-
-    if (!user || !hasPermission('view_audit')) {
-      router.replace('/login')
-    }
-  }, [user, hasPermission, router, isAuthLoading])
-
-  if (isAuthLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
+  const [action, setAction] = useState('all')
+  const [professional, setProfessional] = useState('all')
+  const [period, setPeriod] = useState('all')
+  const [page, setPage] = useState(1)
+  const patientName = (id?: string) => patients.find(item => item.id === id)?.nomeCompleto || (id ? 'Paciente indisponível' : '—')
+  const userName = (log: AuditLog) => log.userName || users.find(item => item.id === log.userId)?.name || 'Usuário indisponível'
+  const filtered = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase()
+    const now = new Date()
+    const cutoff = period === 'today' ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() : period === 'week' ? now.getTime() - 7 * 86400000 : period === 'month' ? now.getTime() - 30 * 86400000 : -Infinity
+    return auditLogs.filter(log => {
+      const patient = patients.find(item => item.id === log.patientId)
+      const timestamp = Date.parse(log.timestamp)
+      return (action === 'all' || action === log.action) &&
+        (professional === 'all' || professional === log.userId) &&
+        (period === 'all' || (timestamp >= cutoff && timestamp <= now.getTime())) &&
+        `${log.userName || users.find(item => item.id === log.userId)?.name || ''} ${patient?.nomeCompleto || ''} ${patient?.prontuario || ''} ${logText(log)} ${actionLabel(log.action)}`.toLocaleLowerCase().includes(term)
+    }).sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))
+  }, [auditLogs, patients, search, action, professional, period])
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const activePage = Math.min(page, pages)
+  const visible = filtered.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE)
+  const actions = [...new Set(auditLogs.map(log => log.action))].sort((a, b) => actionLabel(a).localeCompare(actionLabel(b), 'pt-BR'))
+  const professionals = [...new Map(auditLogs.filter(log => log.userId).map(log => [log.userId, userName(log)])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
+  function clear() { setSearch(''); setAction('all'); setProfessional('all'); setPeriod('all'); setPage(1) }
+  function exportCsv() {
+    const rows = [['Data e hora', 'Ação', 'Profissional', 'Perfil', 'Paciente', 'Descrição'], ...filtered.map(log => [new Date(log.timestamp).toLocaleString('pt-BR'), actionLabel(log.action), userName(log), ROLE_LABELS[log.userRole] || log.userRole, patientName(log.patientId), logText(log)])]
+    const url = URL.createObjectURL(new Blob(['\uFEFF' + rows.map(row => row.map(csvCell).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8;' }))
+    const link = document.createElement('a'); link.href = url; link.download = `auditoria-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+  if (isLoading || !isDataReady) return <p className="p-6" role="status">Carregando...</p>
+  if (!hasPermission('view_audit')) return null
+  return <>
+    <Header breadcrumbs={[{ label: 'Auditoria' }]} />
+    <main className="min-h-[calc(100svh-4rem)] min-w-0 w-full flex-1 space-y-5 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Auditoria do sistema</h1>
+        <Button variant="outline" className="h-11" onClick={exportCsv} disabled={!filtered.length}><Download className="mr-2 h-4 w-4" />Exportar CSV</Button>
       </div>
-    )
-  }
-  
-  const filteredLogs = useMemo(() => {
-    return auditLogs
-      .filter(log => {
-        // Search filter
-        if (search) {
-          const patient = patients.find(p => p.id === log.patientId)
-          const userName = users.find(u => u.id === log.userId)?.name || ''
-          const searchLower = search.toLowerCase()
-          
-          if (
-            !(patient?.nomeCompleto || patient?.name || '').toLowerCase().includes(searchLower) &&
-            !userName.toLowerCase().includes(searchLower) &&
-            !log.details?.toLowerCase().includes(searchLower)
-          ) {
-            return false
-          }
-        }
-        
-        // Action filter
-        if (actionFilter !== 'all' && log.action !== actionFilter) {
-          return false
-        }
-        
-        // User filter
-        if (userFilter !== 'all' && log.userId !== userFilter) {
-          return false
-        }
-        
-        // Date filter
-        if (dateFilter !== 'all') {
-          const logDate = new Date(log.timestamp)
-          const now = new Date()
-          
-          switch (dateFilter) {
-            case 'today':
-              if (logDate.toDateString() !== now.toDateString()) return false
-              break
-            case 'week':
-              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-              if (logDate < weekAgo) return false
-              break
-            case 'month':
-              const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-              if (logDate < monthAgo) return false
-              break
-          }
-        }
-        
-        return true
-      })
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-  }, [auditLogs, patients, search, actionFilter, userFilter, dateFilter])
-  
-  const totalPages = Math.ceil(filteredLogs.length / ITEMS_PER_PAGE)
-  const paginatedLogs = filteredLogs.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  )
-  
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-  
-  const getPatientName = (patientId?: string) => {
-    if (!patientId) return 'N/A'
-    const patient = patients.find(p => p.id === patientId)
-    return patient?.name || 'Paciente removido'
-  }
-  
-  const getUserName = (userId: string) => {
-    const foundUser = users.find(u => u.id === userId)
-    return foundUser?.name || 'Usuario desconhecido'
-  }
-  
-  const getUserRole = (userId: string) => {
-    const foundUser = users.find(u => u.id === userId)
-    return foundUser?.role || ''
-  }
-  
-  const uniqueActions = [...new Set(auditLogs.map(l => l.action))]
-  const uniqueUsers = [...new Set(auditLogs.map(l => l.userId))]
-  
-  const stats = useMemo(() => {
-    const today = new Date()
-    const todayLogs = auditLogs.filter(
-      l => new Date(l.timestamp).toDateString() === today.toDateString()
-    )
-    
-    return {
-      total: auditLogs.length,
-      today: todayLogs.length,
-      uniqueUsers: new Set(todayLogs.map(l => l.userId)).size,
-    }
-  }, [auditLogs])
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Auditoria do Sistema</h1>
-        <p className="text-muted-foreground">
-          Historico completo de todas as acoes realizadas no sistema
-        </p>
-      </div>
-      
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Clock className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total de Registros</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
-                <Activity className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.today}</p>
-                <p className="text-xs text-muted-foreground">Acoes Hoje</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                <User className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.uniqueUsers}</p>
-                <p className="text-xs text-muted-foreground">Usuarios Ativos Hoje</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Filters */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar paciente, usuario..."
-                value={search}
-                onChange={e => {
-                  setSearch(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="pl-9"
-              />
-            </div>
-            
-            <Select value={actionFilter} onValueChange={v => { setActionFilter(v); setCurrentPage(1) }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tipo de Acao" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as Acoes</SelectItem>
-                {uniqueActions.map(action => (
-                  <SelectItem key={action} value={action}>
-                    {ACTION_LABELS[action]?.label || action}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={userFilter} onValueChange={v => { setUserFilter(v); setCurrentPage(1) }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Usuarios</SelectItem>
-                {uniqueUsers.map(userId => (
-                  <SelectItem key={userId} value={userId}>
-                    {getUserName(userId)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={dateFilter} onValueChange={v => { setDateFilter(v); setCurrentPage(1) }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Periodo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todo o Periodo</SelectItem>
-                <SelectItem value="today">Hoje</SelectItem>
-                <SelectItem value="week">Ultima Semana</SelectItem>
-                <SelectItem value="month">Ultimo Mes</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Audit Log List */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div>
-            <CardTitle className="text-base">Registros de Auditoria</CardTitle>
-            <CardDescription>
-              {filteredLogs.length} registro(s) encontrado(s)
-            </CardDescription>
-          </div>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {paginatedLogs.map(log => {
-              const actionInfo = ACTION_LABELS[log.action] || {
-                label: log.action,
-                icon: <Clock className="h-4 w-4" />,
-                color: 'text-gray-600 bg-gray-50 border-gray-200'
-              }
-              
-              return (
-                <div
-                  key={log.id}
-                  className="flex items-start gap-4 rounded-lg border p-4 hover:bg-muted/50 transition-colors"
-                >
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${actionInfo.color}`}>
-                    {actionInfo.icon}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{actionInfo.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(log.timestamp)}
-                      </span>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {getUserName(log.userId)}
-                        <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                          {getUserRole(log.userId)}
-                        </span>
-                      </span>
-                      
-                      {log.patientId && (
-                        <button
-                          onClick={() => router.push(`/paciente/${log.patientId}`)}
-                          className="flex items-center gap-1 hover:text-primary transition-colors"
-                        >
-                          <FileText className="h-3 w-3" />
-                          {getPatientName(log.patientId)}
-                        </button>
-                      )}
-                    </div>
-                    
-                    {log.details && (
-                      <p className="text-sm mt-1">{log.details}</p>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-            
-            {paginatedLogs.length === 0 && (
-              <div className="text-center py-12">
-                <Clock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground">Nenhum registro encontrado</p>
-              </div>
-            )}
-          </div>
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-4 border-t">
-              <p className="text-sm text-muted-foreground">
-                Pagina {currentPage} de {totalPages}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
+      <Card><CardHeader><CardTitle>Filtros</CardTitle></CardHeader><CardContent className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Input className="h-12" aria-label="Buscar registros" placeholder="Paciente, profissional ou descrição" value={search} onChange={event => { setSearch(event.target.value); setPage(1) }} />
+          <Select value={action} onValueChange={value => { setAction(value); setPage(1) }}><SelectTrigger className="h-12 w-full" aria-label="Filtrar ação"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas as ações</SelectItem>{actions.map(item => <SelectItem key={item} value={item}>{actionLabel(item)}</SelectItem>)}</SelectContent></Select>
+          <Select value={professional} onValueChange={value => { setProfessional(value); setPage(1) }}><SelectTrigger className="h-12 w-full" aria-label="Filtrar profissional"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos os profissionais</SelectItem>{professionals.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}</SelectContent></Select>
+          <Select value={period} onValueChange={value => { setPeriod(value); setPage(1) }}><SelectTrigger className="h-12 w-full" aria-label="Filtrar período"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todo o período</SelectItem><SelectItem value="today">Hoje</SelectItem><SelectItem value="week">Últimos 7 dias</SelectItem><SelectItem value="month">Últimos 30 dias</SelectItem></SelectContent></Select>
+        </div>
+        {(search || action !== 'all' || professional !== 'all' || period !== 'all') && <Button variant="ghost" onClick={clear}>Limpar filtros</Button>}
+      </CardContent></Card>
+      <Card><CardHeader><CardTitle>Registros · {filtered.length}</CardTitle></CardHeader><CardContent className="min-w-0">
+        <Table><TableHeader><TableRow><TableHead>Data e hora</TableHead><TableHead>Ação</TableHead><TableHead>Profissional</TableHead><TableHead>Paciente</TableHead><TableHead>Descrição</TableHead></TableRow></TableHeader>
+          <TableBody>{visible.map(log => <TableRow key={log.id}>
+            <TableCell className="whitespace-nowrap align-top">{new Date(log.timestamp).toLocaleString('pt-BR')}</TableCell>
+            <TableCell className="min-w-40 whitespace-normal align-top font-medium">{actionLabel(log.action)}</TableCell>
+            <TableCell className="min-w-40 whitespace-normal align-top">{userName(log)}<span className="mt-1 block text-xs text-muted-foreground">{ROLE_LABELS[log.userRole] || log.userRole}</span></TableCell>
+            <TableCell className="min-w-40 whitespace-normal align-top">{log.patientId && patients.some(item => item.id === log.patientId) ? <Link className="text-primary underline underline-offset-4" href={`/paciente/${log.patientId}`}>{patientName(log.patientId)}</Link> : patientName(log.patientId)}</TableCell>
+            <TableCell className="min-w-64 max-w-xl whitespace-pre-wrap break-words align-top">{logText(log) || '—'}</TableCell>
+          </TableRow>)}{!visible.length && <TableRow><TableCell colSpan={5} className="h-28 text-center text-muted-foreground">Nenhum registro encontrado.</TableCell></TableRow>}</TableBody>
+        </Table>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <p className="text-sm text-muted-foreground">Página {activePage} de {pages}</p>
+          <div className="flex gap-2"><Button variant="outline" className="h-11" disabled={activePage <= 1} onClick={() => setPage(activePage - 1)}>Anterior</Button><Button variant="outline" className="h-11" disabled={activePage >= pages} onClick={() => setPage(activePage + 1)}>Próxima</Button></div>
+        </div>
+      </CardContent></Card>
+    </main>
+  </>
 }

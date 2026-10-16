@@ -87,7 +87,7 @@ const homeByRole: Record<UserRole, HomeConfig> = {
 }
 
 export function ProfileHome({ role, children }: { role: UserRole; children?: ReactNode }) {
-  const compact = role === 'cardiologista' || role === 'anestesista'
+  const compact = role === 'cardiologista' || role === 'anestesista' || role === 'cirurgiao'
   const { user } = useAuth()
   const { title, actions: configuredActions } = homeByRole[role]
   const actions = configuredActions.filter((action) => canAccessRoute(action.href, user))

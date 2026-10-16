@@ -1743,4 +1743,40 @@ export function hydratePatient(patient: Patient): Patient {
   }
 }
 
-export const patients: Patient[] = basePatients.map(hydratePatient)
+const surgicalQueueMocks: Patient[] = [
+  { name: 'Marcos Oliveira (exemplo)', surgery: 'Hernioplastia inguinal', priority: 'pouco_urgente', age: 48 },
+  { name: 'Luciana Ferreira (exemplo)', surgery: 'Colecistectomia', priority: 'urgente', age: 56 },
+  { name: 'Roberto Lima (exemplo)', surgery: 'Avaliação de lesão abdominal', priority: 'muito_urgente', age: 63 },
+  { name: 'Cláudia Santos (exemplo)', surgery: 'Exérese de lesão cutânea', priority: 'nao_urgente', age: 39 },
+].map((example, index): Patient => {
+  const entryAt = new Date(Date.now() - (index + 2) * 3600000).toISOString()
+  return {
+    id: `demo-surgery-${index + 1}`,
+    prontuario: `DEMO-CIR-${String(index + 1).padStart(3, '0')}`,
+    nomeCompleto: example.name,
+    idade: example.age,
+    dataNascimento: `${new Date().getFullYear() - example.age}-01-01`,
+    cpf: '', telefone: '', endereco: '', responsavel: undefined, contatoEmergencia: undefined,
+    cartaoSus: undefined,
+    status: index === 0 ? 'em_avaliacao_cirurgica' : 'aguardando_cirurgiao',
+    sexo: index % 2 === 0 ? 'M' : 'F',
+    unidade: 'Hospital Central',
+    prioridade: example.priority === 'muito_urgente' ? 'urgente' : example.priority === 'urgente' ? 'alta' : 'normal',
+    cadastradoPor: 'user-1', ultimoAtualizadoPor: 'user-3', ultimaAtualizacao: entryAt,
+    dataEntrada: entryAt, cadastradoEm: entryAt,
+    queixaPrincipal: example.surgery,
+    descricaoInicial: 'Paciente fictício para demonstração da fila cirúrgica.',
+    avaliacaoClinica: { tipoCirurgia: example.surgery, motivoAvaliacao: 'Avaliação pré-operatória (demonstração)', avaliadoEm: entryAt, avaliadoPor: 'user-3' },
+    triageRiskClassification: example.priority as Patient['triageRiskClassification'],
+    triageData: undefined,
+    labRiskClassification: undefined,
+    examesSolicitados: [],
+    avaliacaoCirurgica: undefined, surgicalRiskAssessment: undefined, surgeryRecords: [],
+    visitHistory: [], dischargeAt: undefined,
+    assessmentRequests: [{ specialty: 'cirurgiao', status: 'pending', requestedAt: entryAt, requestedBy: 'user-3' }],
+    cardiologyAssessment: { recommendation: 'aprovar', finalRiskLevel: 'baixo', completedAt: entryAt, completedBy: 'user-8' },
+    anesthesiaAssessment: { asaClassification: 'II', recommendation: 'aprovar', fitForAnesthesia: true, completedAt: entryAt, completedBy: 'user-9' },
+  }
+})
+
+export const patients: Patient[] = [...basePatients, ...surgicalQueueMocks].map(hydratePatient)

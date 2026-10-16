@@ -158,14 +158,13 @@ export default function CirurgiaoAvaliarPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100svh-4rem)] min-w-0 w-full flex-1 space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao de Risco Cirurgico</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">Analise completa e parecer final</p>
         </div>
         <div className="self-start sm:self-auto">
           <PatientStatusBadge status={patient.status} />
@@ -522,7 +521,7 @@ export default function CirurgiaoAvaliarPage() {
           <PatientExamsHistory
             examRequests={patientExamRequests}
             title="Historico Completo de Exames"
-            description="Todos os exames ja executados ou em andamento neste paciente, incluindo leitura do laboratorio."
+            description=""
             emptyMessage="Este paciente ainda nao possui exames registrados."
           />
         </TabsContent>
@@ -542,7 +541,6 @@ export default function CirurgiaoAvaliarPage() {
       <Card>
         <CardHeader>
           <CardTitle>Dados Adicionais</CardTitle>
-          <CardDescription>Informacoes basicas que impactam a decisao cirurgica e anestesica.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
@@ -579,7 +577,6 @@ export default function CirurgiaoAvaliarPage() {
             <Shield className="h-5 w-5 text-primary" />
             Parecer Final do Risco Cirurgico
           </CardTitle>
-          <CardDescription>Defina a classificacao final de risco e a recomendacao para o procedimento</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
