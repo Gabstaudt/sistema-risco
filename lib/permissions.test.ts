@@ -70,7 +70,8 @@ test('other profiles retain their existing local patient views', () => {
     assert.equal(canAccessRoute(`/${role}`, user), true)
     assert.equal(canAccessRoute('/paciente/patient-1', user), true)
     assert.equal(canAccessRoute('/paciente/patient-1/historico', user), role !== 'triagem')
-    const projected = projectPatientForUser(patients[0], user)!
+    const source = { ...patients[0], triageAssignedClinicianId: 'user-3', clinicalAssignedCardiologistId: 'user-8', cardiologyAssignedAnesthesiologistId: 'user-9', clinicalAssignedSurgeonId: 'user-5' }
+    const projected = projectPatientForUser(source, user)!
     assert.deepEqual(projected.triageData, patients[0].triageData)
     assert.deepEqual(projected.visitHistory, patients[0].visitHistory)
   }

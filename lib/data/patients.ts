@@ -1773,10 +1773,16 @@ const surgicalQueueMocks: Patient[] = [
     examesSolicitados: [],
     avaliacaoCirurgica: undefined, surgicalRiskAssessment: undefined, surgeryRecords: [],
     visitHistory: [], dischargeAt: undefined,
-    assessmentRequests: [{ specialty: 'cirurgiao', status: 'pending', requestedAt: entryAt, requestedBy: 'user-3' }],
+    assessmentRequests: [{ specialty: 'cirurgiao', status: 'pending', requestedAt: entryAt, requestedBy: 'user-3', assignedProfessionalId: 'user-5', assignedProfessionalName: 'Dr. Roberto Lima' }],
     cardiologyAssessment: { recommendation: 'aprovar', finalRiskLevel: 'baixo', completedAt: entryAt, completedBy: 'user-8' },
     anesthesiaAssessment: { asaClassification: 'II', recommendation: 'aprovar', fitForAnesthesia: true, completedAt: entryAt, completedBy: 'user-9' },
   }
 })
 
-export const patients: Patient[] = [...basePatients, ...surgicalQueueMocks].map(hydratePatient)
+export const patients: Patient[] = [...basePatients, ...surgicalQueueMocks].map(patient => hydratePatient({
+  ...patient,
+  triageAssignedClinicianId: patient.triageAssignedClinicianId || (!['aguardando_triagem', 'em_triagem'].includes(patient.status) ? 'user-3' : undefined),
+  clinicalAssignedCardiologistId: patient.clinicalAssignedCardiologistId || (patient.clinicalRequestsSurgicalRisk ? 'user-8' : undefined),
+  cardiologyAssignedAnesthesiologistId: patient.cardiologyAssignedAnesthesiologistId || (patient.clinicalRequestsSurgicalRisk || patient.anesthesiaAssessment ? 'user-9' : undefined),
+  clinicalAssignedSurgeonId: patient.clinicalAssignedSurgeonId || (patient.clinicalRequestsSurgicalRisk || patient.id.startsWith('demo-surgery-') || patient.avaliacaoCirurgica ? 'user-5' : undefined),
+}))

@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, Save, User, Stethoscope } from 'lucide-react'
 import { PatientStatusBadge, ASABadge } from '@/components/shared/badges'
+import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { Input } from '@/components/ui/input'
 import { AssessmentRequestFields } from '@/components/shared/assessment-request-fields'
@@ -161,6 +162,7 @@ export default function ClinicoAvaliarPage() {
       </div>
       
       {/* Patient Info Card */}
+      <PatientPrintActions patientId={patientId} />
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

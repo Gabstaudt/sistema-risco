@@ -6,7 +6,8 @@ import { nextAssessmentStatus } from '@/lib/assessment-requests'
 import { Header } from '@/components/layout/header'
 import { ASABadge, PatientStatusBadge } from '@/components/shared/badges'
 import { ExamRequestForm } from '@/components/shared/exam-request-form'
-import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
+import { PatientPrintActions } from '@/components/shared/patient-print-actions'
+import { PatientExamList as PatientExamsHistory } from '@/components/shared/patient-exam-list'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -180,6 +181,7 @@ export default function AnestesistaAvaliarPage() {
           </CardContent>
         </Card>
 
+        <PatientPrintActions patientId={patientId} />
         <ExamRequestForm patientId={patientId} />
 
         <Tabs defaultValue="resumo" className="space-y-4">

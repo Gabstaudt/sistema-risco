@@ -12,6 +12,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import { isDoctor } from '@/lib/medical-profile'
 import { ROLE_LABELS } from '@/lib/types'
 
 interface HeaderProps {
@@ -34,7 +35,7 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
               <>
                 <BreadcrumbItem>
                   <BreadcrumbLink href={`/${user.role}`}>
-                    {ROLE_LABELS[user.role]}
+                    {isDoctor(user) ? `Médico · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />

@@ -9,6 +9,9 @@ export interface User {
   name: string
   role: UserRole
   /** Sala atual de atendimento, informada pelo cadastro/serviço de profissionais. */
+  professionalGroup?: 'medico' | 'recepcao' | 'triagem' | 'laboratorio' | 'admin'
+  medicalSpecialty?: 'clinico' | 'cirurgiao' | 'cardiologista' | 'anestesista'
+  professionalRegistration?: string
   consultationRoom?: string
   /** Effective permissions supplied by the backend; [] means no access. */
   permissions?: string[]
@@ -129,7 +132,11 @@ export interface ClinicalEvaluation {
   avaliadoEm?: string
 }
 
+export type ExamResultMode = 'single_file' | 'multiple_images' | 'individual'
+export interface ExamAttachmentFile { id: string; name: string; type: string; size: number; uploadedAt: string; uploadedBy: string }
+
 export interface ExamType {
+  resultMode?: ExamResultMode
   id: string
   name: string
   category: string
@@ -168,7 +175,10 @@ export interface ExamRequest {
   observacoesLab?: string
   labAnalysis?: string
   labUrgency?: LabUrgency
-  attachment?: { id: string; name: string; type: string; size: number; uploadedAt: string; uploadedBy: string }
+  attachment?: ExamAttachmentFile
+  attachments?: ExamAttachmentFile[]
+  examCategory?: string
+  resultMode?: ExamResultMode
   performedAt?: string
   performedBy?: string
   anexoUrl?: string
@@ -425,7 +435,22 @@ export interface Patient {
   updatedAt?: string
 }
 
+export interface MedicalDocument {
+  id: string
+  patientId: string
+  kind: 'receita' | 'atestado'
+  content: string
+  issuedAt: string
+  physicianId: string
+  physicianName: string
+  physicianRole: UserRole
+  professionalRegistration: string
+  startDate?: string
+  endDate?: string
+}
+
 export type AuditAction =
+  | 'documento_medico_emitido'
   | 'senha_ausente'
   | 'senha_retornada'
   | 'medicacao_solicitada'
@@ -499,6 +524,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_triage',
   ],
   triagem: [
+    'print_medication_sheet',
+    'print_patient_history',
+    'print_patient_record',
     'call_triage_ticket',
     'view_dashboard_triagem',
     'view_patients_list',
@@ -512,6 +540,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_clinical',
   ],
   clinico: [
+    'issue_prescription',
+    'issue_certificate',
+    'print_patient_record',
+    'print_patient_history',
+    'print_medication_sheet',
+    'print_exams',
     'prescribe_medication',
     'request_surgical_risk',
     'request_specialist_assessment',
@@ -530,6 +564,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'return_to_triage',
   ],
   laboratorio: [
+    'print_patient_record',
+    'print_patient_history',
+    'view_patients_list',
+    'print_medication_sheet',
+    'print_exams',
     'administer_medication',
     'view_dashboard_laboratorio',
     'view_pending_exams',
@@ -538,6 +577,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'update_exam_status',
   ],
   cardiologista: [
+    'prescribe_medication',
+    'issue_prescription',
+    'issue_certificate',
+    'print_patient_record',
+    'print_patient_history',
+    'print_medication_sheet',
+    'print_exams',
     'request_exams',
     'view_dashboard_cardiologista',
     'view_patients_list',
@@ -551,6 +597,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'generate_report',
   ],
   anestesista: [
+    'issue_prescription',
+    'issue_certificate',
+    'print_patient_record',
+    'print_patient_history',
+    'print_medication_sheet',
+    'print_exams',
     'request_exams',
     'view_dashboard_anestesista',
     'view_patients_list',
@@ -564,6 +616,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_surgeon',
   ],
   cirurgiao: [
+    'create_exam_type',
+    'issue_prescription',
+    'issue_certificate',
+    'print_patient_record',
+    'print_patient_history',
+    'print_medication_sheet',
+    'print_exams',
     'prescribe_medication',
     'record_surgery',
     'request_surgical_risk',
@@ -585,6 +644,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'return_to_lab',
   ],
   admin: [
+    'print_patient_history',
+    'print_patient_record',
+    'print_medication_sheet',
+    'print_exams',
     'view_surgery_audit',
     'view_dashboard_admin',
     'view_all_data',

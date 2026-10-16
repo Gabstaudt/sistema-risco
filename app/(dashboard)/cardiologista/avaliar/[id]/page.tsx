@@ -6,7 +6,8 @@ import { nextAssessmentStatus } from '@/lib/assessment-requests'
 import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
 import { Header } from '@/components/layout/header'
 import { ExamRequestForm } from '@/components/shared/exam-request-form'
-import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
+import { PatientPrintActions } from '@/components/shared/patient-print-actions'
+import { PatientExamList as PatientExamsHistory } from '@/components/shared/patient-exam-list'
 import { PatientStatusBadge, RiskLevelBadge } from '@/components/shared/badges'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -186,6 +187,7 @@ export default function CardiologistaAvaliarPage() {
         {riskScores.acp?.interpretation === 'Alto risco' && <Card><CardHeader><CardTitle>Encaminhamento — ACP alto risco</CardTitle></CardHeader><CardContent className="space-y-2"><Label htmlFor="cardio-specialist-referral">Parecer especializado / suporte de maior complexidade *</Label><Textarea id="cardio-specialist-referral" value={specialistReferral} onChange={event => setSpecialistReferral(event.target.value)} rows={3} /></CardContent></Card>}
         {saveError && <p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{saveError}</p>}
 
+        <PatientPrintActions patientId={patientId} />
         <ExamRequestForm patientId={patientId} />
 
         <Tabs defaultValue="resumo" className="space-y-4">

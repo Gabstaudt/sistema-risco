@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Download } from 'lucide-react'
 
 const ACTION_LABELS: Record<string, string> = {
+  documento_medico_emitido: 'Documento médico emitido',
   cadastro_paciente: 'Cadastro de paciente', paciente_cadastrado: 'Cadastro de paciente', edicao_dados_basicos: 'Edição de cadastro',
   encaminhamento_triagem: 'Encaminhamento à triagem', registro_sinais_vitais: 'Registro de sinais vitais', alteracao_sinais_vitais: 'Alteração de sinais vitais', registro_queixa: 'Registro de queixa',
   encaminhamento_clinico: 'Encaminhamento ao clínico', avaliacao_clinica: 'Avaliação clínica', avaliacao_clinica_concluida: 'Avaliação clínica concluída', avaliacao_clinica_atualizada: 'Avaliação clínica atualizada',

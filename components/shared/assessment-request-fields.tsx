@@ -32,11 +32,11 @@ export function AssessmentRequestFields({ value, onChange, patient, surgeon = fa
                 </div>
                 {pending && <p className="text-sm text-muted-foreground">Avaliação já solicitada e aguardando atendimento.</p>}
                 {selected && <div className="space-y-2">
-                  <Label htmlFor={`assigned-${specialty}`}>Profissional responsável (opcional)</Label>
+                  <Label htmlFor={`assigned-${specialty}`}>Profissional responsável *</Label>
                   <Select value={value.assignees[specialty] || 'unassigned'} onValueChange={(id) => onChange({ ...value, assignees: { ...value.assignees, [specialty]: id === 'unassigned' ? '' : id } })}>
                     <SelectTrigger id={`assigned-${specialty}`} className="h-12 w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="unassigned">Sem profissional definido</SelectItem>
+                      <SelectItem value="unassigned">Selecione o profissional</SelectItem>
                       {users.filter((item) => item.role === specialty && item.active).map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
                     </SelectContent>
                   </Select>

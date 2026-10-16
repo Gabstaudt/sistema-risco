@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data-context'
+import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -163,6 +164,7 @@ export default function PatientDetailsPage() {
         </dl>
       </div>
 
+      <PatientPrintActions patientId={patient.id} />
       <Tabs defaultValue={canViewClinical || canViewTriage ? "summary" : canViewExams ? "exams" : "visits"} className="flex-1 space-y-4">
         <TabsList aria-label="Seções do prontuário" className="sticky top-0 z-20 grid h-auto w-full grid-cols-2 gap-2 rounded-xl border bg-background p-2 shadow-sm sm:flex sm:flex-wrap">
           {(canViewClinical || canViewTriage) && (<TabsTrigger value="summary" className="min-h-12 flex-1 whitespace-normal rounded-lg px-4 py-3 text-center text-sm font-semibold focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">

@@ -1,5 +1,6 @@
 'use client'
 
+import type { ExamResultMode } from '@/lib/types'
 import { useState } from 'react'
 import { Header } from '@/components/layout/header'
 import { useData } from '@/lib/data-context'
@@ -15,10 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Plus, Search, FlaskConical } from 'lucide-react'
 
-const EXAM_CATEGORIES = ['Laboratorio', 'Imagem', 'Cardiologia', 'Pneumologia', 'Outros']
+const EXAM_CATEGORIES = ['Laboratorial', 'Imagem', 'Cardiologia', 'Pneumologia', 'Outros']
 
 export default function ExamesClinicosPage() {
-  const { user } = useAuth()
+  const { user, hasPermission } = useAuth()
+  const [error, setError] = useState('')
   const { examTypes, createExamType } = useData()
 
   const [search, setSearch] = useState('')
@@ -29,6 +31,7 @@ export default function ExamesClinicosPage() {
     category: '',
     description: '',
     valueReference: '',
+    resultMode: 'single_file' as ExamResultMode,
   })
 
   const filteredExams = examTypes.filter((exam) => {
@@ -52,19 +55,22 @@ export default function ExamesClinicosPage() {
 
     if (!formData.name || !formData.category) return
 
-    createExamType({
+    setError('')
+    try { createExamType({
       name: formData.name,
       category: formData.category,
+      resultMode: formData.resultMode,
       description: formData.description || undefined,
       valueReference: formData.valueReference || undefined,
       createdBy: user?.id || '',
-    })
+    }) } catch (error) { setError(error instanceof Error ? error.message : 'Não foi possível cadastrar.'); return }
 
     setFormData({
       name: '',
       category: '',
       description: '',
       valueReference: '',
+      resultMode: 'single_file' as ExamResultMode,
     })
     setIsDialogOpen(false)
   }
@@ -91,17 +97,17 @@ export default function ExamesClinicosPage() {
           </div>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
+            {hasPermission('create_exam_type') && <DialogTrigger asChild>
               <Button className="w-full lg:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Tipo de Exame
               </Button>
-            </DialogTrigger>
+            </DialogTrigger>}
             <DialogContent className="sm:max-w-[500px]">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle>Cadastrar Tipo de Exame</DialogTitle>
-                  <DialogDescription>Adicione um novo tipo de exame ao sistema.</DialogDescription>
+                  <DialogDescription className="sr-only">Cadastrar tipo de exame</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
@@ -116,8 +122,8 @@ export default function ExamesClinicosPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="category">Categoria *</Label>
-                    <Select value={formData.category} onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}>
-                      <SelectTrigger>
+                    <Select value={formData.category} onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value, resultMode: value === 'Imagem' ? 'multiple_images' : 'single_file' }))}>
+                      <SelectTrigger id="category">
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent>
@@ -129,6 +135,8 @@ export default function ExamesClinicosPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2"><Label htmlFor="result-mode">Formato do resultado *</Label><select id="result-mode" className="h-12 w-full rounded-md border bg-background px-3" value={formData.resultMode} onChange={event=>setFormData(prev=>({...prev,resultMode:event.target.value as ExamResultMode}))}><option value="single_file">Arquivo único</option><option value="individual">Registro individual (um resultado por solicitação)</option>{formData.category === 'Imagem' && <option value="multiple_images">Uma ou mais imagens</option>}</select></div>
+                  {error && <p role="alert" className="text-destructive">{error}</p>}
                   <div className="space-y-2">
                     <Label htmlFor="description">Descricao</Label>
                     <Textarea

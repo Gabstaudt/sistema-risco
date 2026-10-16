@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { User, UserRole } from './types'
+import { normalizeUserProfile, type BackendProfile } from './medical-profile'
 import { hasUserPermission } from './permissions'
 import { users as initialUsers } from './data/users'
 
@@ -10,7 +11,7 @@ interface AuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectPath?: string }>
   logout: () => void
-  setSession: (user: User | null) => void
+  setSession: (user: BackendProfile | null) => void
   hasPermission: (permission: string) => boolean
   getRedirectPath: () => string
 }
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedUser = localStorage.getItem(STORAGE_KEY)
     if (savedUser) {
       try {
-        setUser(JSON.parse(savedUser))
+        setUser(normalizeUserProfile(JSON.parse(savedUser)))
       } catch {
         localStorage.removeItem(STORAGE_KEY)
       }
@@ -52,7 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Backend integration can install its authenticated user and effective permissions here.
-  const setSession = useCallback((sessionUser: User | null) => {
+  const setSession = useCallback((input: BackendProfile | null) => {
+    const sessionUser = input ? normalizeUserProfile(input) : null
     setUser(sessionUser)
     if (sessionUser) localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionUser))
     else localStorage.removeItem(STORAGE_KEY)

@@ -31,7 +31,8 @@ test('reception and triage call the same linked ticket, without inventing a Manc
 test('a claimed ticket cannot be stolen, double-called or linked to two patients',()=>{
  const first=issueArrivalTicket([],'comum');const second=issueArrivalTicket([first],'comum')
  const called=callArrivalTicket([first,second],reception,'recepcao')
- assert.throws(()=>callArrivalTicket(called.tickets,reception,'recepcao',second.id),/Conclua/)
+ const switched=callArrivalTicket(called.tickets,reception,'recepcao',second.id)
+ assert.equal(switched.ticket.id,second.id);assert.equal(switched.tickets.find(t=>t.id===first.id)?.stage,'aguardando_recepcao')
  assert.throws(()=>callArrivalTicket(called.tickets,{...reception,id:'other-user'},'recepcao',first.id),/disponível/)
  assert.equal(callArrivalTicket(called.tickets,reception,'recepcao',first.id).ticket.number,first.number)
 })

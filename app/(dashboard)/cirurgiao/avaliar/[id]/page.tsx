@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Save, User, Shield, Activity, Calculator } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/shared/badges'
+import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import type { RiskLevel } from '@/lib/types'
 import { ExamRequestForm } from '@/components/shared/exam-request-form'
@@ -530,6 +531,7 @@ export default function CirurgiaoAvaliarPage() {
       <CardiologyRiskScores value={getCardiologyScores(patient)} />
       {hasPermission('record_surgery') && <Button asChild className="h-12"><Link href={`/cirurgiao/acompanhamento/${patient.id}`}>Registrar cirurgia e pós-operatório</Link></Button>}
 
+      <PatientPrintActions patientId={patientId} />
       <ExamRequestForm patientId={patientId} />
       <MedicationOrders patientId={patient.id} prescribe />
       {hasPermission('request_specialist_assessment') && <div className="space-y-3">

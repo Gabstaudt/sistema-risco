@@ -36,6 +36,7 @@ export function buildAssessmentUpdates(patient: Patient, user: User, draft: Asse
     if (assignedId && !assigned) throw new Error('Selecione um profissional ativo da especialidade.')
     const previous = patient.assessmentRequests?.find((item) => item.specialty === specialty)
     const pending = hasPendingAssessment(patient, specialty)
+    if (complete && !assigned) throw new Error('Selecione o profissional responsável por cada avaliação solicitada.')
     return { specialty, status: (complete || pending ? 'pending' : 'draft') as 'pending' | 'draft', requestedAt: pending ? previous?.requestedAt : complete ? now : undefined, requestedBy: pending ? previous?.requestedBy : complete ? user.id : undefined, assignedProfessionalId: assigned?.id, assignedProfessionalName: assigned?.name }
   })
   const retained = (patient.assessmentRequests || []).filter((item) => !draft.targets.includes(item.specialty) && item.status === 'pending')

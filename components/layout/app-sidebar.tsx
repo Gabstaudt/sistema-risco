@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { BrandLogo } from '@/components/shared/brand-logo'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import { isDoctor } from '@/lib/medical-profile'
 import { canAccessRoute } from '@/lib/permissions'
 import { useData } from '@/lib/data-context'
 import { ROLE_LABELS, type UserRole } from '@/lib/types'
@@ -133,6 +134,7 @@ const getNavigation = (
         title: 'Menu Principal',
         items: [
           { title: 'Início', url: '/laboratorio', icon: LayoutDashboard },
+          { title: 'Pacientes', url: '/laboratorio/pacientes', icon: Users },
         ],
       },
       {
@@ -150,6 +152,7 @@ const getNavigation = (
         items: [
           { title: 'Início', url: '/cardiologista', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/cardiologista/pacientes', icon: Users },
+          { title: 'Exames dos pacientes', url: '/cardiologista/exames', icon: FlaskConical },
         ],
       },
       {
@@ -165,6 +168,7 @@ const getNavigation = (
         items: [
           { title: 'Início', url: '/anestesista', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/anestesista/pacientes', icon: Users },
+          { title: 'Exames dos pacientes', url: '/anestesista/exames', icon: FlaskConical },
         ],
       },
       {
@@ -188,6 +192,7 @@ const getNavigation = (
           { title: 'Aguardando Avaliacao', url: '/cirurgiao/fila', icon: Syringe, badge: stats.aguardandoCirurgiao },
           { title: 'Cirurgia e pós-operatório', url: '/cirurgiao/acompanhamento', icon: ClipboardList },
           { title: 'Calculadora de Risco', url: '/cirurgiao/calculadora', icon: Heart },
+          { title: 'Tipos de exames', url: '/cirurgiao/exames', icon: TestTube },
         ],
       },
       {
@@ -247,7 +252,7 @@ export function AppSidebar() {
       <SidebarHeader className="px-2 py-4">
         <Link href={`/${user.role}`} className="flex flex-col items-start">
           <BrandLogo variant="negative" className="w-full max-w-[240px]" />
-          <span className="px-4 text-xs text-sidebar-foreground/75">{ROLE_LABELS[user.role]}</span>
+          <span className="px-4 text-xs text-sidebar-foreground/75">{isDoctor(user) ? `Médico · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}</span>
         </Link>
       </SidebarHeader>
 

@@ -1,6 +1,7 @@
+import { professionalHierarchy } from '../medical-profile'
 import { User } from '../types'
 
-export const users: User[] = [
+const seedUsers: User[] = [
   {
     id: 'user-1',
     email: 'recepcao@hospital.com',
@@ -75,3 +76,5 @@ export const users: User[] = [
     createdAt: '2024-01-15T08:00:00Z',
   },
 ]
+
+export const users: User[] = seedUsers.map(user => { const hierarchy = professionalHierarchy(user.role); return { ...user, professionalGroup: hierarchy.group, medicalSpecialty: hierarchy.specialty } })

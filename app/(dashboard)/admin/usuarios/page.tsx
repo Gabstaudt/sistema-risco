@@ -16,6 +16,7 @@ import {
   Mail,
   Building
 } from 'lucide-react'
+import { isDoctor } from '@/lib/medical-profile'
 import { users } from '@/lib/data/users'
 import type { UserRole } from '@/lib/types'
 
@@ -34,11 +35,13 @@ export default function UsuariosPage() {
   const router = useRouter()
   const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const [search, setSearch] = useState('')
+  const [group, setGroup] = useState('all')
+  const [specialty, setSpecialty] = useState('all')
   
   useEffect(() => {
     if (isAuthLoading) return
 
-    if (!user || !hasPermission('admin.usuarios')) {
+    if (!user || !hasPermission('manage_users')) {
       router.replace('/login')
     }
   }, [user, hasPermission, router, isAuthLoading])
@@ -52,6 +55,8 @@ export default function UsuariosPage() {
   }
   
   const filteredUsers = users.filter(u => {
+    if (group !== 'all' && u.professionalGroup !== group) return false
+    if (group === 'medico' && specialty !== 'all' && u.medicalSpecialty !== specialty) return false
     if (!search) return true
     const searchLower = search.toLowerCase()
     return (
@@ -142,6 +147,10 @@ export default function UsuariosPage() {
         </Card>
       </div>
       
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2"><label htmlFor="user-group" className="text-sm font-medium">Perfil</label><select id="user-group" className="h-12 w-full rounded-md border bg-background px-3" value={group} onChange={event => { setGroup(event.target.value); setSpecialty('all') }}><option value="all">Todos os perfis</option><option value="medico">Médico</option><option value="recepcao">Recepção</option><option value="triagem">Triagem</option><option value="laboratorio">Laboratório</option><option value="admin">Administração</option></select></div>
+        {group === 'medico' && <div className="space-y-2"><label htmlFor="user-specialty" className="text-sm font-medium">Tipo de médico</label><select id="user-specialty" className="h-12 w-full rounded-md border bg-background px-3" value={specialty} onChange={event => setSpecialty(event.target.value)}><option value="all">Todas as especialidades</option><option value="clinico">Clínico</option><option value="cirurgiao">Cirurgião</option><option value="cardiologista">Cardiologista</option><option value="anestesista">Anestesista</option></select></div>}
+      </div>
       {/* Search */}
       <Card>
         <CardContent className="pt-6">
@@ -204,7 +213,7 @@ export default function UsuariosPage() {
                   </div>
                   
                   <Badge className={roleInfo.color} variant="secondary">
-                    {roleInfo.label}
+                    {isDoctor(u) ? `Médico · ${roleInfo.label}` : roleInfo.label}
                   </Badge>
                 </div>
               )

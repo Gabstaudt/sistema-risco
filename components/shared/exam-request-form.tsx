@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import Link from 'next/link'
+import { useRef, useState } from 'react'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data-context'
 import { Button } from '@/components/ui/button'
@@ -11,7 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
 export function ExamRequestForm({ patientId }: { patientId: string }) {
-  const { hasPermission } = useAuth()
+  const { user, hasPermission } = useAuth()
+  const running = useRef(false)
   const { examTypes, requestExams } = useData()
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string[]>([])
@@ -23,7 +25,8 @@ export function ExamRequestForm({ patientId }: { patientId: string }) {
   if (!hasPermission('request_exams')) return null
 
   function submit() {
-    if (busy || !selected.length) return
+    if (running.current || !selected.length) return
+    running.current = true
     setBusy(true)
     setMessage('')
     setError('')
@@ -35,13 +38,14 @@ export function ExamRequestForm({ patientId }: { patientId: string }) {
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Não foi possível solicitar os exames.')
     } finally {
+      running.current = false
       setBusy(false)
     }
   }
 
   return (
     <Card>
-      <CardHeader><CardTitle>Solicitação de exames</CardTitle></CardHeader>
+      <CardHeader className="flex flex-wrap items-center justify-between gap-3"><CardTitle>Solicitação de exames</CardTitle>{hasPermission('create_exam_type') && user && <Button asChild variant="outline"><Link href={`/${user.role}/exames`} target="_blank">Cadastrar tipo de exame</Link></Button>}</CardHeader>
       <CardContent className="space-y-4">
         <Input aria-label="Buscar tipo de exame" placeholder="Buscar exame" className="h-12" value={search} onChange={event => setSearch(event.target.value)} />
         <div className="grid max-h-72 gap-3 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
