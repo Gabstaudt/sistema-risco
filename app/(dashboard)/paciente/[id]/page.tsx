@@ -14,6 +14,7 @@ import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/share
 import { PatientBasicDetails } from '@/components/shared/patient-basic-details'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
+import { MedicationOrders } from '@/components/shared/medication-orders'
 import { users } from '@/lib/data/users'
 import { STATUS_LABELS } from '@/lib/types'
 import { getPatientManchesterPriority, MANCHESTER_PRIORITIES } from '@/lib/manchester'
@@ -372,7 +373,8 @@ export default function PatientDetailsPage() {
         </TabsContent>)}
         
         {/* Clinical Tab */}
-        {(canViewClinical) && (<TabsContent value="clinical">
+        {(canViewClinical) && (<TabsContent value="clinical" className="space-y-5">
+          <MedicationOrders patientId={patient.id} showAllInitially />
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

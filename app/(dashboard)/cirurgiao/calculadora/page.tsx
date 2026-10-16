@@ -293,8 +293,8 @@ export default function CirurgiaoCalculadoraPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {ASA_CLASSIFICATIONS.map((item) => (
-                        <SelectItem key={item.classification} value={item.classification}>
-                          {`ASA ${item.classification} - ${item.description}`}
+                        <SelectItem key={item.code} value={item.code}>
+                          {`ASA ${item.code} - ${item.description}`}
                         </SelectItem>
                       ))}
                     </SelectContent>

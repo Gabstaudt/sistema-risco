@@ -168,6 +168,9 @@ export interface ExamRequest {
   observacoesLab?: string
   labAnalysis?: string
   labUrgency?: LabUrgency
+  attachment?: { id: string; name: string; type: string; size: number; uploadedAt: string; uploadedBy: string }
+  performedAt?: string
+  performedBy?: string
   anexoUrl?: string
   solicitadoPor: string
   solicitadoEm: string
@@ -314,6 +317,20 @@ export interface SpecialtyAssessmentRequest {
   assignedProfessionalName?: string
 }
 
+export interface MedicationOrder {
+  id: string
+  patientId: string
+  medication: string
+  dose: string
+  route: string
+  instructions: string
+  status: 'solicitada' | 'administrada'
+  requestedAt: string
+  requestedBy: string
+  administeredAt?: string
+  administeredBy?: string
+}
+
 export interface Patient {
   ticketId?: string
   ticketNumber?: string
@@ -411,6 +428,8 @@ export interface Patient {
 export type AuditAction =
   | 'senha_ausente'
   | 'senha_retornada'
+  | 'medicacao_solicitada'
+  | 'medicacao_administrada'
   | 'senha_chamada'
   | 'senha_encaminhada'
   | 'cirurgia_registrada'
@@ -493,6 +512,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_clinical',
   ],
   clinico: [
+    'prescribe_medication',
     'request_surgical_risk',
     'request_specialist_assessment',
     'view_dashboard_clinico',
@@ -510,6 +530,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'return_to_triage',
   ],
   laboratorio: [
+    'administer_medication',
     'view_dashboard_laboratorio',
     'view_pending_exams',
     'view_patient_minimal',
@@ -541,6 +562,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_surgeon',
   ],
   cirurgiao: [
+    'prescribe_medication',
     'record_surgery',
     'request_surgical_risk',
     'request_specialist_assessment',

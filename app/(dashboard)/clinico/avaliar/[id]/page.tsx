@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { AssessmentRequestFields } from '@/components/shared/assessment-request-fields'
 import { buildAssessmentUpdates, getAssessmentDraft, nextAssessmentStatus } from '@/lib/assessment-requests'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { MedicationOrders } from '@/components/shared/medication-orders'
 import { users } from '@/lib/data/users'
 import { editManchesterPriority, getPatientManchesterPriority, MANCHESTER_PRIORITIES } from '@/lib/manchester'
 import type { LabUrgency } from '@/lib/types'
@@ -371,6 +372,7 @@ export default function ClinicoAvaliarPage() {
         emptyMessage="Este paciente ainda nao possui exames registrados."
       />
 
+      <MedicationOrders patientId={patient.id} prescribe />
       {hasPermission('request_specialist_assessment') && <AssessmentRequestFields value={assessmentDraft} onChange={setAssessmentDraft} patient={patient} />}
       {saveError && <p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{saveError}</p>}
       

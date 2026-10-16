@@ -89,7 +89,8 @@ export default function RelatorioPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString || !Number.isFinite(Date.parse(dateString))) return 'Não informado'
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -194,9 +195,9 @@ export default function RelatorioPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="text-2xl font-bold">
-                    {RISK_LABELS[evaluation.riscoFinal]}
+                    {evaluation.riscoFinal ? RISK_LABELS[evaluation.riscoFinal] : 'Não classificado'}
                   </h3>
-                  <RiskBadge risk={evaluation.riscoFinal} />
+                  {evaluation.riscoFinal && <RiskBadge risk={evaluation.riscoFinal} />}
                 </div>
                 <p className="text-muted-foreground">{evaluation.conduta}</p>
               </div>
@@ -207,23 +208,23 @@ export default function RelatorioPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="text-center p-4 rounded-lg bg-background">
                 <p className="text-sm text-muted-foreground mb-1">Score ASA</p>
-                <p className="text-3xl font-bold text-primary">{evaluation.scores.asa || '-'}</p>
-                {evaluation.scores.asa && (
+                <p className="text-3xl font-bold text-primary">{evaluation.scores?.asa || '-'}</p>
+                {evaluation.scores?.asa && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {ASA_DESCRIPTIONS[evaluation.scores.asa]}
+                    {ASA_DESCRIPTIONS[evaluation.scores?.asa]}
                   </p>
                 )}
               </div>
               <div className="text-center p-4 rounded-lg bg-background">
                 <p className="text-sm text-muted-foreground mb-1">Score RCRI</p>
-                <p className="text-3xl font-bold text-primary">{evaluation.scores.rcri ?? '-'}</p>
+                <p className="text-3xl font-bold text-primary">{evaluation.scores?.rcri ?? '-'}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Revised Cardiac Risk Index
                 </p>
               </div>
               <div className="text-center p-4 rounded-lg bg-background">
                 <p className="text-sm text-muted-foreground mb-1">Score VSG-CRI</p>
-                <p className="text-3xl font-bold text-primary">{evaluation.scores.vsgCri ?? '-'}</p>
+                <p className="text-3xl font-bold text-primary">{evaluation.scores?.vsgCri ?? '-'}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Vascular Surgery Group
                 </p>
@@ -255,13 +256,13 @@ export default function RelatorioPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Porte Cirurgico</p>
                 <Badge variant="outline" className="mt-1">
-                  {evaluation.porteCirurgico.charAt(0).toUpperCase() + evaluation.porteCirurgico.slice(1)}
+                  {evaluation.porteCirurgico ? evaluation.porteCirurgico.charAt(0).toUpperCase() + evaluation.porteCirurgico.slice(1) : 'Não informado'}
                 </Badge>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Urgencia</p>
                 <Badge variant="outline" className="mt-1">
-                  {evaluation.urgencia.charAt(0).toUpperCase() + evaluation.urgencia.slice(1)}
+                  {evaluation.urgencia ? evaluation.urgencia.charAt(0).toUpperCase() + evaluation.urgencia.slice(1) : 'Não informada'}
                 </Badge>
               </div>
               <div>
@@ -349,27 +350,27 @@ export default function RelatorioPage() {
               {clinicalEval.comorbidades.anticoagulantes && (
                 <Badge variant="destructive">Uso de Anticoagulantes</Badge>
               )}
-              {clinicalEval.comorbidades.outras.map((item, i) => (
+              {(clinicalEval.comorbidades.outras || []).map((item, i) => (
                 <Badge key={i} variant="outline">{item}</Badge>
               ))}
             </div>
             
-            {clinicalEval.comorbidades.alergias.length > 0 && (
+            {(clinicalEval.comorbidades.alergias || []).length > 0 && (
               <div className="mt-4">
                 <p className="text-sm font-medium text-red-600 mb-2">Alergias:</p>
                 <div className="flex flex-wrap gap-2">
-                  {clinicalEval.comorbidades.alergias.map((alergia, i) => (
+                  {(clinicalEval.comorbidades.alergias || []).map((alergia, i) => (
                     <Badge key={i} variant="destructive">{alergia}</Badge>
                   ))}
                 </div>
               </div>
             )}
             
-            {clinicalEval.comorbidades.medicacoes.length > 0 && (
+            {(clinicalEval.comorbidades.medicacoes || []).length > 0 && (
               <div className="mt-4">
                 <p className="text-sm font-medium mb-2">Medicacoes em Uso:</p>
                 <p className="text-sm text-muted-foreground">
-                  {clinicalEval.comorbidades.medicacoes.join(', ')}
+                  {(clinicalEval.comorbidades.medicacoes || []).join(', ')}
                 </p>
               </div>
             )}

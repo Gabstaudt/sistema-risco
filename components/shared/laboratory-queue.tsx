@@ -1,0 +1,12 @@
+'use client'
+import {useState} from 'react'
+import Link from 'next/link'
+import {useData} from '@/lib/data-context'
+import {Header} from '@/components/layout/header'
+import {Card,CardHeader,CardTitle,CardContent} from '@/components/ui/card'
+import {Input} from '@/components/ui/input'
+import {Button} from '@/components/ui/button'
+import {MedicationOrders} from './medication-orders'
+import {examActivityTime} from '@/lib/lab-operations'
+export function LaboratoryQueue(){const {examRequests,patients}=useData();const [search,setSearch]=useState('');const [all,setAll]=useState(false);const exams=examRequests.filter(exam=>(all||!['concluido','cancelado'].includes(exam.status))&&`${exam.examTypeName} ${patients.find(patient=>patient.id===exam.patientId)?.nomeCompleto||''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())).sort((a,b)=>examActivityTime(b)-examActivityTime(a))
+return <><Header breadcrumbs={[{label:'Laboratório'}]} /><main className="min-h-[calc(100svh-4rem)] min-w-0 w-full flex-1 space-y-5 p-4 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-bold">Exames e medicações solicitadas</h1><Button variant="outline" className="h-12" onClick={()=>setAll(!all)}>{all?'Ver aguardando':'Ver todos os exames'}</Button></div><Input aria-label="Buscar exames ou pacientes" className="h-12" value={search} onChange={event=>setSearch(event.target.value)} placeholder="Buscar exame ou paciente"/><Card><CardHeader><CardTitle>Exames · {exams.length}</CardTitle></CardHeader><CardContent><ul className="divide-y">{!exams.length&&<li className="py-6 text-muted-foreground">Nenhum exame nesta lista.</li>}{exams.map(exam=><li key={exam.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="font-semibold">{exam.examTypeName}</p><p className="break-words">{patients.find(patient=>patient.id===exam.patientId)?.nomeCompleto||'Paciente não encontrado'}</p><p className="text-sm text-muted-foreground">{{solicitado:'Aguardando coleta',coletado:'Coletado — aguardando realização',em_analise:'Aguardando resultado',concluido:'Resultado disponível',cancelado:'Cancelado'}[exam.status]} · {new Date(exam.solicitadoEm).toLocaleString('pt-BR')}</p></div><Button asChild className="h-11"><Link href={`/laboratorio/registrar/${exam.id}`}>Abrir exame</Link></Button></li>)}</ul></CardContent></Card><MedicationOrders/></main></>}

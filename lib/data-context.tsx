@@ -1,10 +1,12 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
-import { Patient, PatientStatus, Priority, VitalSigns, ClinicalEvaluation, SurgicalEvaluation, AuditLog, AuditAction, ExamRequest, ExamType, ExamStatus } from './types'
+import { Patient, PatientStatus, Priority, VitalSigns, ClinicalEvaluation, SurgicalEvaluation, AuditLog, AuditAction, ExamRequest, ExamType, ExamStatus, MedicationOrder } from './types'
 import { patients as initialPatients, examRequests as initialExamRequests, hydratePatient } from './data/patients'
 import { examTypes as initialExamTypes } from './data/exams'
 import { auditLogs as initialAuditLogs } from './data/audit'
+import { nextAssessmentStatus } from './assessment-requests'
+import { applyExamOperation, prescribeMedication, administerMedication, type MedicationDraft } from './lab-operations'
 import { useAuth } from './auth'
 import { projectPatientForUser } from './permissions'
 import { issueArrivalTicket, callArrivalTicket, forwardArrivalTicket, seedArrivalTickets, markTicketAttendance, type ArrivalTicket, type TicketCategory } from './tickets'
@@ -32,6 +34,9 @@ interface DataContextType {
   registerClinicalEvaluation: (id: string, evaluation: Omit<ClinicalEvaluation, 'id' | 'patientId'>) => void
   registerSurgicalEvaluation: (id: string, evaluation: Omit<SurgicalEvaluation, 'id' | 'patientId'>) => void
   
+  medicationOrders: MedicationOrder[]
+  prescribeMedicationOrder: (patientId: string, draft: MedicationDraft) => Promise<void>
+  recordMedicationAdministration: (id: string, at: string) => Promise<void>
   // Exames
   examTypes: ExamType[]
   examRequests: ExamRequest[]
@@ -76,12 +81,14 @@ const EXAM_TYPES_KEY = 'hospital-exam-types'
 const EXAM_REQUESTS_KEY = 'hospital-exam-requests'
 const AUDIT_KEY = 'hospital-audit'
 const TICKETS_KEY = 'hospital-tickets'
+const MEDICATIONS_KEY = 'hospital-medication-orders'
 
 const normalizePatient = (patient: Patient) => hydratePatient(patient)
 const normalizePatients = (items: Patient[]) => items.map(normalizePatient)
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { user, hasPermission } = useAuth()
+  const [medicationOrders, setMedicationOrders] = useState<MedicationOrder[]>([])
   const [tickets, setTickets] = useState<ArrivalTicket[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
   const [examTypes, setExamTypes] = useState<ExamType[]>([])
@@ -103,6 +110,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const savedExamTypes = localStorage.getItem(EXAM_TYPES_KEY)
     const savedExamRequests = localStorage.getItem(EXAM_REQUESTS_KEY)
     const savedAudit = localStorage.getItem(AUDIT_KEY)
+    setMedicationOrders(JSON.parse(localStorage.getItem(MEDICATIONS_KEY) || '[]'))
 
     if (savedPatients) {
       const saved: Patient[] = JSON.parse(savedPatients)
@@ -181,6 +189,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const sync = (event: StorageEvent) => {
+      if (event.key === MEDICATIONS_KEY && event.newValue) setMedicationOrders(JSON.parse(event.newValue))
+      if (event.key === EXAM_REQUESTS_KEY && event.newValue) setExamRequests(JSON.parse(event.newValue))
       if (event.key === TICKETS_KEY && event.newValue) setTickets(JSON.parse(event.newValue))
       if (event.key === PATIENTS_KEY && event.newValue) setPatients(normalizePatients(JSON.parse(event.newValue)))
     }
@@ -480,33 +490,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const exam = examRequests.find(e => e.id === examId)
     if (!exam) return
 
-    setExamRequests(prev => prev.map(e => {
-      if (e.id === examId) {
-        const updated: ExamRequest = {
-          ...e,
-          status,
-          ...updates,
-        }
-        
-        // Adicionar timestamps baseado no status
-        if (status === 'coletado' && !updated.coletadoPor) {
-          updated.coletadoPor = user?.id
-          updated.coletadoEm = new Date().toISOString()
-        }
-        if (status === 'em_analise' && !updated.analisadoPor) {
-          updated.analisadoPor = user?.id
-          updated.analisadoEm = new Date().toISOString()
-        }
-        if (status === 'concluido' && !updated.concluidoPor) {
-          updated.concluidoPor = user?.id
-          updated.concluidoEm = new Date().toISOString()
-        }
-        
-        return updated
+    if (!user) throw new Error('Faça login para registrar exames.')
+    const next = applyExamOperation(exam, status, updates || {}, user)
+    setExamRequests(prev => prev.map(item => item.id === examId ? next : item))
+
+    if (status === 'concluido') {
+      const patient = patients.find(item => item.id === exam.patientId)
+      const relevant = examRequests.map(item => item.id === examId ? next : item).filter(item => item.patientId === exam.patientId && (!patient?.ticketId || Date.parse(item.solicitadoEm) >= Date.parse(patient.dataEntrada)))
+      if (patient && relevant.length > 0 && relevant.every(item => ['concluido', 'cancelado'].includes(item.status))) {
+        updatePatient(patient.id, { status: nextAssessmentStatus(patient, 'exames_concluidos') })
       }
-      return e
-    }))
-    
+    }
+
     const actionMap: Record<ExamStatus, AuditAction> = {
       solicitado: 'solicitacao_exame',
       coletado: 'coleta_exame',
@@ -522,7 +517,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
       previousValue: exam.status,
       newValue: status,
     })
-  }, [examRequests, user?.id, addAuditLog])
+  }, [examRequests, user, patients, updatePatient, addAuditLog])
+
+  const changeMedications = useCallback(async (change: (orders: MedicationOrder[]) => MedicationOrder[]) => {
+    if (!isInitialized) throw new Error('Aguarde o carregamento.')
+    const run = () => {
+      const orders: MedicationOrder[] = JSON.parse(localStorage.getItem(MEDICATIONS_KEY) || '[]')
+      const next = change(orders)
+      localStorage.setItem(MEDICATIONS_KEY, JSON.stringify(next)); setMedicationOrders(next)
+    }
+    if (navigator.locks) await navigator.locks.request('medrisk-medications', run); else run()
+  }, [isInitialized])
+
+  const prescribeMedicationOrder = useCallback(async (patientId: string, draft: MedicationDraft) => {
+    if (!user || !patients.some(patient => patient.id === patientId)) throw new Error('Paciente não encontrado.')
+    const order = prescribeMedication(patientId, draft, user)
+    await changeMedications(orders => [...orders, order])
+    addAuditLog({ action: 'medicacao_solicitada', patientId, details: `Solicitada: ${order.medication} | ${order.dose} | ${order.route}` })
+  }, [user, patients, changeMedications, addAuditLog])
+
+  const recordMedicationAdministration = useCallback(async (id: string, at: string) => {
+    if (!user) throw new Error('Faça login para registrar a administração.')
+    let updated: MedicationOrder | undefined
+    await changeMedications(orders => {
+      const order = orders.find(item => item.id === id)
+      if (!order) throw new Error('Medicação não encontrada.')
+      updated = administerMedication(order, at, user)
+      return orders.map(item => item.id === id ? updated! : item)
+    })
+    addAuditLog({ action: 'medicacao_administrada', patientId: updated?.patientId, details: `${updated?.medication} administrada em ${updated?.administeredAt}.` })
+  }, [user, changeMedications, addAuditLog])
 
   // Auditoria
   const getAuditLogsByPatient = useCallback((patientId: string) => {
@@ -557,6 +581,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider value={{
+      medicationOrders: hasPermission('view_clinical_data') || hasPermission('administer_medication') ? medicationOrders : [],
+      prescribeMedicationOrder, recordMedicationAdministration,
       isDataReady: isInitialized,
       publicCalls: tickets.filter(ticket => ['chamada_recepcao', 'chamada_triagem', 'em_triagem'].includes(ticket.stage)).map(({number, stage, category, calledAt, day}) => ({number, stage, category, calledAt, day})),
       tickets: hasPermission('manage_reception_queue') || hasPermission('call_triage_ticket') ? tickets : [],

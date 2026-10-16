@@ -112,7 +112,7 @@ export default function AuditoriaPage() {
           const searchLower = search.toLowerCase()
           
           if (
-            !patient?.name.toLowerCase().includes(searchLower) &&
+            !(patient?.nomeCompleto || patient?.name || '').toLowerCase().includes(searchLower) &&
             !userName.toLowerCase().includes(searchLower) &&
             !log.details?.toLowerCase().includes(searchLower)
           ) {

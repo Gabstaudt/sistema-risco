@@ -17,6 +17,7 @@ import { ArrowLeft, Save, User, Shield, Activity, Calculator } from 'lucide-reac
 import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/shared/badges'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import type { RiskLevel } from '@/lib/types'
+import { MedicationOrders } from '@/components/shared/medication-orders'
 import { users } from '@/lib/data/users'
 import { AssessmentRequestFields } from '@/components/shared/assessment-request-fields'
 import { buildAssessmentUpdates, getAssessmentDraft, nextAssessmentStatus, type AssessmentDraft } from '@/lib/assessment-requests'
@@ -529,6 +530,7 @@ export default function CirurgiaoAvaliarPage() {
       <CardiologyRiskScores value={getCardiologyScores(patient)} />
       {hasPermission('record_surgery') && <Button asChild className="h-12"><Link href={`/cirurgiao/acompanhamento/${patient.id}`}>Registrar cirurgia e pós-operatório</Link></Button>}
 
+      <MedicationOrders patientId={patient.id} prescribe />
       {hasPermission('request_specialist_assessment') && <div className="space-y-3">
         <AssessmentRequestFields value={assessmentDraft} onChange={setAssessmentDraft} patient={patient} surgeon />
         {requestMessage && <p role="status" className="rounded-lg border p-3 text-sm">{requestMessage}</p>}

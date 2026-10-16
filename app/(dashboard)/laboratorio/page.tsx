@@ -1,5 +1,2 @@
-import { ProfileHome } from '@/components/shared/profile-home'
-
-export default function Page() {
-  return <ProfileHome role="laboratorio" />
-}
+import {LaboratoryQueue} from '@/components/shared/laboratory-queue'
+export default function Page(){return <LaboratoryQueue/>}
