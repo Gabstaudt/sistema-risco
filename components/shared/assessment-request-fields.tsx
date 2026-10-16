@@ -14,7 +14,7 @@ export function AssessmentRequestFields({ value, onChange, patient, surgeon = fa
     <Card>
       <CardHeader>
         <CardTitle>Solicitações de avaliação</CardTitle>
-        <CardDescription>Solicite o risco cirúrgico e selecione as especialidades que devem avaliar o paciente. O profissional responsável é opcional.</CardDescription>
+        {surgeon && <CardDescription>Solicite o risco cirúrgico e selecione as especialidades que devem avaliar o paciente. O profissional responsável é opcional.</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="flex items-center gap-3 rounded-lg border p-4">

@@ -1,5 +1,5 @@
 'use client'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { CardiologyAssessment, Patient } from '@/lib/types'
@@ -12,7 +12,7 @@ export function getCardiologyScores(patient?: Patient): CardiologyScores {
 }
 export function CardiologyRiskScores({ value, onChange }: { value: CardiologyScores; onChange?: (value: CardiologyScores) => void }) {
   return <Card>
-    <CardHeader><CardTitle>Scores de risco — Cardiologia</CardTitle>{onChange && <CardDescription>Registre o resultado e a interpretação do protocolo utilizado na avaliação.</CardDescription>}</CardHeader>
+    <CardHeader><CardTitle>Scores de risco — Cardiologia</CardTitle></CardHeader>
     <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {Object.entries(CARDIOLOGY_SCORE_LABELS).map(([key, label]) => {
         const score = key as keyof CardiologyScores

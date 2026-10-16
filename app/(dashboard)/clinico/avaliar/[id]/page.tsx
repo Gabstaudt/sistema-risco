@@ -250,7 +250,6 @@ export default function ClinicoAvaliarPage() {
       <Card>
         <CardHeader>
           <CardTitle>Classificação de Manchester</CardTitle>
-          <CardDescription>Classificação recebida da triagem. Você pode editar a prioridade durante a avaliação.</CardDescription>
         </CardHeader>
         <CardContent>
           {getPatientManchesterPriority(patient) ? (
@@ -270,7 +269,6 @@ export default function ClinicoAvaliarPage() {
       <Card>
         <CardHeader>
           <CardTitle>Dados Adicionais</CardTitle>
-          <CardDescription>Informacoes clinicas basicas compartilhadas com cirurgia e laboratorio.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
@@ -309,9 +307,6 @@ export default function ClinicoAvaliarPage() {
           <Card>
             <CardHeader>
               <CardTitle>Solicitacao de Exames</CardTitle>
-              <CardDescription>
-                Selecione os exames complementares necessarios para a avaliacao
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -368,7 +363,7 @@ export default function ClinicoAvaliarPage() {
       <PatientExamsHistory
         examRequests={patientExamRequests}
         title="Historico de Exames do Paciente"
-        description="Exames ja solicitados ou concluidos neste prontuario, incluindo resultados e leitura do laboratorio."
+        description=""
         emptyMessage="Este paciente ainda nao possui exames registrados."
       />
 

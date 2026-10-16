@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { nextAssessmentStatus } from '@/lib/assessment-requests'
 import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
 import { Header } from '@/components/layout/header'
+import { ExamRequestForm } from '@/components/shared/exam-request-form'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { PatientStatusBadge, RiskLevelBadge } from '@/components/shared/badges'
 import { Button } from '@/components/ui/button'
@@ -141,14 +142,13 @@ export default function CardiologistaAvaliarPage() {
   return (
     <>
       <Header breadcrumbs={[{ label: 'Cardiologista', href: '/cardiologista' }, { label: 'Avaliacao' }]} />
-      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100svh-4rem)] min-w-0 flex-1 w-full space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao Cardiologica Pre-Operatoria</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">Etapa obrigatoria antes do fluxo da anestesia.</p>
           </div>
           <PatientStatusBadge status={patient.status} />
         </div>
@@ -185,6 +185,8 @@ export default function CardiologistaAvaliarPage() {
         <CardiologyRiskScores value={riskScores} onChange={setRiskScores} />
         {riskScores.acp?.interpretation === 'Alto risco' && <Card><CardHeader><CardTitle>Encaminhamento — ACP alto risco</CardTitle></CardHeader><CardContent className="space-y-2"><Label htmlFor="cardio-specialist-referral">Parecer especializado / suporte de maior complexidade *</Label><Textarea id="cardio-specialist-referral" value={specialistReferral} onChange={event => setSpecialistReferral(event.target.value)} rows={3} /></CardContent></Card>}
         {saveError && <p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{saveError}</p>}
+
+        <ExamRequestForm patientId={patientId} />
 
         <Tabs defaultValue="resumo" className="space-y-4">
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-4">
@@ -242,7 +244,7 @@ export default function CardiologistaAvaliarPage() {
             <PatientExamsHistory
               examRequests={examRequests}
               title="Historico Completo de Exames"
-              description="Todos os exames executados ou em andamento neste paciente."
+              description=""
               emptyMessage="Este paciente ainda nao possui exames registrados."
             />
           </TabsContent>
@@ -254,7 +256,6 @@ export default function CardiologistaAvaliarPage() {
               <Heart className="h-5 w-5 text-primary" />
               Parecer Cardiologico
             </CardTitle>
-            <CardDescription>Fluxo baseado no tipo de cirurgia, urgencia, controle de danos e necessidade de UTI.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-2">

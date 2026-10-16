@@ -87,6 +87,7 @@ const homeByRole: Record<UserRole, HomeConfig> = {
 }
 
 export function ProfileHome({ role, children }: { role: UserRole; children?: ReactNode }) {
+  const compact = role === 'cardiologista' || role === 'anestesista'
   const { user } = useAuth()
   const { title, actions: configuredActions } = homeByRole[role]
   const actions = configuredActions.filter((action) => canAccessRoute(action.href, user))
@@ -94,10 +95,10 @@ export function ProfileHome({ role, children }: { role: UserRole; children?: Rea
   return (
     <>
       <Header breadcrumbs={[{ label: 'Início' }]} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8 sm:py-12">
+      <main className={cn('w-full min-w-0 min-h-[calc(100svh-4rem)] flex-1 px-4 py-8 sm:px-8 sm:py-12', !compact && 'mx-auto max-w-6xl')}>
         <div className="mb-8 space-y-2 sm:mb-10">
           <h1 className="text-3xl font-bold text-foreground">{title}</h1>
-          <p className="text-lg text-muted-foreground">O que você precisa fazer?</p>
+          {!compact && <p className="text-lg text-muted-foreground">O que você precisa fazer?</p>}
         </div>
         <nav aria-label={`Ações principais — ${title}`} className={cn('grid grid-cols-1 gap-4 md:gap-6', actions.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3')}>
           {actions.map(({ label, description, href, icon: Icon }, index) => (
@@ -115,9 +116,9 @@ export function ProfileHome({ role, children }: { role: UserRole; children?: Rea
               <Icon aria-hidden="true" className="size-8 shrink-0" />
               <div className="min-w-0 flex-1 space-y-2">
                 <span className="block font-heading text-xl font-bold leading-snug">{label}</span>
-                <span className={cn('block text-base leading-relaxed', index === 0 ? 'text-white/85' : 'text-muted-foreground')}>
+                {!compact && <span className={cn('block text-base leading-relaxed', index === 0 ? 'text-white/85' : 'text-muted-foreground')}>
                   {description}
-                </span>
+                </span>}
               </div>
               <ArrowRight aria-hidden="true" className="size-6 shrink-0 md:self-end" />
             </Link>

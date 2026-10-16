@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { nextAssessmentStatus } from '@/lib/assessment-requests'
 import { Header } from '@/components/layout/header'
 import { ASABadge, PatientStatusBadge } from '@/components/shared/badges'
+import { ExamRequestForm } from '@/components/shared/exam-request-form'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -125,14 +126,13 @@ export default function AnestesistaAvaliarPage() {
   return (
     <>
       <Header breadcrumbs={[{ label: 'Anestesista', href: '/anestesista' }, { label: 'Avaliacao' }]} />
-      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100svh-4rem)] min-w-0 flex-1 w-full space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao Pre-Anestesica</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">Etapa obrigatoria entre cardiologia e cirurgia.</p>
           </div>
           <PatientStatusBadge status={patient.status} />
         </div>
@@ -179,6 +179,8 @@ export default function AnestesistaAvaliarPage() {
             </div>
           </CardContent>
         </Card>
+
+        <ExamRequestForm patientId={patientId} />
 
         <Tabs defaultValue="resumo" className="space-y-4">
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-5">
@@ -245,7 +247,7 @@ export default function AnestesistaAvaliarPage() {
             <PatientExamsHistory
               examRequests={examRequests}
               title="Historico Completo de Exames"
-              description="Todos os exames executados ou em andamento neste paciente."
+              description=""
               emptyMessage="Este paciente ainda nao possui exames registrados."
             />
           </TabsContent>
@@ -257,7 +259,6 @@ export default function AnestesistaAvaliarPage() {
               <Syringe className="h-5 w-5 text-primary" />
               Parecer Pre-Anestesico
             </CardTitle>
-            <CardDescription>Historico anestesico, via aerea, ASA e definicao da estrategia anestesica.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-2 lg:col-span-2">
@@ -313,9 +314,6 @@ export default function AnestesistaAvaliarPage() {
                   <Label htmlFor="additional-evaluation" className="cursor-pointer text-sm font-medium">
                     Necessita exames ou avaliacoes adicionais
                   </Label>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Ao concluir com esta opcao, o caso retorna para complementacao e depois volta para a fila da anestesia.
-                  </p>
                 </div>
               </div>
             </div>

@@ -5,7 +5,7 @@ import { hasPendingAssessment } from '@/lib/assessment-requests'
 import { Header } from '@/components/layout/header'
 import { StatusBadge } from '@/components/shared/badges'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useData } from '@/lib/data-context'
 import { ArrowRight, Clock, FileText, Heart, User } from 'lucide-react'
 import type { LabUrgency, Patient } from '@/lib/types'
@@ -45,12 +45,9 @@ export default function CardiologistaFilaPage() {
   return (
     <>
       <Header breadcrumbs={[{ label: 'Aguardando Avaliacao' }]} />
-      <div className="mx-auto flex-1 w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100svh-4rem)] min-w-0 flex-1 w-full space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Fila da Cardiologia</h1>
-          <p className="text-muted-foreground">
-            Pacientes aguardando liberacao cardiologica pre-operatoria antes do encaminhamento ao anestesista.
-          </p>
         </div>
 
         {queue.length === 0 ? (
@@ -63,7 +60,6 @@ export default function CardiologistaFilaPage() {
           <Card>
             <CardHeader>
               <CardTitle>Fila Prioritaria</CardTitle>
-              <CardDescription>Ordem do mais urgente ao menos urgente.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {queue.map(({ patient, urgency }) => (

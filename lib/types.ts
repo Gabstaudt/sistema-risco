@@ -538,6 +538,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'update_exam_status',
   ],
   cardiologista: [
+    'request_exams',
     'view_dashboard_cardiologista',
     'view_patients_list',
     'view_all_data',
@@ -550,6 +551,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'generate_report',
   ],
   anestesista: [
+    'request_exams',
     'view_dashboard_anestesista',
     'view_patients_list',
     'view_all_data',

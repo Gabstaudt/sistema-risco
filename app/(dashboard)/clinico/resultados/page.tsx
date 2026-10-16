@@ -144,7 +144,7 @@ export default function ClinicoResultadosPage() {
         <PatientExamsHistory
           examRequests={filteredRequests}
           patientsById={patientMap}
-          description="Historico consolidado de exames com resultado, interpretacao laboratorial e atalho para abrir o paciente."
+          description=""
           emptyMessage="Nenhum exame corresponde aos filtros aplicados."
           patientLinkBuilder={(patientId) => `/paciente/${patientId}`}
           actionLabel="Abrir prontuario"

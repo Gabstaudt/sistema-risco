@@ -453,6 +453,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [addAuditLog])
 
   const requestExams = useCallback((patientId: string, examTypeIds: string[], justificativa: string) => {
+    if (!user || !hasPermission('request_exams')) throw new Error('Sem permissão para solicitar exames.')
+    if (!patients.some(patient => patient.id === patientId)) throw new Error('Paciente não encontrado.')
+    if (!examTypeIds.length || new Set(examTypeIds).size !== examTypeIds.length || examTypeIds.some(id => !examTypes.some(exam => exam.id === id))) throw new Error('Selecione exames válidos.')
     const newRequests: ExamRequest[] = examTypeIds.map(examTypeId => {
       const examType = examTypes.find(e => e.id === examTypeId)
       return {
@@ -484,7 +487,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       action: 'solicitacao_exame',
       description: `Exames solicitados: ${examNames}`,
     })
-  }, [examTypes, user?.id, patients, updatePatient, addAuditLog])
+  }, [examTypes, user, hasPermission, patients, updatePatient, addAuditLog])
 
   const updateExamStatus = useCallback((examId: string, status: ExamStatus, updates?: Partial<ExamRequest>) => {
     const exam = examRequests.find(e => e.id === examId)
