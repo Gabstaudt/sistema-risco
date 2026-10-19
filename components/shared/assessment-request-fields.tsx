@@ -1,14 +1,16 @@
 'use client'
+import { hasUserPermission } from '@/lib/permissions'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { users } from '@/lib/data/users'
+import { useAuth } from '@/lib/auth'
 import { ASSESSMENT_LABELS, hasPendingAssessment, type AssessmentDraft } from '@/lib/assessment-requests'
 import type { Patient } from '@/lib/types'
 
 export function AssessmentRequestFields({ value, onChange, patient, surgeon = false }: { value: AssessmentDraft; onChange: (value: AssessmentDraft) => void; patient: Patient; surgeon?: boolean }) {
+  const { users } = useAuth()
   const specialties = surgeon ? ['cardiologista', 'anestesista'] as const : ['cirurgiao', 'anestesista', 'cardiologista'] as const
   return (
     <Card>
@@ -37,7 +39,7 @@ export function AssessmentRequestFields({ value, onChange, patient, surgeon = fa
                     <SelectTrigger id={`assigned-${specialty}`} className="h-12 w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unassigned">Selecione o profissional</SelectItem>
-                      {users.filter((item) => item.role === specialty && item.active).map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
+                      {users.filter((item) => item.role === specialty && item.active && hasUserPermission(item, specialty === 'cardiologista' ? 'classify_cardiac_risk' : specialty === 'anestesista' ? 'classify_asa' : 'classify_risk')).map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>}

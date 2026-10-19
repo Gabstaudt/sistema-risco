@@ -3,7 +3,7 @@ import { hasUserPermission } from './permissions'
 export type TicketCategory = 'emergencia' | 'prioridade' | 'comum'
 export type TicketCallStage = 'recepcao' | 'triagem' | 'clinico'
 export type TicketStage = 'aguardando_recepcao' | 'chamada_recepcao' | 'aguardando_triagem' | 'chamada_triagem' | 'em_triagem' | 'aguardando_clinico' | 'chamada_clinico' | 'em_clinico' | 'concluida' | 'ausente_recepcao' | 'ausente_triagem' | 'ausente_clinico'
-export interface ArrivalTicket { id:string; number:string; day:string; sequence:number; category:TicketCategory; stage:TicketStage; issuedAt:string; calledAt?:string; calledBy?:string; receptionCalledBy?:string; triageCalledBy?:string; clinicalCalledBy?:string; clinicalAssignedTo?:string; destination?:string; patientId?:string; forwardedAt?:string }
+export interface ArrivalTicket { id:string; number:string; day:string; sequence:number; category:TicketCategory; stage:TicketStage; issuedAt:string; calledAt?:string; calledBy?:string; receptionCalledBy?:string; triageCalledBy?:string; clinicalCalledBy?:string; clinicalAssignedTo?:string; clinicalQueuedAt?:string; destination?:string; patientId?:string; forwardedAt?:string }
 export const TICKET_CATEGORIES = { emergencia:{label:'Emergência',prefix:'E',rank:0,className:'border-red-300 bg-red-50 text-red-900'},prioridade:{label:'Prioridade',prefix:'P',rank:1,className:'border-amber-300 bg-amber-50 text-amber-900'},comum:{label:'Comum',prefix:'C',rank:2,className:'border-primary/20 bg-primary/5 text-primary'} } as const
 export const ticketDay = (date:Date) => new Intl.DateTimeFormat('en-CA',{timeZone:'America/Belem',year:'numeric',month:'2-digit',day:'2-digit'}).format(date)
 export function issueArrivalTicket(tickets:ArrivalTicket[],category:TicketCategory,now=new Date()):ArrivalTicket {
@@ -46,7 +46,7 @@ export function ensureClinicalTickets(tickets:ArrivalTicket[],patients:Patient[]
   }
   const previous=[...next].reverse().find(t=>t.patientId===patient.id)
   const issued=previous||issueArrivalTicket(next,'comum',new Date(patient.dataEntrada))
-  const ticket={...issued,id:previous?.id||issued.id,patientId:patient.id,stage:'aguardando_clinico' as const,clinicalAssignedTo:patient.triageAssignedClinicianId,calledBy:undefined,calledAt:undefined}
+  const ticket={...issued,id:previous?.id||issued.id,patientId:patient.id,stage:'aguardando_clinico' as const,clinicalAssignedTo:patient.triageAssignedClinicianId,clinicalQueuedAt:patient.status==='exames_concluidos'?patient.updatedAt||patient.ultimaAtualizacao:patient.triageData?.completedAt||patient.dataEntrada,calledBy:undefined,calledAt:undefined}
   const index=next.findIndex(t=>t.id===ticket.id);if(index>=0)next[index]=ticket;else next.push(ticket)
  }
  return next

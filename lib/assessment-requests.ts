@@ -32,7 +32,7 @@ export function buildAssessmentUpdates(patient: Patient, user: User, draft: Asse
   const requests = draft.targets.map((specialty) => {
     if (!(specialty in ASSESSMENT_LABELS) || (user.role === 'cirurgiao' && specialty === 'cirurgiao')) throw new Error('Especialidade inválida para esta solicitação.')
     const assignedId = draft.assignees[specialty]
-    const assigned = professionals.find((item) => item.id === assignedId && item.active && item.role === specialty)
+    const assigned = professionals.find((item) => item.id === assignedId && item.active && item.role === specialty && hasUserPermission(item, specialty === 'cardiologista' ? 'classify_cardiac_risk' : specialty === 'anestesista' ? 'classify_asa' : 'classify_risk'))
     if (assignedId && !assigned) throw new Error('Selecione um profissional ativo da especialidade.')
     const previous = patient.assessmentRequests?.find((item) => item.specialty === specialty)
     const pending = hasPendingAssessment(patient, specialty)

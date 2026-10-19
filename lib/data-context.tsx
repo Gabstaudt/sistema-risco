@@ -5,6 +5,8 @@ import { Patient, PatientStatus, Priority, VitalSigns, ClinicalEvaluation, Surgi
 import { patients as initialPatients, examRequests as initialExamRequests, hydratePatient } from './data/patients'
 import { examTypes as initialExamTypes } from './data/exams'
 import { auditLogs as initialAuditLogs } from './data/audit'
+import { hasPendingAssessment } from './assessment-requests'
+import { recordCareStart } from './admin-analytics'
 import { nextAssessmentStatus } from './assessment-requests'
 import { applyExamOperation, prescribeMedication, administerMedication, type MedicationDraft } from './lab-operations'
 import { useAuth } from './auth'
@@ -15,6 +17,7 @@ import { issueArrivalTicket, callArrivalTicket, forwardArrivalTicket, seedArriva
 import { validatePatientBasicEdit, type PatientBasicDraft } from './patient-basic-edit'
 
 interface DataContextType {
+  registerCareStart: (patientId:string) => void
   isDataReady: boolean
   tickets: ArrivalTicket[]
   publicCalls: Pick<ArrivalTicket, 'number' | 'stage' | 'category' | 'calledAt' | 'day' | 'destination'>[]
@@ -48,6 +51,7 @@ interface DataContextType {
   getExamRequestsByPatient: (patientId: string) => ExamRequest[]
   getExamRequestsByStatus: (status: ExamStatus | ExamStatus[]) => ExamRequest[]
   getPendingExams: () => ExamRequest[]
+  updateExamType: (id:string, draft:Partial<ExamType>) => void
   createExamType: (examType: Omit<ExamType, 'id' | 'createdAt'>) => ExamType
   requestExams: (patientId: string, examTypeIds: string[], justificativa: string) => void
   updateExamStatus: (examId: string, status: ExamStatus, updates?: Partial<ExamRequest>) => void
@@ -203,11 +207,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (event.key === EXAM_TYPES_KEY && event.newValue) setExamTypes(JSON.parse(event.newValue))
       if (event.key === EXAM_REQUESTS_KEY && event.newValue) setExamRequests(JSON.parse(event.newValue))
       if (event.key === TICKETS_KEY && event.newValue) setTickets(JSON.parse(event.newValue))
+      if (event.key === AUDIT_KEY && event.newValue) setAuditLogs(JSON.parse(event.newValue))
       if (event.key === DOCUMENTS_KEY && event.newValue) setMedicalDocuments(JSON.parse(event.newValue))
       if (event.key === PATIENTS_KEY && event.newValue) setPatients(normalizePatients(JSON.parse(event.newValue)))
     }
+    const syncAudit = () => setAuditLogs(JSON.parse(localStorage.getItem(AUDIT_KEY) || '[]'))
+    window.addEventListener('medrisk-audit-updated', syncAudit)
     window.addEventListener('storage', sync)
-    return () => window.removeEventListener('storage', sync)
+    return () => { window.removeEventListener('storage', sync); window.removeEventListener('medrisk-audit-updated', syncAudit) }
   }, [])
 
   const mutateTickets = useCallback(async <T,>(change: (current: ArrivalTicket[]) => { tickets: ArrivalTicket[]; result: T }): Promise<T> => {
@@ -248,7 +255,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const ticket = current.find(item => item.id === id)
     if (!user || user.role !== 'triagem' || !hasPermission('call_triage_ticket') || !ticket?.patientId || !['chamada_triagem', 'em_triagem'].includes(ticket.stage) || ticket.calledBy !== user.id) throw new Error('Chame a senha antes de iniciar a triagem.')
     const stored: Patient[] = JSON.parse(localStorage.getItem(PATIENTS_KEY) || '[]')
-    const nextPatients = stored.map(patient => patient.id === ticket.patientId ? { ...patient, status: 'em_triagem' as const } : patient)
+    const nextPatients = stored.map(patient => patient.id === ticket.patientId ? { ...patient, status: 'em_triagem' as const, careTimings: recordCareStart(patient, 'triagem', ticket.forwardedAt || patient.dataEntrada, user.id) } : patient)
     localStorage.setItem(PATIENTS_KEY, JSON.stringify(nextPatients)); setPatients(nextPatients)
     return { tickets: current.map(item => item.id === id ? { ...item, stage: 'em_triagem' as const } : item), result: ticket.patientId }
   }), [user, hasPermission, mutateTickets])
@@ -258,7 +265,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!user || user.role !== 'clinico' || !hasPermission('clinical_evaluation') || !ticket?.patientId || ticket.clinicalAssignedTo !== user.id || ticket.calledBy !== user.id || !['chamada_clinico', 'em_clinico'].includes(ticket.stage)) throw new Error('Chame a senha deste paciente antes de iniciar o atendimento.')
     const stored: Patient[] = JSON.parse(localStorage.getItem(PATIENTS_KEY) || '[]')
     if (!stored.some(patient => patient.id === ticket.patientId && isPatientAssignedToDoctor(patient, user))) throw new Error('Paciente não direcionado para este médico.')
-    const nextPatients = stored.map(patient => patient.id === ticket.patientId ? { ...patient, status: 'em_avaliacao_clinica' as const } : patient)
+    const nextPatients = stored.map(patient => patient.id === ticket.patientId ? { ...patient, status: 'em_avaliacao_clinica' as const, careTimings: recordCareStart(patient, 'clinico', ticket.clinicalQueuedAt || patient.triageData?.completedAt || '', user.id) } : patient)
     localStorage.setItem(PATIENTS_KEY, JSON.stringify(nextPatients)); setPatients(nextPatients)
     return { tickets: current.map(item => item.id === id ? { ...item, stage: 'em_clinico' as const } : item), result: ticket.patientId }
   }), [user, hasPermission, mutateTickets])
@@ -278,6 +285,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const updated = normalizePatient({ ...patient, ticketId, ticketNumber: ticket.number, status: 'aguardando_triagem', dataEntrada: new Date().toISOString(), dischargeAt: undefined,
       triageData: undefined, sinaisVitais: undefined, triageRiskClassification: undefined, observacoesTriagem: undefined, clinicalEvaluation: undefined, avaliacaoClinica: undefined, cardiologyAssessment: undefined, anesthesiaAssessment: undefined, surgicalRiskAssessment: undefined, avaliacaoCirurgica: undefined, riskLevel: undefined, assessmentRequests: undefined, surgicalRiskRequest: undefined, clinicalRequestsSurgicalRisk: false, clinicalAssignedCardiologistId: undefined, clinicalAssignedCardiologistName: undefined, cardiologyAssignedAnesthesiologistId: undefined, cardiologyAssignedAnesthesiologistName: undefined, clinicalAssignedSurgeonId: undefined, clinicalAssignedSurgeonName: undefined, triageAssignedClinicianId: undefined, triageAssignedClinicianName: undefined, labRiskClassification: undefined, labRiskNotes: undefined, labNurseObservation: undefined, queixaPrincipal: intake.complaint.trim(), descricaoInicial: intake.notes.trim(), prioridade: 'normal', examesSolicitados: [], examResults: undefined,
       visitHistory: [...previous.filter(item => item.id !== `${patient.id}-visit-current`), ...(archived ? [archived] : [])] })
+    const sourceTicket = current.find(item => item.id === ticketId)
+    if (sourceTicket?.calledAt) updated.careTimings = recordCareStart(updated, 'recepcao', sourceTicket.issuedAt, user.id, new Date(sourceTicket.calledAt))
     const nextPatients = stored.map(item => item.id === patientId ? updated : item)
     localStorage.setItem(PATIENTS_KEY, JSON.stringify(nextPatients)); setPatients(nextPatients)
     addAuditLog({ action: 'senha_encaminhada', patientId, details: `Senha ${ticket.number} encaminhada à triagem.` })
@@ -306,6 +315,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const directTicket = !ticket && user.role === 'triagem' ? issueArrivalTicket(current, 'comum') : undefined
       const nextTickets = ticket ? forwardArrivalTicket(current, ticket.id, id, user) : directTicket ? [...current, { ...directTicket, stage: 'aguardando_triagem' as const, patientId: id, forwardedAt: new Date().toISOString() }] : current
       const newPatient: Patient = normalizePatient({ ...patientData, ticketId: ticket?.id || directTicket?.id, ticketNumber: ticket?.number || directTicket?.number, id, prontuario: `PRONT-${new Date().getFullYear()}-${String(stored.length + 1).padStart(3, '0')}`, name: patientData.nomeCompleto, age: patientData.idade, cadastradoEm: new Date().toISOString(), ultimaAtualizacao: new Date().toISOString(), updatedAt: new Date().toISOString(), ultimoAtualizadoPor: user.id })
+      if (ticket?.calledAt) newPatient.careTimings = recordCareStart(newPatient, 'recepcao', ticket.issuedAt, user.id, new Date(ticket.calledAt))
       const nextPatients = [...stored, newPatient]
       localStorage.setItem(PATIENTS_KEY, JSON.stringify(nextPatients)); setPatients(nextPatients)
       addAuditLog({ patientId: id, action: 'cadastro_paciente', description: `Paciente ${newPatient.nomeCompleto} cadastrado${ticket ? ` com senha ${ticket.number}, encaminhado à triagem` : ''}.` })
@@ -317,7 +327,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const currentPatient = patients.find(patient => patient.id === id)
     if (!currentPatient || !projectPatientForUser(currentPatient, user)) throw new Error('Paciente não direcionado para este profissional.')
     if (updates.triageData?.completedAt && user?.role === 'triagem') {
-      void mutateTickets(current => ({ tickets: current.map(ticket => ticket.patientId === id && ['chamada_triagem', 'em_triagem'].includes(ticket.stage) && ticket.calledBy === user.id ? { ...ticket, stage: 'aguardando_clinico' as const, clinicalAssignedTo: updates.triageAssignedClinicianId || currentPatient.triageAssignedClinicianId, calledBy: undefined, calledAt: undefined } : ticket), result: undefined }))
+      void mutateTickets(current => ({ tickets: current.map(ticket => ticket.patientId === id && ['chamada_triagem', 'em_triagem'].includes(ticket.stage) && ticket.calledBy === user.id ? { ...ticket, stage: 'aguardando_clinico' as const, clinicalAssignedTo: updates.triageAssignedClinicianId || currentPatient.triageAssignedClinicianId, clinicalQueuedAt: updates.triageData?.completedAt, calledBy: undefined, calledAt: undefined } : ticket), result: undefined }))
     }
     if (updates.clinicalEvaluation?.completedAt && user?.role === 'clinico') {
       void mutateTickets(current => ({ tickets: current.map(ticket => ticket.patientId === id && ['chamada_clinico', 'em_clinico'].includes(ticket.stage) && ticket.calledBy === user.id ? { ...ticket, stage: 'concluida' as const } : ticket), result: undefined }))
@@ -337,6 +347,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return p
     }))
   }, [user, patients, mutateTickets])
+
+  const registerCareStart = useCallback((patientId: string) => {
+    const patient = patients.find(item => item.id === patientId)
+    if (!user || !patient || !isPatientAssignedToDoctor(patient, user)) return
+    const sector = user.role
+    const permission = sector === 'clinico' ? 'clinical_evaluation' : sector === 'cardiologista' ? 'classify_cardiac_risk' : sector === 'anestesista' ? 'classify_asa' : 'classify_risk'
+    if (!hasPermission(permission)) return
+    if (!['clinico', 'cardiologista', 'anestesista', 'cirurgiao'].includes(sector)) return
+    const request = patient.assessmentRequests?.find(item => item.specialty === sector)
+    const eligible = sector === 'clinico' ? ['aguardando_clinico', 'aguardando_avaliacao', 'em_avaliacao_clinica', 'exames_concluidos'].includes(patient.status)
+      : ['aguardando_' + sector, sector === 'cardiologista' ? 'em_avaliacao_cardiologica' : sector === 'anestesista' ? 'em_avaliacao_anestesica' : 'em_avaliacao_cirurgica'].includes(patient.status) || hasPendingAssessment(patient, sector as 'cardiologista' | 'anestesista' | 'cirurgiao')
+    if (!eligible) return
+    const active = tickets.find(ticket => ticket.patientId === patient.id && ['chamada_clinico', 'em_clinico', 'aguardando_clinico'].includes(ticket.stage))
+    const queuedAt = sector === 'clinico' ? active?.clinicalQueuedAt || patient.triageData?.completedAt
+      : request?.requestedAt || (sector === 'cardiologista' ? patient.clinicalEvaluation?.completedAt : sector === 'anestesista' ? patient.cardiologyAssessment?.completedAt : patient.anesthesiaAssessment?.completedAt || patient.clinicalEvaluation?.completedAt)
+    if (!queuedAt) return
+    const next = recordCareStart(patient, sector as 'clinico' | 'cardiologista' | 'anestesista' | 'cirurgiao', queuedAt, user.id)
+    if (next === patient.careTimings || !next.length) return
+    updatePatient(patientId, { careTimings: next })
+  }, [patients, user, tickets, updatePatient, hasPermission])
 
   const updatePatientBasic = useCallback(async (id: string, draft: PatientBasicDraft) => {
     const updates = validatePatientBasicEdit(user, id, draft, patients)
@@ -487,9 +517,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return newExamType
   }, [user, hasPermission, addAuditLog])
 
+  const updateExamType = useCallback((id: string, draft: Partial<ExamType>) => {
+    if (!user || !hasPermission('create_exam_type')) throw new Error('Sem permissão para gerenciar tipos de exames.')
+    const previous = examTypes.find(exam => exam.id === id)
+    if (!previous) throw new Error('Tipo de exame não encontrado.')
+    const next = { ...previous, ...draft, id: previous.id, createdAt: previous.createdAt, createdBy: previous.createdBy }
+    if (!next.name.trim() || !next.category.trim()) throw new Error('Informe nome e categoria do exame.')
+    if (next.resultMode === 'multiple_images' && !next.category.toLowerCase().includes('imagem')) throw new Error('Múltiplas imagens exigem a categoria Imagem.')
+    setExamTypes(current => current.map(exam => exam.id === id ? next : exam))
+    addAuditLog({action:'cadastro_exame',description:`Tipo de exame atualizado: ${next.name}`})
+  }, [user, hasPermission, examTypes, addAuditLog])
+
   const requestExams = useCallback((patientId: string, examTypeIds: string[], justificativa: string) => {
     if (!user || !hasPermission('request_exams')) throw new Error('Sem permissão para solicitar exames.')
     if (!patients.some(patient => patient.id === patientId && isPatientAssignedToDoctor(patient, user))) throw new Error('Paciente não encontrado.')
+    if (examTypeIds.some(id => examTypes.find(exam => exam.id === id)?.active === false)) throw new Error('Um dos tipos de exame está inativo.')
     if (!examTypeIds.length || new Set(examTypeIds).size !== examTypeIds.length || examTypeIds.some(id => !examTypes.some(exam => exam.id === id))) throw new Error('Selecione exames válidos.')
     const newRequests: ExamRequest[] = examTypeIds.map(examTypeId => {
       const examType = examTypes.find(e => e.id === examTypeId)
@@ -636,6 +678,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider value={{
+      registerCareStart,
       medicalDocuments: hasPermission('view_clinical_data') ? medicalDocuments.filter(document => visibleIds.has(document.patientId)) : [],
       createMedicalDocument,
       medicationOrders: hasPermission('view_clinical_data') || hasPermission('administer_medication') ? medicationOrders.filter(order => visibleIds.has(order.patientId)) : [],
@@ -660,7 +703,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       getExamRequestsByPatient,
       getExamRequestsByStatus,
       getPendingExams,
-      createExamType,
+      createExamType, updateExamType,
       requestExams,
       updateExamStatus,
       auditLogs: visibleAuditLogs,

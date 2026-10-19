@@ -7,12 +7,11 @@ import {Card,CardHeader,CardTitle,CardContent} from '@/components/ui/card'
 import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
 import {Button} from '@/components/ui/button'
-import {users} from '@/lib/data/users'
 import type {MedicationDraft} from '@/lib/lab-operations'
 const blank:MedicationDraft={medication:'',dose:'',route:'',instructions:''}
 export function localTime(date=new Date()){const parts=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')];return `${parts.join('-')}T${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}:${String(date.getSeconds()).padStart(2,'0')}`}
 export function MedicationOrders({patientId,prescribe=false,showAllInitially=false}:{patientId?:string;prescribe?:boolean;showAllInitially?:boolean}){
- const {hasPermission}=useAuth();const {medicationOrders,patients,prescribeMedicationOrder,recordMedicationAdministration}=useData()
+ const { users,hasPermission}=useAuth();const {medicationOrders,patients,prescribeMedicationOrder,recordMedicationAdministration}=useData()
  const running=useRef(false)
  const [draft,setDraft]=useState(blank);const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [times,setTimes]=useState<Record<string,string>>({});const [showDone,setShowDone]=useState(showAllInitially)
  const orders=medicationOrders.filter(order=>(!patientId||order.patientId===patientId)&&(showDone||order.status==='solicitada')).sort((a,b)=>Date.parse(b.requestedAt)-Date.parse(a.requestedAt))

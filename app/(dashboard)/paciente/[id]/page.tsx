@@ -16,14 +16,13 @@ import { PatientBasicDetails } from '@/components/shared/patient-basic-details'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
 import { MedicationOrders } from '@/components/shared/medication-orders'
-import { users } from '@/lib/data/users'
 import { STATUS_LABELS } from '@/lib/types'
 import { getPatientManchesterPriority, MANCHESTER_PRIORITIES } from '@/lib/manchester'
 
 export default function PatientDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, hasPermission } = useAuth()
+  const { users, user, hasPermission } = useAuth()
   const canViewTriage = hasPermission('view_triage_data')
   const canViewClinical = hasPermission('view_clinical_data')
   const canViewScores = canViewClinical && user?.role !== 'clinico'

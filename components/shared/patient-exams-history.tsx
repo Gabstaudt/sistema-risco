@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/badges'
 import type { ExamRequest, Patient } from '@/lib/types'
 import { AlertTriangle, CheckCircle2, Clock3, ExternalLink, FileText, FlaskConical } from 'lucide-react'
-import { users } from '@/lib/data/users'
+import { useAuth } from '@/lib/auth'
 
 type PatientLookup = Pick<Patient, 'id' | 'nomeCompleto' | 'prontuario' | 'status'>
 
@@ -56,11 +56,6 @@ function formatDate(dateString?: string) {
   })
 }
 
-function getUserName(userId?: string) {
-  if (!userId) return 'Nao informado'
-
-  return users.find((user) => user.id === userId)?.name || userId
-}
 
 function getResultTone(exam: ExamRequest) {
   const text = `${exam.resultado || ''} ${exam.observacoesLab || ''} ${exam.labAnalysis || ''}`.toLowerCase()
@@ -86,6 +81,13 @@ export function PatientExamsHistory({
   actionLabel = 'Abrir paciente',
   maxItems,
 }: PatientExamsHistoryProps) {
+  const { users } = useAuth()
+  function getUserName(userId?: string) {
+  if (!userId) return 'Nao informado'
+
+  return users.find((user) => user.id === userId)?.name || userId
+}
+
   const sortedExams = [...examRequests]
     .sort((a, b) => examActivityTime(b) - examActivityTime(a))
     .slice(0, maxItems ?? examRequests.length)

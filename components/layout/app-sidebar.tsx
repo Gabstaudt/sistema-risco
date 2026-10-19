@@ -216,8 +216,9 @@ const getNavigation = (
         items: [
           { title: 'Tipos de Exames', url: '/admin/exames', icon: TestTube },
           { title: 'Cirurgias por tipo', url: '/admin/cirurgias', icon: Syringe },
+          { title: 'Relatórios', url: '/admin/relatorios', icon: FileText },
           { title: 'Auditoria', url: '/admin/auditoria', icon: History },
-          { title: 'Configuracoes', url: '/admin/configuracoes', icon: Settings },
+          { title: 'Perfis e permissões', url: '/admin/configuracoes', icon: Settings },
         ],
       },
     ],

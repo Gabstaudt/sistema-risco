@@ -1,4 +1,5 @@
 'use client'
+import { hasUserPermission } from '@/lib/permissions'
 
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -11,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, Save, User, Stethoscope } from 'lucide-react'
 import { PatientStatusBadge, ASABadge } from '@/components/shared/badges'
+import { CareStartTracker } from '@/components/shared/care-start-tracker'
 import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { Input } from '@/components/ui/input'
@@ -18,7 +20,6 @@ import { AssessmentRequestFields } from '@/components/shared/assessment-request-
 import { buildAssessmentUpdates, getAssessmentDraft, nextAssessmentStatus } from '@/lib/assessment-requests'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MedicationOrders } from '@/components/shared/medication-orders'
-import { users } from '@/lib/data/users'
 import { editManchesterPriority, getPatientManchesterPriority, MANCHESTER_PRIORITIES } from '@/lib/manchester'
 import type { LabUrgency } from '@/lib/types'
 
@@ -27,7 +28,7 @@ const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as
 export default function ClinicoAvaliarPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
+  const { users, user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog, requestExams, examTypes } = useData()
   
   const patientId = params.id as string
@@ -162,6 +163,7 @@ export default function ClinicoAvaliarPage() {
       </div>
       
       {/* Patient Info Card */}
+      <CareStartTracker patientId={patientId} />
       <PatientPrintActions patientId={patientId} />
       <Card>
         <CardHeader className="pb-3">
@@ -313,7 +315,7 @@ export default function ClinicoAvaliarPage() {
             <CardContent>
               <div className="space-y-4">
                 {Object.entries(
-                  examTypes.reduce((acc, exam) => {
+                  examTypes.filter(exam=>exam.active!==false).reduce((acc, exam) => {
                     if (!acc[exam.category]) acc[exam.category] = []
                     acc[exam.category].push(exam)
                     return acc

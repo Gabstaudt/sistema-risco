@@ -1,4 +1,5 @@
 'use client'
+import { hasUserPermission } from '@/lib/permissions'
 
 import Link from 'next/link'
 import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
@@ -15,12 +16,12 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Save, User, Shield, Activity, Calculator } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/shared/badges'
+import { CareStartTracker } from '@/components/shared/care-start-tracker'
 import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import type { RiskLevel } from '@/lib/types'
 import { ExamRequestForm } from '@/components/shared/exam-request-form'
 import { MedicationOrders } from '@/components/shared/medication-orders'
-import { users } from '@/lib/data/users'
 import { AssessmentRequestFields } from '@/components/shared/assessment-request-fields'
 import { buildAssessmentUpdates, getAssessmentDraft, nextAssessmentStatus, type AssessmentDraft } from '@/lib/assessment-requests'
 
@@ -29,7 +30,7 @@ const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as
 export default function CirurgiaoAvaliarPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
+  const { users, user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog } = useData()
 
   const patientId = params.id as string
@@ -531,6 +532,7 @@ export default function CirurgiaoAvaliarPage() {
       <CardiologyRiskScores value={getCardiologyScores(patient)} />
       {hasPermission('record_surgery') && <Button asChild className="h-12"><Link href={`/cirurgiao/acompanhamento/${patient.id}`}>Registrar cirurgia e pós-operatório</Link></Button>}
 
+      <CareStartTracker patientId={patientId} />
       <PatientPrintActions patientId={patientId} />
       <ExamRequestForm patientId={patientId} />
       <MedicationOrders patientId={patient.id} prescribe />

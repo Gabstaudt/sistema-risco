@@ -1,15 +1,16 @@
 'use client'
+import { useAuth } from '@/lib/auth'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useData } from '@/lib/data-context'
 import { summarizeSurgeries } from '@/lib/surgery-records'
-import { users } from '@/lib/data/users'
 import { Header } from '@/components/layout/header'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 export default function SurgeryAuditPage() {
+ const { users } = useAuth()
  const {patients}=useData();const [from,setFrom]=useState('');const [to,setTo]=useState('');const [type,setType]=useState('')
  const invalidRange=Boolean(from && to && from>to)
  const all=summarizeSurgeries(patients);const summary=summarizeSurgeries(patients,from,to,type)

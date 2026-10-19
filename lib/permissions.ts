@@ -51,8 +51,9 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
   if (section === 'recepcao') return page === 'fila' && hasUserPermission(user, 'manage_reception_queue')
   if (section === 'admin') {
     const adminPermissions: Record<string, string> = {
-      usuarios: 'manage_users', exames: 'create_exam_type', auditoria: 'view_audit', cirurgias: 'view_surgery_audit', configuracoes: 'system_settings',
+      usuarios: 'manage_users', exames: 'create_exam_type', auditoria: 'view_audit', cirurgias: 'view_surgery_audit', configuracoes: 'manage_profiles', relatorios: 'view_reports',
     }
+    if (page === 'configuracoes' && !hasUserPermission(user, 'system_settings')) return false
     return !!adminPermissions[page] && hasUserPermission(user, adminPermissions[page])
   }
   if (section === 'cirurgiao' && page === 'acompanhamento') return hasUserPermission(user, 'record_surgery') && hasUserPermission(user, 'view_clinical_data')
@@ -76,7 +77,7 @@ export function projectPatientForUser(patient: Patient, user: User | null): Pati
   const clinical = hasUserPermission(user, 'view_clinical_data')
   const exams = hasUserPermission(user, 'view_exam_results')
   if (triage) fields.push('sinaisVitais', 'observacoesTriagem', 'triageData', 'triageAssignedClinicianId', 'triageAssignedClinicianName', 'triageRiskClassification')
-  if (clinical) fields.push('surgeryRecords', 'assessmentRequests', 'surgicalRiskRequest', 'scheduledSurgery', 'scheduledDate', 'requestingPhysician', 'riskLevel', 'avaliacaoClinica', 'clinicalEvaluation', 'avaliacaoCirurgica', 'surgicalRiskAssessment', 'cardiologyAssessment', 'anesthesiaAssessment', 'clinicalRequestsSurgicalRisk', 'clinicalAssignedCardiologistId', 'clinicalAssignedCardiologistName', 'cardiologyAssignedAnesthesiologistId', 'cardiologyAssignedAnesthesiologistName', 'clinicalAssignedSurgeonId', 'clinicalAssignedSurgeonName')
+  if (clinical) fields.push('careTimings', 'surgeryRecords', 'assessmentRequests', 'surgicalRiskRequest', 'scheduledSurgery', 'scheduledDate', 'requestingPhysician', 'riskLevel', 'avaliacaoClinica', 'clinicalEvaluation', 'avaliacaoCirurgica', 'surgicalRiskAssessment', 'cardiologyAssessment', 'anesthesiaAssessment', 'clinicalRequestsSurgicalRisk', 'clinicalAssignedCardiologistId', 'clinicalAssignedCardiologistName', 'cardiologyAssignedAnesthesiologistId', 'cardiologyAssignedAnesthesiologistName', 'clinicalAssignedSurgeonId', 'clinicalAssignedSurgeonName')
   if (exams) fields.push('examResults', 'labRiskClassification', 'labRiskNotes', 'labNurseObservation')
   // A visit contains clinical snapshots: history alone does not grant access to them.
   if (hasUserPermission(user, 'view_patient_history') && triage && clinical && exams) fields.push('visitHistory')

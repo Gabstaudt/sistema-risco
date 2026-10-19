@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Header } from '@/components/layout/header'
 import { useData } from '@/lib/data-context'
 import { useAuth } from '@/lib/auth'
-import { users } from '@/lib/data/users'
 import { ROLE_LABELS, type AuditLog } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Download } from 'lucide-react'
 
 const ACTION_LABELS: Record<string, string> = {
+  usuario_gerenciado:'Usuário gerenciado', perfil_gerenciado:'Perfil gerenciado', inicio_atendimento:'Início de atendimento',
   documento_medico_emitido: 'Documento médico emitido',
   cadastro_paciente: 'Cadastro de paciente', paciente_cadastrado: 'Cadastro de paciente', edicao_dados_basicos: 'Edição de cadastro',
   encaminhamento_triagem: 'Encaminhamento à triagem', registro_sinais_vitais: 'Registro de sinais vitais', alteracao_sinais_vitais: 'Alteração de sinais vitais', registro_queixa: 'Registro de queixa',
@@ -34,7 +34,7 @@ const logText = (log: AuditLog) => log.details || log.description || ''
 const csvCell = (value: string) => `"${(/^[\s]*[=+\-@]/.test(value) ? "'" + value : value).replaceAll('"', '""')}"`
 
 export default function AuditoriaPage() {
-  const { hasPermission, isLoading } = useAuth()
+  const { users, hasPermission, isLoading } = useAuth()
   const { auditLogs, patients, isDataReady } = useData()
   const [search, setSearch] = useState('')
   const [action, setAction] = useState('all')

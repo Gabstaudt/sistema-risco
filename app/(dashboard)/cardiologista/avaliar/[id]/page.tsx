@@ -1,4 +1,5 @@
 'use client'
+import { hasUserPermission } from '@/lib/permissions'
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -6,6 +7,7 @@ import { nextAssessmentStatus } from '@/lib/assessment-requests'
 import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
 import { Header } from '@/components/layout/header'
 import { ExamRequestForm } from '@/components/shared/exam-request-form'
+import { CareStartTracker } from '@/components/shared/care-start-tracker'
 import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { PatientExamList as PatientExamsHistory } from '@/components/shared/patient-exam-list'
 import { PatientStatusBadge, RiskLevelBadge } from '@/components/shared/badges'
@@ -17,7 +19,6 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/lib/auth'
-import { users } from '@/lib/data/users'
 import { useData } from '@/lib/data-context'
 import type { RiskLevel, SurgeryUrgency } from '@/lib/types'
 import { Activity, ArrowLeft, Heart, Save, ShieldCheck, User } from 'lucide-react'
@@ -29,7 +30,7 @@ type Recommendation = 'aprovar' | 'adiar' | 'contraindicar'
 export default function CardiologistaAvaliarPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
+  const { users, user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog } = useData()
 
   const patientId = params.id as string
@@ -50,7 +51,7 @@ export default function CardiologistaAvaliarPage() {
   const [notes, setNotes] = useState(cardiologyAssessment?.notes || '')
   const [assignedAnesthesiologistId, setAssignedAnesthesiologistId] = useState(patient?.cardiologyAssignedAnesthesiologistId || '')
   const [isSaving, setIsSaving] = useState(false)
-  const anesthesiologists = users.filter((item) => item.role === 'anestesista' && item.active)
+  const anesthesiologists = users.filter((item) => item.role === 'anestesista' && item.active && hasUserPermission(item, 'classify_asa'))
   const normalizedAnesthesiologistId = assignedAnesthesiologistId === 'unassigned' ? '' : assignedAnesthesiologistId
   const assignedAnesthesiologist = anesthesiologists.find((item) => item.id === normalizedAnesthesiologistId)
 
@@ -187,7 +188,8 @@ export default function CardiologistaAvaliarPage() {
         {riskScores.acp?.interpretation === 'Alto risco' && <Card><CardHeader><CardTitle>Encaminhamento — ACP alto risco</CardTitle></CardHeader><CardContent className="space-y-2"><Label htmlFor="cardio-specialist-referral">Parecer especializado / suporte de maior complexidade *</Label><Textarea id="cardio-specialist-referral" value={specialistReferral} onChange={event => setSpecialistReferral(event.target.value)} rows={3} /></CardContent></Card>}
         {saveError && <p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{saveError}</p>}
 
-        <PatientPrintActions patientId={patientId} />
+        <CareStartTracker patientId={patientId} />
+      <PatientPrintActions patientId={patientId} />
         <ExamRequestForm patientId={patientId} />
 
         <Tabs defaultValue="resumo" className="space-y-4">

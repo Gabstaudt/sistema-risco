@@ -1,1 +1,18 @@
-export { default } from '../../clinico/exames/page'
+'use client'
+import { useState } from 'react'
+import Link from 'next/link'
+import { useAuth } from '@/lib/auth'
+import { useData } from '@/lib/data-context'
+import { Header } from '@/components/layout/header'
+import { ExamTypeCatalog } from '@/components/shared/exam-type-catalog'
+import { Tabs,TabsList,TabsTrigger,TabsContent } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Card,CardHeader,CardTitle,CardContent } from '@/components/ui/card'
+import { exportCsv } from '@/lib/report-export'
+export default function AdminExamsPage(){
+ const {hasPermission}=useAuth();const {examRequests,patients}=useData();const [search,setSearch]=useState('');const [status,setStatus]=useState('all')
+ const filtered=examRequests.filter(exam=>(status==='all'||exam.status===status)&&`${exam.examTypeName} ${patients.find(patient=>patient.id===exam.patientId)?.nomeCompleto||''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())).sort((a,b)=>Date.parse(b.solicitadoEm)-Date.parse(a.solicitadoEm))
+ const labels:Record<string,string>={solicitado:'Solicitado',coletado:'Coletado',em_analise:'Em análise',concluido:'Concluído',cancelado:'Cancelado'}
+ return <><Header breadcrumbs={[{label:'Exames'}]} /><main className="min-w-0 w-full flex-1 space-y-5 p-4 sm:p-6"><h1 className="text-2xl font-bold">Exames</h1><Tabs defaultValue="requests" className="space-y-5"><TabsList className="grid h-12 w-full grid-cols-2"><TabsTrigger value="requests">Exames solicitados</TabsTrigger><TabsTrigger value="types">Tipos de exames</TabsTrigger></TabsList><TabsContent value="requests" className="space-y-4"><div className="flex flex-wrap gap-3"><Input className="h-12 min-w-0 flex-1" aria-label="Buscar exame ou paciente" placeholder="Buscar exame ou paciente" value={search} onChange={event=>setSearch(event.target.value)}/><select aria-label="Situação do exame" className="h-12 rounded-md border bg-background px-3" value={status} onChange={event=>setStatus(event.target.value)}><option value="all">Todas as situações</option>{Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>{hasPermission('view_reports')&&<Button variant="outline" className="h-12" onClick={()=>exportCsv('exames-administracao',[{title:'Exames',headers:['Paciente','Exame','Situação','Solicitação','Realização','Resultado'],rows:filtered.map(exam=>[patients.find(patient=>patient.id===exam.patientId)?.nomeCompleto||exam.patientId,exam.examTypeName,labels[exam.status],exam.solicitadoEm,exam.performedAt||exam.analisadoEm||'',exam.concluidoEm||''])}])}>Exportar exames</Button>}</div><Card><CardHeader><CardTitle>Exames · {filtered.length}</CardTitle></CardHeader><CardContent><ul className="divide-y">{filtered.map(exam=><li key={exam.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-semibold">{exam.examTypeName}</p><p className="text-sm">{patients.find(patient=>patient.id===exam.patientId)?.nomeCompleto||'Paciente indisponível'}</p><p className="text-sm text-muted-foreground">{labels[exam.status]} · {new Date(exam.solicitadoEm).toLocaleString('pt-BR')}</p></div><Button asChild variant="outline" className="h-11"><Link href={`/paciente/${exam.patientId}/exames?exame=${exam.id}`}>Abrir exame</Link></Button></li>)}{!filtered.length&&<li className="py-8 text-muted-foreground">Nenhum exame encontrado.</li>}</ul></CardContent></Card></TabsContent><TabsContent value="types"><ExamTypeCatalog embedded/></TabsContent></Tabs></main></>
+}

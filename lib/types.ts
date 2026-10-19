@@ -1,8 +1,10 @@
+import type { CareTiming } from './admin-analytics'
 // Tipos base do sistema de Avaliacao de Risco Cirurgico
 
 export type UserRole = 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'admin'
 
 export interface User {
+  profileId?: string
   id: string
   email: string
   password: string
@@ -136,6 +138,7 @@ export type ExamResultMode = 'single_file' | 'multiple_images' | 'individual'
 export interface ExamAttachmentFile { id: string; name: string; type: string; size: number; uploadedAt: string; uploadedBy: string }
 
 export interface ExamType {
+  active?: boolean
   resultMode?: ExamResultMode
   id: string
   name: string
@@ -342,6 +345,7 @@ export interface MedicationOrder {
 }
 
 export interface Patient {
+  careTimings?: CareTiming[]
   ticketId?: string
   ticketNumber?: string
   surgeryRecords?: SurgeryRecord[]
@@ -450,6 +454,9 @@ export interface MedicalDocument {
 }
 
 export type AuditAction =
+  | 'usuario_gerenciado'
+  | 'perfil_gerenciado'
+  | 'inicio_atendimento'
   | 'documento_medico_emitido'
   | 'senha_ausente'
   | 'senha_retornada'
@@ -644,6 +651,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'return_to_lab',
   ],
   admin: [
+    'manage_profiles',
     'print_patient_history',
     'print_patient_record',
     'print_medication_sheet',

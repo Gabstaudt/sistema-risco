@@ -1,4 +1,5 @@
 'use client'
+import { hasUserPermission } from '@/lib/permissions'
 
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -16,7 +17,6 @@ import { ArrowLeft, Save, User, Heart, Activity, AlertTriangle } from 'lucide-re
 import { PatientStatusBadge } from '@/components/shared/badges'
 import { MANCHESTER_PRIORITIES, createManchesterRecord } from '@/lib/manchester'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { users } from '@/lib/data/users'
 import type { LabUrgency } from '@/lib/types'
 
 const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
@@ -24,12 +24,12 @@ const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as
 export default function TriagemAvaliarPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
+  const { users, user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { getPatientById, updatePatient, addAuditLog, tickets } = useData()
   
   const patientId = params.id as string
   const patient = getPatientById(patientId)
-  const clinicians = users.filter((item) => item.role === 'clinico' && item.active)
+  const clinicians = users.filter((item) => item.role === 'clinico' && item.active && hasUserPermission(item, 'clinical_evaluation'))
   
   const [vitalSigns, setVitalSigns] = useState({
     bloodPressure: patient?.triageData?.vitalSigns?.bloodPressure || '',

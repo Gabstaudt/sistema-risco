@@ -6,21 +6,20 @@ import { useData } from '@/lib/data-context'
 import { BrandLogo } from '@/components/shared/brand-logo'
 import { ExamAttachment } from '@/components/shared/exam-operations'
 import { Button } from '@/components/ui/button'
-import { users } from '@/lib/data/users'
 import { MANCHESTER_PRIORITIES, getPatientManchesterPriority } from '@/lib/manchester'
 import { ROLE_LABELS, STATUS_LABELS, type PatientStatus } from '@/lib/types'
 const titles: Record<string,string> = { prontuario:'Prontuário do paciente', historico:'Histórico de atendimentos', medicacoes:'Ficha de medicação', solicitacao_medicacao:'Solicitação de medicação', exames:'Exames do paciente', receita:'Receita médica', atestado:'Atestado médico' }
 const permissions: Record<string,string> = { prontuario:'print_patient_record', historico:'print_patient_history', medicacoes:'print_medication_sheet', solicitacao_medicacao:'print_medication_sheet', exames:'print_exams', receita:'issue_prescription', atestado:'issue_certificate' }
 const at = (value?:string) => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('pt-BR') : 'Não informado'
 const day = (value?:string) => value ? new Date(value + 'T12:00:00').toLocaleDateString('pt-BR') : 'Não informado'
-const professional = (id?:string) => users.find(user => user.id === id)?.name || id || 'Não informado'
 function Section({ title, children }: { title:string; children:React.ReactNode }) { return <section className="space-y-3 border-t pt-5 print:break-inside-avoid"><h2 className="text-lg font-bold">{title}</h2>{children}</section> }
 function PrintPage() {
  const { id } = useParams<{ id:string }>()
  const query = useSearchParams()
  const kind = query.get('tipo') || 'prontuario'
- const { hasPermission } = useAuth()
+ const { users, hasPermission } = useAuth()
  const { getPatientById, getExamRequestsByPatient, medicationOrders, medicalDocuments, isDataReady } = useData()
+ const professional = (id?:string) => users.find(user => user.id === id)?.name || id || 'Não informado'
  const patient = getPatientById(id)
  const document = medicalDocuments.find(item => item.patientId === id && item.id === query.get('documento') && item.kind === kind)
  const exams = getExamRequestsByPatient(id).filter(exam => !query.get('exame') || exam.id === query.get('exame')).sort((a,b) => Date.parse(b.solicitadoEm)-Date.parse(a.solicitadoEm))

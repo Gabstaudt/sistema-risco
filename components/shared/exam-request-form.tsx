@@ -49,7 +49,7 @@ export function ExamRequestForm({ patientId }: { patientId: string }) {
       <CardContent className="space-y-4">
         <Input aria-label="Buscar tipo de exame" placeholder="Buscar exame" className="h-12" value={search} onChange={event => setSearch(event.target.value)} />
         <div className="grid max-h-72 gap-3 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
-          {examTypes.filter(exam => exam.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())).map(exam => (
+          {examTypes.filter(exam => exam.active !== false && exam.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())).map(exam => (
             <div key={exam.id} className="flex items-center gap-3 rounded-lg border p-3">
               <Checkbox id={`request-exam-${exam.id}`} checked={selected.includes(exam.id)} onCheckedChange={checked => {
                 setSelected(current => checked ? [...current, exam.id] : current.filter(id => id !== exam.id))
