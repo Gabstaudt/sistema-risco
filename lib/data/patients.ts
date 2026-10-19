@@ -48,6 +48,8 @@ function summarizeVitalSigns(patient: Patient) {
 function buildCurrentEncounter(patient: Patient): PatientEncounter {
   return {
     id: `${patient.id}-visit-current`,
+    attendanceRoute: patient.attendanceRoute,
+    attendanceClosure: patient.attendanceClosure,
     entryAt: patient.dataEntrada,
     dischargeAt: patient.dischargeAt,
     unit: patient.unidade,
@@ -81,7 +83,7 @@ function buildCurrentEncounter(patient: Patient): PatientEncounter {
       : undefined,
     medicationsAdministered: [],
     examsSummary: patient.examesSolicitados,
-    outcome: patient.status,
+    outcome: patient.attendanceClosure ? `${patient.attendanceClosure.kind==='cancelamento'?'Cancelamento':'Baixa administrativa'}: ${patient.attendanceClosure.reason}` : patient.status,
   }
 }
 
@@ -1248,7 +1250,7 @@ basePatients[0].visitHistory = [
 
 basePatients.push({
   ...basePatients[0],
-  id: 'patient-14', prontuario: 'PRONT-2024-014', nomeCompleto: 'Mariana Costa Almeida',
+  id: 'patient-14', cartaoSus:'898001456789012', prontuario: 'PRONT-2024-014', nomeCompleto: 'Mariana Costa Almeida',
   cpf: '147.258.369-00', dataNascimento: '1990-04-12', idade: calcularIdade('1990-04-12'), sexo: 'F',
   responsavel: undefined, allergies: [], telefone: '(11) 99999-1414',
   dataEntrada: new Date(mockNow - 5 * 3600000).toISOString(),
@@ -1632,7 +1634,7 @@ export function hydratePatient(patient: Patient): Patient {
     ...previousCurrent,
     ...buildCurrentEncounter(patient),
     medicationsAdministered: previousCurrent?.medicationsAdministered || [],
-    outcome: patient.dischargeAt ? previousCurrent?.outcome || 'Alta após atendimento médico' : patient.status,
+    outcome: patient.attendanceClosure ? `${patient.attendanceClosure.kind==='cancelamento'?'Cancelamento':'Baixa administrativa'}: ${patient.attendanceClosure.reason}` : patient.dischargeAt ? previousCurrent?.outcome || 'Alta após atendimento médico' : patient.status,
   }
   const visitHistory = [...(patient.visitHistory || []).filter((visit) => visit.id !== currentId), currentEncounter].sort(
     (a, b) => new Date(b.entryAt).getTime() - new Date(a.entryAt).getTime(),

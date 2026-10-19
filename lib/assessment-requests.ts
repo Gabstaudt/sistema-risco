@@ -10,6 +10,7 @@ export interface AssessmentDraft {
   assignees: Partial<Record<AssessmentSpecialty, string>>
 }
 export function hasPendingAssessment(patient: Patient, specialty: AssessmentSpecialty): boolean {
+  if(patient.attendanceClosure)return false
   const request = patient.assessmentRequests?.find((item) => item.specialty === specialty)
   if (!request || request.status !== 'pending' || !request.requestedAt) return false
   const completedAt = specialty === 'cardiologista' ? patient.cardiologyAssessment?.completedAt

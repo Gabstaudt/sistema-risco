@@ -1,3 +1,4 @@
+import { REGISTRATION_TEXT_FIELDS, REGISTRATION_BOOLEAN_FIELDS } from './patient-registration'
 import { isDoctor, isPatientAssignedToDoctor } from './medical-profile'
 import { ROLE_PERMISSIONS, type Patient, type User, type UserRole } from './types'
 
@@ -48,6 +49,7 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
   if (page === 'cadastro') return hasUserPermission(user, 'create_patient')
   if (page === 'pacientes') return hasUserPermission(user, 'view_patients_list') && hasUserPermission(user, 'view_patient_basic')
   if (section === 'recepcao' && page === 'entrada') return hasUserPermission(user, 'manage_reception_queue') && hasUserPermission(user, 'view_patient_basic')
+  if (section === 'recepcao' && ['novo','atendimentos','atendimento','ficha-em-branco'].includes(page)) return hasUserPermission(user, page==='ficha-em-branco'?'print_blank_attendance':'manage_attendance')
   if (section === 'recepcao') return page === 'fila' && hasUserPermission(user, 'manage_reception_queue')
   if (section === 'admin') {
     const adminPermissions: Record<string, string> = {
@@ -72,7 +74,7 @@ export function projectPatientForUser(patient: Patient, user: User | null): Pati
     'healthInsurance', 'bloodType', 'allergies', 'queixaPrincipal', 'descricaoInicial',
     'cadastradoPor', 'cadastradoEm', 'ultimaAtualizacao', 'ultimoAtualizadoPor', 'updatedAt',
   ] as const
-  const fields: (keyof Patient)[] = [...basicFields]
+  const fields: (keyof Patient)[] = [...basicFields,...REGISTRATION_TEXT_FIELDS,...REGISTRATION_BOOLEAN_FIELDS,'attendanceRoute','attendanceClosure','receptionClassification','triageAssignedClinicianId','triageAssignedClinicianName']
   const triage = hasUserPermission(user, 'view_triage_data')
   const clinical = hasUserPermission(user, 'view_clinical_data')
   const exams = hasUserPermission(user, 'view_exam_results')

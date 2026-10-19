@@ -4,7 +4,7 @@ import type { User } from './types'
 import { normalizeUserProfile, type BackendProfile } from './medical-profile'
 import { hasUserPermission } from './permissions'
 import { users as initialUsers } from './data/users'
-import { ACCESS_KEY, seedRegistry, resolveRegistryUser, saveManagedUser, saveAccessProfile, type AccessRegistry, type AccessProfile, type UserDraft } from './admin-access'
+import { ACCESS_KEY, upgradeAccessRegistry, seedRegistry, resolveRegistryUser, saveManagedUser, saveAccessProfile, type AccessRegistry, type AccessProfile, type UserDraft } from './admin-access'
 interface AuthContextType {
  user:User|null; users:User[]; profiles:AccessProfile[]; isLoading:boolean
  login:(email:string,password:string)=>Promise<{success:boolean;error?:string;redirectPath?:string}>
@@ -28,8 +28,8 @@ export function AuthProvider({children}:{children:ReactNode}) {
  const [registry,setRegistry]=useState<AccessRegistry>(()=>seedRegistry(initialUsers))
  const [isLoading,setIsLoading]=useState(true)
  useEffect(()=>{
-  const stored=localStorage.getItem(ACCESS_KEY);const loaded:AccessRegistry=stored?JSON.parse(stored):seedRegistry(initialUsers)
-  if(!stored)localStorage.setItem(ACCESS_KEY,JSON.stringify(loaded));setRegistry(loaded)
+  const stored=localStorage.getItem(ACCESS_KEY);const loaded:AccessRegistry=upgradeAccessRegistry(stored?JSON.parse(stored):seedRegistry(initialUsers))
+  localStorage.setItem(ACCESS_KEY,JSON.stringify(loaded));setRegistry(loaded)
   try{const current=localStorage.getItem(STORAGE_KEY);if(current)setSessionState(normalizeUserProfile(JSON.parse(current)))}catch{localStorage.removeItem(STORAGE_KEY)}
   setIsLoading(false)
   const sync=(event:StorageEvent)=>{if(event.key===ACCESS_KEY&&event.newValue)setRegistry(JSON.parse(event.newValue));if(event.key===STORAGE_KEY)setSessionState(event.newValue?normalizeUserProfile(JSON.parse(event.newValue)):null)}

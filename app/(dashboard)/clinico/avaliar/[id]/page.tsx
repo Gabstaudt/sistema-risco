@@ -266,7 +266,7 @@ export default function ClinicoAvaliarPage() {
                 </button>
               ))}
             </div>
-          ) : <p className="text-sm text-muted-foreground">Classificação ainda não registrada pela triagem.</p>}
+          ) : <p className="text-sm text-muted-foreground">{patient.attendanceRoute==='sem_triagem'?'Branca · atendimento sem triagem':'Classificação ainda não registrada pela triagem.'}</p>}
         </CardContent>
       </Card>
 

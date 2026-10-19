@@ -24,7 +24,7 @@ const ACTION_LABELS: Record<string, string> = {
   calculo_score: 'Cálculo de score', classificacao_risco: 'Classificação de risco', liberacao_cirurgia: 'Liberação para cirurgia', contraindicacao_cirurgia: 'Contraindicação de cirurgia',
   avaliacao_cardiologica_concluida: 'Avaliação cardiológica concluída', avaliacao_cardiologica_atualizada: 'Avaliação cardiológica atualizada', avaliacao_anestesica_concluida: 'Avaliação anestésica concluída', avaliacao_anestesica_atualizada: 'Avaliação anestésica atualizada', avaliacao_cirurgica_concluida: 'Avaliação cirúrgica concluída', avaliacao_cirurgica_atualizada: 'Avaliação cirúrgica atualizada',
   geracao_relatorio: 'Geração de relatório', triagem_concluida: 'Triagem concluída', triagem_atualizada: 'Triagem atualizada', login: 'Entrada no sistema', logout: 'Saída do sistema',
-  senha_ausente: 'Ausência na chamada', senha_retornada: 'Retorno à fila', senha_chamada: 'Chamada de senha', senha_encaminhada: 'Encaminhamento de senha',
+  atendimento_atualizado:'Atualização de atendimento',atendimento_encerrado:'Encerramento administrativo',senha_ausente: 'Ausência na chamada', senha_retornada: 'Retorno à fila', senha_chamada: 'Chamada de senha', senha_encaminhada: 'Encaminhamento de senha',
   medicacao_solicitada: 'Medicação solicitada', medicacao_administrada: 'Medicação administrada', cirurgia_registrada: 'Cirurgia registrada', cirurgia_atualizada: 'Cirurgia atualizada', solicitacao_avaliacao_especializada: 'Avaliação especializada solicitada',
 }
 const PAGE_SIZE = 20

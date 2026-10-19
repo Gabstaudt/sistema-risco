@@ -27,7 +27,7 @@ export function recordCareStart(patient:Patient,sector:Sector,queuedAt:string,pr
 }
 export function summarizeAdministration(input:{patients:Patient[];exams:ExamRequest[];medications:MedicationOrder[];audit:AuditLog[];users:User[]},range:DateRange){
  const {patients,exams,medications,audit,users}=input
- const visits=new Map<string,{id:string;patientId:string;patientName:string;entryAt:string;priority?:LabUrgency;outcome:string}>()
+ const visits=new Map<string,{id:string;patientId:string;patientName:string;entryAt:string;priority?:LabUrgency|'branca';outcome:string}>()
  const medical=new Map<string,{id:string;patientId:string;encounterId:string;name:string;professionalId:string;specialty:string;at:string}>()
  const waiting=new Map<string,{id:string;patientId:string;sector:Sector;queuedAt:string;startedAt:string;minutes:number}>()
  const administered=new Map<string,{id:string;patientId:string;name:string;dose:string;route:string;at:string}>()
@@ -39,10 +39,10 @@ export function summarizeAdministration(input:{patients:Patient[];exams:ExamRequ
  }
  function addWait(id:string,patientId:string,sector:Sector,queuedAt:string,startedAt:string){const minutes=(Date.parse(startedAt)-Date.parse(queuedAt))/60000;if(Number.isFinite(minutes)&&minutes>=0&&inRange(startedAt,range))waiting.set(id,{id,patientId,sector,queuedAt,startedAt,minutes})}
  for(const patient of patients){
-  const entries=[...(patient.visitHistory||[]),{id:`${patient.id}-visit-current`,entryAt:patient.dataEntrada,reason:patient.queixaPrincipal||'',unit:patient.unidade,outcome:patient.status,triage:{riskClassification:patient.triageData?.manchester?.priority||patient.triageRiskClassification},clinicalSnapshot:{clinicalEvaluation:patient.clinicalEvaluation,avaliacaoClinica:patient.avaliacaoClinica,cardiologyAssessment:patient.cardiologyAssessment,anesthesiaAssessment:patient.anesthesiaAssessment,surgicalRiskAssessment:patient.surgicalRiskAssessment,avaliacaoCirurgica:patient.avaliacaoCirurgica,triageData:patient.triageData}}]
+  const entries=[...(patient.visitHistory||[]),{id:`${patient.id}-visit-current`,entryAt:patient.dataEntrada,reason:patient.queixaPrincipal||'',unit:patient.unidade,outcome:patient.attendanceClosure?.reason||patient.status,attendanceRoute:patient.attendanceRoute,triage:{riskClassification:patient.triageData?.manchester?.priority||patient.triageRiskClassification},clinicalSnapshot:{clinicalEvaluation:patient.clinicalEvaluation,avaliacaoClinica:patient.avaliacaoClinica,cardiologyAssessment:patient.cardiologyAssessment,anesthesiaAssessment:patient.anesthesiaAssessment,surgicalRiskAssessment:patient.surgicalRiskAssessment,avaliacaoCirurgica:patient.avaliacaoCirurgica,triageData:patient.triageData}}]
   for(const visit of entries){
    const id=`${patient.id}|${visit.entryAt}`;const previous=visits.get(id)
-   visits.set(id,{id,patientId:patient.id,patientName:patient.nomeCompleto,entryAt:visit.entryAt,priority:visit.clinicalSnapshot?.triageData?.manchester?.priority||visit.triage?.riskClassification||previous?.priority,outcome:visit.outcome||previous?.outcome||''})
+   visits.set(id,{id,patientId:patient.id,patientName:patient.nomeCompleto,entryAt:visit.entryAt,priority:visit.attendanceRoute==='sem_triagem'?'branca':visit.clinicalSnapshot?.triageData?.manchester?.priority||visit.triage?.riskClassification||previous?.priority,outcome:visit.outcome||previous?.outcome||''})
    const snapshot=visit.clinicalSnapshot
    const clinical=snapshot?.clinicalEvaluation||snapshot?.avaliacaoClinica
    addMedical(patient,visit.entryAt,'clinico',clinical?.completedAt||clinical?.avaliadoEm,clinical?.completedBy||clinical?.avaliadoPor)
@@ -62,7 +62,7 @@ export function summarizeAdministration(input:{patients:Patient[];exams:ExamRequ
  const medicationRows=[...administered.values()].filter(row=>inRange(row.at,range))
  const performed=exams.filter(exam=>exam.status!=='cancelado'&&inRange(exam.performedAt||exam.analisadoEm,range))
  const examRows=exams.filter(exam=>[exam.solicitadoEm,exam.coletadoEm,exam.performedAt,exam.analisadoEm,exam.concluidoEm].some(at=>inRange(at,range)))
- const classifications=[...Object.entries(MANCHESTER_PRIORITIES).map(([priority,meta])=>({priority,label:meta.label,className:meta.className,count:visitRows.filter(visit=>visit.priority===priority).length})),{priority:'unknown',label:'Não classificado',className:'border-slate-200 bg-slate-50 text-slate-700',count:visitRows.filter(visit=>!visit.priority).length}]
+ const classifications=[...Object.entries(MANCHESTER_PRIORITIES).map(([priority,meta])=>({priority,label:meta.label,className:meta.className,count:visitRows.filter(visit=>visit.priority===priority).length})),{priority:'branca',label:'Branca · sem triagem',className:'border-slate-300 bg-white text-slate-900',count:visitRows.filter(visit=>visit.priority==='branca').length},{priority:'unknown',label:'Não classificado',className:'border-slate-200 bg-slate-50 text-slate-700',count:visitRows.filter(visit=>!visit.priority).length}]
  const waits=(Object.keys(SECTOR_LABELS) as Sector[]).map(sector=>{const samples=[...waiting.values()].filter(row=>row.sector===sector);return {sector,label:SECTOR_LABELS[sector],samples:samples.length,minutes:samples.length?samples.reduce((sum,row)=>sum+row.minutes,0)/samples.length:null}})
  const doctorCounts=new Map<string,{id:string;name:string;count:number}>();for(const row of medicalRows){const item=doctorCounts.get(row.professionalId)||{id:row.professionalId,name:row.name,count:0};item.count++;doctorCounts.set(row.professionalId,item)}
  const doctors=[...doctorCounts.values()].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'pt-BR'));const examRanking=ranking(performed.map(exam=>({name:exam.examTypeName})));const medicationRanking=ranking(medicationRows)
@@ -75,7 +75,7 @@ export function administrationReports(summary:ReturnType<typeof summarizeAdminis
   medicos:{title:`Atendimentos médicos concluídos · ${period}`,headers:['Médico','Avaliações concluídas'],rows:summary.doctors.map(row=>[row.name,row.count])},
   exames:{title:`Exames realizados · ${period}`,headers:['Exame','Quantidade realizada'],rows:summary.examRanking.map(row=>[row.name,row.count])},
   medicacoes:{title:`Medicações utilizadas · ${period}`,headers:['Medicação','Administrações'],rows:summary.medicationRanking.map(row=>[row.name,row.count])},
-  pacientes:{title:`Entradas de pacientes · ${period}`,headers:['Paciente','Entrada','Classificação','Desfecho'],rows:summary.visits.map(row=>[row.patientName,row.entryAt,row.priority?MANCHESTER_PRIORITIES[row.priority].label:'Não classificado',row.outcome])},
+  pacientes:{title:`Entradas de pacientes · ${period}`,headers:['Paciente','Entrada','Classificação','Desfecho'],rows:summary.visits.map(row=>[row.patientName,row.entryAt,row.priority==='branca'?'Branca · sem triagem':row.priority?MANCHESTER_PRIORITIES[row.priority].label:'Não classificado',row.outcome])},
   esperas:{title:`Tempo médio de espera por setor · ${period}`,headers:['Setor','Média em minutos','Amostras'],rows:summary.waits.map(row=>[row.label,row.minutes===null?'Sem registros':Math.round(row.minutes*100)/100,row.samples])},
   atendimentos:{title:`Detalhamento dos atendimentos concluídos · ${period}`,headers:['Paciente (ID)','Médico','Especialidade','Conclusão'],rows:summary.medical.map(row=>[row.patientId,row.name,row.specialty,row.at])},
   resultados:{title:`Movimentação dos exames · ${period}`,headers:['Paciente (ID)','Exame','Situação','Solicitação','Coleta','Realização','Resultado'],rows:summary.exams.map(exam=>[exam.patientId,exam.examTypeName,exam.status,exam.solicitadoEm,exam.coletadoEm||'',exam.performedAt||exam.analisadoEm||'',exam.concluidoEm||''])},

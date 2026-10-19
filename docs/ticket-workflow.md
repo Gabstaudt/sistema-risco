@@ -15,3 +15,13 @@ Ao selecionar um paciente já cadastrado, a recepção abre `/recepcao/entrada/[
 Nesta versão, o estado usa `localStorage`, eventos `storage` e Web Locks para sincronização e concorrência entre abas do mesmo navegador. Os mocks inicializam exemplos de senhas e vinculam pacientes já aguardando triagem. A numeração é diária por categoria, mantendo números ativos distintos quando há senhas pendentes de dias anteriores.
 
 O backend deverá substituir a persistência local por uma fila compartilhada, com emissão e transições atômicas, índices únicos, autenticação, permissões `manage_reception_queue` / `call_triage_ticket` / `clinical_evaluation` e atualização de chamadas entre equipamentos. O painel público deve receber apenas número, categoria, setor, sala e horário de chamada.
+
+## Entrada pela recepção
+
+A recepção inicia pela pesquisa de nome, nome social, CPF, CNS ou prontuário. Um cadastro existente recebe apenas a queixa e as observações da nova entrada; um cadastro novo usa o formulário completo, com foto opcional por câmera ou arquivo. Nome, nascimento, sexo e filiação são obrigatórios, permitindo marcar mãe/pai desconhecidos. CPF e contatos são opcionais.
+
+O encaminhamento exige confirmação e mantém a mesma senha: com triagem segue para a enfermagem; sem triagem segue para o clínico selecionado com identificação branca, sem inventar classificação Manchester. As filas clínicas continuam restritas ao profissional responsável. As listas da recepção separam os dois caminhos.
+
+A recepção pode atualizar queixa e observações. A mudança de destino só é permitida antes da chamada/início do próximo setor. Baixa/cancelamento exigem justificativa, encerram a senha e cancelam solicitações pendentes da entrada atual, preservando resultados concluídos e medicações administradas. Uma nova entrada arquiva o atendimento anterior. A ficha em branco está disponível para impressão A4.
+
+Os dados e fotos permanecem no protótipo local (localStorage e IndexedDB); a integração com o backend deve aplicar as mesmas permissões e transações.

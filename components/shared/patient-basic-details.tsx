@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import {registrationGroups} from './patient-registration-fields'
+import {PatientPhoto} from './patient-photo'
 import { useState } from 'react'
 import { PatientBasicEditForm } from '@/components/shared/patient-basic-edit-form'
 import { ArrowLeft, Pencil } from 'lucide-react'
@@ -16,13 +18,11 @@ export function PatientBasicDetails({ patient }: { patient: Patient }) {
   const [saved, setSaved] = useState(false)
   const canEdit = hasPermission('edit_patient_basic')
   const fields = [
-    ['Prontuário', patient.prontuario], ['CPF', patient.cpf],
-    ['Data de nascimento', new Date(`${patient.dataNascimento.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR')],
-    ['Idade', `${patient.idade} anos`], ['Sexo', { M: 'Masculino', F: 'Feminino', O: 'Outro' }[patient.sexo]],
-    ['Cartão SUS', patient.cartaoSus], ['Telefone', patient.telefone], ['Endereço', patient.endereco],
-    ['Responsável / acompanhante', patient.responsavel], ['Contato de emergência', patient.contatoEmergencia],
-    ['Unidade / hospital', patient.unidade],
+    ['Prontuário',patient.prontuario],
+    ...registrationGroups.flatMap(group=>group.fields.map(field=>[field.label,field.key==='nomeMae'&&patient.maeDesconhecida?'Desconhecida':field.key==='nomePai'&&patient.paiDesconhecido?'Desconhecido':String(patient[field.key]||'')])),
+    ['Situação de rua',patient.situacaoRua?'Sim':'Não'],['Possui plano privado',patient.possuiPlanoPrivado?'Sim':'Não'],
   ]
+
   return (
     <>
       <Header breadcrumbs={[{ label: 'Pacientes', href: `/${user?.role}/pacientes` }, { label: 'Cadastro' }]} />
@@ -31,7 +31,7 @@ export function PatientBasicDetails({ patient }: { patient: Patient }) {
           <Button variant="outline" className="size-11 shrink-0" asChild>
             <Link href={`/${user?.role}/pacientes`} aria-label="Voltar para a lista de pacientes"><ArrowLeft className="size-5" /></Link>
           </Button>
-          <div className="min-w-0">
+          <PatientPhoto photoId={patient.photoId}/><div className="min-w-0">
             <h1 className="break-words text-2xl font-bold">{patient.nomeCompleto}</h1>
             <p className="text-muted-foreground">Dados de cadastro do paciente</p>
           </div>
@@ -62,6 +62,7 @@ export function PatientBasicDetails({ patient }: { patient: Patient }) {
         {!editing && <Card>
           <CardHeader><CardTitle>Entrada atual</CardTitle></CardHeader>
           <CardContent>
+            <p className="mb-4 font-medium">{patient.attendanceRoute==='sem_triagem'?'Sem triagem · classificação branca':'Com triagem'}</p>{patient.attendanceClosure&&<p className="mb-4">Atendimento encerrado: {patient.attendanceClosure.reason}</p>}{hasPermission('manage_attendance')&&<Button asChild variant="outline" className="mb-4 h-11"><Link href={`/recepcao/atendimento/${patient.id}`}>Atualizar atendimento</Link></Button>}
             <dl className="grid gap-5 sm:grid-cols-2">
               <div><dt className="text-sm text-muted-foreground">Data de entrada</dt><dd className="font-medium">{new Date(patient.dataEntrada).toLocaleString('pt-BR')}</dd></div>
               <div><dt className="text-sm text-muted-foreground">Queixa inicial registrada</dt><dd className="break-words font-medium">{patient.queixaPrincipal || 'Não informada'}</dd></div>

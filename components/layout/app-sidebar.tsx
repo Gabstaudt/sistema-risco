@@ -82,6 +82,9 @@ const getNavigation = (
         items: [
           { title: 'Início', url: '/recepcao', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/recepcao/pacientes', icon: Users },
+          {title:'Atendimentos',url:'/recepcao/atendimentos',icon:ClipboardList},
+          {title:'Novo atendimento',url:'/recepcao/novo',icon:UserPlus},
+          {title:'Ficha em branco',url:'/recepcao/ficha-em-branco',icon:FileText},
         ],
       },
       {

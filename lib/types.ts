@@ -277,6 +277,8 @@ export interface AdministeredMedication {
 }
 
 export interface PatientEncounter {
+  attendanceRoute?: AttendanceRoute
+  attendanceClosure?: AttendanceClosure
   clinicalSnapshot?: Pick<Patient, 'clinicalEvaluation' | 'cardiologyAssessment' | 'anesthesiaAssessment' | 'surgicalRiskAssessment' | 'triageData' | 'examResults' | 'avaliacaoClinica' | 'avaliacaoCirurgica'>
   id: string
   entryAt: string
@@ -337,14 +339,53 @@ export interface MedicationOrder {
   dose: string
   route: string
   instructions: string
-  status: 'solicitada' | 'administrada'
+  status: 'solicitada' | 'administrada' | 'cancelada'
+  cancelledReason?: string
   requestedAt: string
   requestedBy: string
   administeredAt?: string
   administeredBy?: string
 }
 
+export type AttendanceRoute = 'com_triagem' | 'sem_triagem'
+export interface AttendanceClosure {kind:'baixa'|'cancelamento';reason:string;at:string;by:string}
 export interface Patient {
+  attendanceRoute?: AttendanceRoute
+  attendanceClosure?: AttendanceClosure
+  receptionClassification?: 'branca'
+  nomeSocial?: string
+  genero?: string
+  racaCor?: string
+  cep?: string
+  logradouro?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  ufResidencia?: string
+  municipioResidencia?: string
+  ufNascimento?: string
+  municipioNascimento?: string
+  situacaoRua?: boolean
+  telefone2?: string
+  whatsapp?: string
+  email?: string
+  escolaridade?: string
+  nomeMae?: string
+  maeDesconhecida?: boolean
+  nomePai?: string
+  paiDesconhecido?: boolean
+  telefoneResponsavel?: string
+  informacoesComplementares?: string
+  nacionalidade?: 'brasileira'|'naturalizado'|'estrangeiro'|string
+  paisNascimento?: string
+  dataNaturalizacao?: string
+  portariaNaturalizacao?: string
+  dataEntradaBrasil?: string
+  pisPasep?: string
+  possuiPlanoPrivado?: boolean
+  nomePlanoPrivado?: string
+  ocupacao?: string
+  photoId?: string
   careTimings?: CareTiming[]
   ticketId?: string
   ticketNumber?: string
@@ -454,6 +495,8 @@ export interface MedicalDocument {
 }
 
 export type AuditAction =
+  | 'atendimento_atualizado'
+  | 'atendimento_encerrado'
   | 'usuario_gerenciado'
   | 'perfil_gerenciado'
   | 'inicio_atendimento'
@@ -522,6 +565,8 @@ export interface AuditLog {
 // Permissoes por perfil
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   recepcao: [
+    'manage_attendance',
+    'print_blank_attendance',
     'manage_reception_queue',
     'view_dashboard_recepcao',
     'view_patients_list',
@@ -651,6 +696,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'return_to_lab',
   ],
   admin: [
+    'manage_attendance',
+    'print_blank_attendance',
     'manage_profiles',
     'print_patient_history',
     'print_patient_record',

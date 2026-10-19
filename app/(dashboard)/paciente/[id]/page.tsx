@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { ArrowLeft, User, Activity, Stethoscope, Shield, Clock, AlertTriangle, ChevronDown } from 'lucide-react'
 import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/shared/badges'
+import {PatientPhoto} from '@/components/shared/patient-photo'
 import { PatientBasicDetails } from '@/components/shared/patient-basic-details'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
 import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
@@ -113,18 +114,18 @@ export default function PatientDetailsPage() {
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <PatientPhoto photoId={patient.photoId} className="h-14 w-14 shrink-0 rounded-lg object-cover"/><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10">
                 <User className="h-7 w-7 text-primary" />
               </div>
               <div className="min-w-0">
-                <CardTitle className="break-words text-xl sm:text-2xl">{patient.nomeCompleto}</CardTitle>
+                <CardTitle className="break-words text-xl sm:text-2xl">{patient.nomeSocial||patient.nomeCompleto}</CardTitle>{patient.nomeSocial&&<p className="text-sm text-muted-foreground">{patient.nomeCompleto}</p>}
                 <CardDescription className="mt-1 break-words text-sm sm:text-base">
                   {patient.idade} anos · Prontuário: {patient.prontuario}{patient.ticketNumber ? ` · Senha: ${patient.ticketNumber}` : ''}
                 </CardDescription>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {priority && <span className={`rounded-lg border px-3 py-2 text-sm font-semibold ${MANCHESTER_PRIORITIES[priority].className}`}>{MANCHESTER_PRIORITIES[priority].label}</span>}
+              {patient.attendanceRoute==='sem_triagem'&&<span className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900">Branca · sem triagem</span>}{patient.attendanceClosure&&<span className="rounded-lg border p-2 text-sm">Encerrado: {patient.attendanceClosure.reason}</span>}{priority && <span className={`rounded-lg border px-3 py-2 text-sm font-semibold ${MANCHESTER_PRIORITIES[priority].className}`}>{MANCHESTER_PRIORITIES[priority].label}</span>}
               {canViewScores && patient.riskLevel && <RiskLevelBadge level={patient.riskLevel} />}
               {canViewScores && patient.anesthesiaAssessment?.asaClassification && (
                 <ASABadge classification={patient.anesthesiaAssessment!.asaClassification!} />

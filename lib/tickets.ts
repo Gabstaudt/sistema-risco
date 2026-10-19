@@ -38,7 +38,7 @@ export function forwardArrivalTicket(tickets:ArrivalTicket[],id:string,patientId
 /** Migrate only missing clinical queue entries; preserve the arrival number and existing claims. */
 export function ensureClinicalTickets(tickets:ArrivalTicket[],patients:Patient[]) {
  const next=[...tickets]
- for(const patient of patients.filter(p=>['aguardando_clinico','aguardando_avaliacao','exames_concluidos','em_avaliacao_clinica'].includes(p.status)&&p.triageAssignedClinicianId)) {
+ for(const patient of patients.filter(p=>['aguardando_clinico','aguardando_avaliacao','exames_concluidos','em_avaliacao_clinica'].includes(p.status)&&p.triageAssignedClinicianId&&!p.attendanceClosure)) {
   const existing=next.find(t=>t.patientId===patient.id&&t.stage!=='concluida')
   if(existing){
    if(['aguardando_clinico','chamada_clinico','em_clinico','ausente_clinico'].includes(existing.stage) && existing.clinicalAssignedTo!==patient.triageAssignedClinicianId){const index=next.findIndex(t=>t.id===existing.id);next[index]={...existing,clinicalAssignedTo:patient.triageAssignedClinicianId,stage:'aguardando_clinico',calledBy:undefined,calledAt:undefined}}

@@ -7,14 +7,14 @@ import { users } from './data/users'
 const user = users.find((user) => user.role === 'recepcao')!
 const patient = patients[0]
 const today = new Date(2026, 9, 6)
-const draft: PatientBasicDraft = { ...getPatientBasicDraft(patient), dataNascimento: '1980-11-15', telefone: '(91) 99999-1234', contatoEmergencia: '' }
+const draft: PatientBasicDraft = { ...getPatientBasicDraft(patient), dataNascimento: '1980-11-15', telefone: '(91) 99999-1234', contatoEmergencia: '', maeDesconhecida:true,paiDesconhecido:true }
 
 test('reception can update basic data and age without sending clinical fields or identifiers', () => {
   const original = JSON.stringify(patient)
   const result = validatePatientBasicEdit(user, patient.id, { ...draft, nomeCompleto: '  Nome corrigido  ' }, patients, today)
   assert.equal(result.nomeCompleto, 'Nome corrigido')
   assert.equal(result.idade, 45)
-  assert.equal(result.telefone, '(91) 99999-1234')
+  assert.equal(result.telefone, '91999991234')
   assert.equal(result.contatoEmergencia, '')
   for (const field of ['id', 'prontuario', 'dataEntrada', 'status', 'prioridade', 'triageData', 'clinicalEvaluation', 'visitHistory', 'sinaisVitais', 'riskLevel']) {
     assert.equal(field in result, false, field)

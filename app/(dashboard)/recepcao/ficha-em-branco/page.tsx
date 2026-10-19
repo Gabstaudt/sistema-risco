@@ -1,0 +1,9 @@
+'use client'
+import {useAuth} from '@/lib/auth'
+import {Button} from '@/components/ui/button'
+import {BrandLogo} from '@/components/shared/brand-logo'
+export default function BlankAttendance(){
+ const {hasPermission}=useAuth()
+ if(!hasPermission('print_blank_attendance'))return <p className="p-6">Sem permissão para imprimir esta ficha.</p>
+ return <main className="w-full min-w-0 p-4 sm:p-6"><style>{`@media print{[data-slot="sidebar-container"],[data-slot="sidebar-gap"],header,.print-actions{display:none!important}main{padding:0!important} .blank-sheet{border:0!important;max-width:none!important;width:100%!important;box-shadow:none!important} @page{size:A4;margin:12mm}}`}</style><div className="print-actions mb-5"><Button className="h-12" onClick={()=>window.print()}>Imprimir ficha em branco</Button></div><article className="blank-sheet mx-auto max-w-4xl space-y-5 rounded-lg border bg-white p-6 text-black"><BrandLogo/><h1 className="text-xl font-bold">Ficha de atendimento</h1><div className="grid grid-cols-2 gap-4 text-sm">{['Data / hora','Senha / prontuário','Nome completo','Nome social','Data de nascimento','Sexo','CPF','CNS','Nome da mãe','Nome do pai','Responsável / contato','Telefone','Endereço','Profissional / setor'].map(label=><div key={label} className="min-h-12 border-b border-slate-400">{label}:</div>)}</div><p className="text-sm">Encaminhamento: ☐ Com triagem　 ☐ Sem triagem / branca</p>{['Queixa / motivo do atendimento','Sinais vitais e observações da triagem','Avaliação / evolução','Conduta / solicitações'].map(label=><section key={label}><h2 className="text-sm font-semibold">{label}</h2><div className="h-20 border-b border-slate-400"/></section>)}<div className="pt-6 text-center text-sm">Assinatura e identificação do profissional: ____________________________________</div></article></main>
+}
