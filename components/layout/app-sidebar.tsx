@@ -100,7 +100,7 @@ const getNavigation = (
         items: [
           { title: 'Início', url: '/triagem', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/triagem/pacientes', icon: Users },
-          { title: 'Novo Paciente', url: '/triagem/cadastro', icon: UserPlus },
+          { title: 'Novo atendimento', url: '/triagem/cadastro', icon: UserPlus },
         ],
       },
       {
@@ -210,6 +210,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
+          {title:'Setores',url:'/admin/setores',icon:Users},
           { title: 'Início', url: '/admin', icon: LayoutDashboard },
           { title: 'Usuarios', url: '/admin/usuarios', icon: Users },
         ],

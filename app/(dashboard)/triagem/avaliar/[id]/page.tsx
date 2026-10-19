@@ -1,8 +1,9 @@
 'use client'
-import { hasUserPermission } from '@/lib/permissions'
+import {triageIntake,validateTriageIntake,TRIAGE_SECTORS} from '@/lib/triage-intake'
+import {TriageIntakeFields,TriageDestination} from '@/components/shared/triage-intake-fields'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data-context'
 import { Header } from '@/components/layout/header'
@@ -21,17 +22,19 @@ import type { LabUrgency } from '@/lib/types'
 
 const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
 
-export default function TriagemAvaliarPage() {
-  const params = useParams()
+function TriageForm({patientId}:{patientId:string}) {
   const router = useRouter()
-  const { users, user, hasPermission, isLoading: isAuthLoading } = useAuth()
+  const { sectors,users, user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { getPatientById, updatePatient, addAuditLog, tickets } = useData()
-  
-  const patientId = params.id as string
+
   const patient = getPatientById(patientId)
-  const clinicians = users.filter((item) => item.role === 'clinico' && item.active && hasUserPermission(item, 'clinical_evaluation'))
-  
+
+  const [intake,setIntake]=useState(()=>triageIntake(patient))
+  const [printSheet,setPrintSheet]=useState(false)
+  const saveLock=useRef(false)
   const [vitalSigns, setVitalSigns] = useState({
+    hgt:patient?.triageData?.vitalSigns?.hgt,
+    glasgow:patient?.triageData?.vitalSigns?.glasgow,
     bloodPressure: patient?.triageData?.vitalSigns?.bloodPressure || '',
     heartRate: patient?.triageData?.vitalSigns?.heartRate || 0,
     temperature: patient?.triageData?.vitalSigns?.temperature || 0,
@@ -40,7 +43,7 @@ export default function TriagemAvaliarPage() {
     weight: patient?.triageData?.vitalSigns?.weight || 0,
     height: patient?.triageData?.vitalSigns?.height || 0,
   })
-  
+
   const [conditions, setConditions] = useState({
     diabetes: patient?.triageData?.comorbidities?.diabetes || false,
     hypertension: patient?.triageData?.comorbidities?.hypertension || false,
@@ -54,25 +57,17 @@ export default function TriagemAvaliarPage() {
     alcoholism: patient?.triageData?.comorbidities?.alcoholism || false,
     other: patient?.triageData?.comorbidities?.other || '',
   })
-  
+
   const [bloodType, setBloodType] = useState(patient?.bloodType || '')
-  const [allergiesText, setAllergiesText] = useState((patient?.allergies || []).join(', '))
-  const [assignedClinicianId, setAssignedClinicianId] = useState(patient?.triageAssignedClinicianId || '')
   const [triageRiskClassification, setTriageRiskClassification] = useState<LabUrgency | ''>(
     patient?.triageData?.manchester?.priority || patient?.triageRiskClassification || ''
   )
   const [notes, setNotes] = useState(patient?.triageData?.notes || '')
   const [isSaving, setIsSaving] = useState(false)
-  
+
   const [flowchart, setFlowchart] = useState(patient?.triageData?.manchester?.flowchart || '')
   const [discriminator, setDiscriminator] = useState(patient?.triageData?.manchester?.discriminator || '')
   const [saveError, setSaveError] = useState('')
-  const assignedClinician = clinicians.find((item) => item.id === assignedClinicianId)
-  const parsedAllergies = allergiesText
-    .split(/,|\n/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-  
   useEffect(() => {
     if (isAuthLoading) return
 
@@ -93,7 +88,7 @@ export default function TriagemAvaliarPage() {
       </div>
     )
   }
-  
+
   if (!patient) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -101,25 +96,31 @@ export default function TriagemAvaliarPage() {
       </div>
     )
   }
-  
+
   const handleSave = async (complete: boolean) => {
-    if (!user || !hasPermission('register_vital_signs')) return
+    if (!user || !hasPermission('register_vital_signs')||saveLock.current) return
     setSaveError('')
     if (patient.ticketId && !tickets.some(ticket => ticket.id === patient.ticketId && ticket.stage === 'em_triagem' && ticket.calledBy === user.id)) {
       setSaveError('Chame a senha e inicie o atendimento pela fila da triagem antes de salvar.')
       return
     }
     let manchester
+    let destinationUpdates
     try {
       manchester = createManchesterRecord(triageRiskClassification, flowchart, discriminator, user.id, complete)
-      if (complete && !assignedClinicianId) throw new Error('Selecione o clínico responsável para encaminhar o paciente.')
+      destinationUpdates=validateTriageIntake(intake,complete,users,user,sectors)
+      if(vitalSigns.glasgow!==undefined&&(!Number.isInteger(vitalSigns.glasgow)||vitalSigns.glasgow<3||vitalSigns.glasgow>15))throw new Error('Glasgow deve ser um número inteiro entre 3 e 15.')
+      if(vitalSigns.hgt!==undefined&&(!Number.isFinite(vitalSigns.hgt)||vitalSigns.hgt<0))throw new Error('Informe HGT válido.')
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Não foi possível registrar a classificação.')
       return
     }
+    saveLock.current=true
     setIsSaving(true)
-    
+    try {
+
     const triageData = {
+      intake:{...intake,sectorName:sectors.find(sector=>sector.id===(intake.sectorId||'sector-'+intake.destination))?.name,medications:intake.medicationsInUse==='sim'?intake.medications:''},
       vitalSigns,
       comorbidities: conditions,
       manchester,
@@ -127,42 +128,42 @@ export default function TriagemAvaliarPage() {
       completedAt: complete ? new Date().toISOString() : undefined,
       completedBy: complete ? user?.id : undefined,
     }
-    
+
     updatePatient(patientId, {
       triageData,
       bloodType: bloodType || undefined,
-      allergies: parsedAllergies,
-      triageAssignedClinicianId: assignedClinicianId || undefined,
-      triageAssignedClinicianName: assignedClinician?.name || undefined,
+      allergies: intake.intolerances.split(/,|\n/).map(value=>value.trim()).filter(Boolean),
+
       triageRiskClassification: triageRiskClassification || undefined,
-      requestingPhysician: assignedClinician?.name || patient.requestingPhysician,
+      requestingPhysician: users.find(user=>user.id===intake.professionalId)?.name || patient.requestingPhysician,
       prioridade:
         triageRiskClassification === 'emergente' || triageRiskClassification === 'muito_urgente'
           ? 'urgente'
           : triageRiskClassification === 'urgente'
             ? 'alta'
             : 'normal',
-      status: complete ? 'aguardando_clinico' : 'em_triagem',
+      status: 'em_triagem',
+      ...destinationUpdates,
       updatedAt: new Date().toISOString(),
     })
-    
+
     addAuditLog({
       action: complete ? 'triagem_concluida' : 'triagem_atualizada',
       userId: user!.id,
       patientId,
-      details: complete 
-        ? `Triagem concluída. Manchester: ${triageRiskClassification ? MANCHESTER_PRIORITIES[triageRiskClassification].label : ''} | Fluxograma: ${flowchart.trim()} | Discriminador: ${discriminator.trim()} | Clínico: ${assignedClinician?.name || 'Não definido'}`
+      details: complete
+        ? `Triagem concluída. Manchester: ${triageRiskClassification ? MANCHESTER_PRIORITIES[triageRiskClassification].label : ''} | Fluxograma: ${flowchart.trim()} | Discriminador: ${discriminator.trim()} | Setor: ${TRIAGE_SECTORS[intake.destination]}`
         : 'Dados de triagem atualizados',
     })
-    
-    setTimeout(() => {
-      setIsSaving(false)
-      if (complete) {
-        router.push('/triagem')
-      }
-    }, 500)
+
+    if(complete){
+      if(printSheet&&hasPermission('print_triage_sheet'))router.push(`/paciente/${patientId}/imprimir?tipo=triagem`)
+      else router.push('/triagem/fila')
+    }
+    }catch(error){setSaveError(error instanceof Error?error.message:'Não foi possível salvar a triagem.')}
+    finally{saveLock.current=false;setIsSaving(false)}
   }
-  
+
   const calculateBMI = () => {
     if (vitalSigns.weight && vitalSigns.height) {
       const heightInMeters = vitalSigns.height / 100
@@ -182,13 +183,13 @@ export default function TriagemAvaliarPage() {
         </Button>
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-foreground">Triagem do Paciente</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">Coleta de sinais vitais e historico medico</p>
+
         </div>
         <div className="self-start sm:self-auto">
           <PatientStatusBadge status={patient.status} />
         </div>
       </div>
-      
+
       {/* Patient Info Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -205,15 +206,16 @@ export default function TriagemAvaliarPage() {
                 <p>Queixa inicial: {patient.queixaPrincipal || 'Nao informada'}</p>
                 <p>Relato da recepcao: {patient.descricaoInicial || 'Nao informado'}</p>
                 <p>Tipo sanguineo: {bloodType || patient.bloodType || 'Nao informado'}</p>
-                <p>Alergias: {parsedAllergies.length > 0 ? parsedAllergies.join(', ') : 'Nenhuma registrada'}</p>
+                <p>Alergias: {intake.intolerances ? intake.intolerances : 'Nenhuma registrada'}</p>
               </div>
             </div>
           </div>
         </CardHeader>
       </Card>
-      
+
       <form onSubmit={(event) => event.preventDefault()} className="flex w-full flex-1 flex-col gap-5">
       {saveError && <Alert variant="destructive"><AlertDescription>{saveError}</AlertDescription></Alert>}
+      <TriageIntakeFields value={intake} onChange={setIntake} disabled={isSaving}/>
       <div className="grid gap-5 xl:grid-cols-2">
         {/* Sinais Vitais */}
         <Card className="xl:col-span-2">
@@ -259,7 +261,7 @@ export default function TriagemAvaliarPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-base" htmlFor="spo2">Saturacao O2 (%)</Label>
+                <Label className="text-base" htmlFor="spo2">SpO₂ (%)</Label>
                 <Input
                   className="h-14 rounded-lg px-4 text-base md:text-base"
                   id="spo2"
@@ -270,7 +272,7 @@ export default function TriagemAvaliarPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-base" htmlFor="rr">Freq. Respiratoria</Label>
+                <Label className="text-base" htmlFor="rr">FR (irpm)</Label>
                 <Input
                   className="h-14 rounded-lg px-4 text-base md:text-base"
                   id="rr"
@@ -309,6 +311,7 @@ export default function TriagemAvaliarPage() {
                   {calculateBMI()} kg/m²
                 </div>
               </div>
+              {(['hgt','glasgow'] as const).map(key=><div key={key} className="space-y-2"><Label htmlFor={'vital-'+key}>{key==='hgt'?'HGT (mg/dL)':'Glasgow (3–15)'}</Label><Input id={'vital-'+key} className="h-14" type="number" min={key==='glasgow'?3:0} max={key==='glasgow'?15:undefined} value={vitalSigns[key]??''} onChange={event=>setVitalSigns({...vitalSigns,[key]:event.target.value===''?undefined:Number(event.target.value)})}/></div>)}
             </div>
           </CardContent>
         </Card>
@@ -337,20 +340,10 @@ export default function TriagemAvaliarPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label className="text-base" htmlFor="triage-allergies">Alergias</Label>
-              <Textarea
-                className="min-h-28 rounded-lg px-4 py-3 text-base md:text-base"
-                id="triage-allergies"
-                value={allergiesText}
-                onChange={(e) => setAllergiesText(e.target.value)}
-                placeholder="Ex.: dipirona, penicilina, contraste iodado"
-                rows={3}
-              />
-            </div>
+
           </CardContent>
         </Card>
-        
+
         {/* Comorbidades */}
         <Card>
           <CardHeader>
@@ -378,7 +371,7 @@ export default function TriagemAvaliarPage() {
                     id={key}
                     className="size-5 shrink-0"
                     checked={conditions[key as keyof typeof conditions] as boolean}
-                    onCheckedChange={checked => 
+                    onCheckedChange={checked =>
                       setConditions(c => ({ ...c, [key]: checked }))
                     }
                   />
@@ -423,33 +416,7 @@ export default function TriagemAvaliarPage() {
                 className="h-14 px-4 text-base md:text-base" placeholder="Discriminador que fundamenta a prioridade" />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="triage-clinician" className="text-base">Clínico responsável</Label>
-            <Select value={assignedClinicianId} onValueChange={setAssignedClinicianId}>
-              <SelectTrigger id="triage-clinician" className="w-full rounded-lg px-4 text-base data-[size=default]:h-14">
-                <SelectValue placeholder="Selecione quem atendera este paciente" />
-              </SelectTrigger>
-              <SelectContent>
-                {clinicians.map((clinician) => (
-                  <SelectItem className="min-h-12 py-3 text-base" key={clinician.id} value={clinician.id}>
-                    {clinician.name} · {clinician.consultationRoom?.trim() || 'Sala não informada'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {assignedClinician && (
-              <div role="status" className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-                <p className="text-sm text-muted-foreground">Local de atendimento de {assignedClinician.name}</p>
-                <p className="mt-1 text-lg font-semibold">
-                  {assignedClinician.consultationRoom?.trim() || 'Sala não informada'}
-                </p>
-                {!assignedClinician.consultationRoom?.trim() && (
-                  <p className="mt-1 text-sm text-muted-foreground">Confirme a sala com a equipe antes de direcionar o paciente.</p>
-                )}
-              </div>
-            )}
-          </div>
-
+          <TriageDestination value={intake} onChange={setIntake} disabled={isSaving}/>
           <div className="space-y-2">
             <p id="triage-risk-label" className="text-base font-medium">Prioridade de Manchester *</p>
             <div role="group" aria-labelledby="triage-risk-label" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -471,7 +438,7 @@ export default function TriagemAvaliarPage() {
           </div>
         </CardContent>
       </Card>
-      
+
       {patient.ticketNumber && <p className="rounded-lg border bg-primary/5 p-4 font-semibold">Senha do paciente: {patient.ticketNumber}</p>}
       {/* Observacoes */}
       <Card>
@@ -489,6 +456,7 @@ export default function TriagemAvaliarPage() {
           />
         </CardContent>
       </Card>
+        {hasPermission('print_triage_sheet')&&<label className="flex min-h-12 cursor-pointer items-center gap-3"><input type="checkbox" className="size-5" checked={printSheet} onChange={event=>setPrintSheet(event.target.checked)}/>Imprimir ficha ao concluir a triagem</label>}
         <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:justify-end">
           <Button type="button" className="h-14 w-full px-6 text-base sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
             Salvar Rascunho
@@ -497,7 +465,7 @@ export default function TriagemAvaliarPage() {
             type="button"
             className="h-14 w-full px-6 text-base sm:w-auto"
             onClick={() => handleSave(true)}
-            disabled={isSaving || !assignedClinicianId || !triageRiskClassification}
+            disabled={isSaving || (intake.destination!=='laboratorio'&&!intake.professionalId) || !triageRiskClassification}
           >
             <Save className="mr-2 h-4 w-4" />
             Concluir Triagem
@@ -507,4 +475,12 @@ export default function TriagemAvaliarPage() {
     </div>
     </>
   )
+}
+
+export default function TriagemAvaliarPage(){
+ const {id}=useParams<{id:string}>()
+ const {getPatientById,isDataReady}=useData()
+ const patient=getPatientById(id)
+ if(!isDataReady)return <p className="p-6">Carregando...</p>
+ return <TriageForm key={id+'-'+patient?.dataEntrada} patientId={id}/>
 }

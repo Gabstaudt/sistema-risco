@@ -1,9 +1,11 @@
+import type {TriageIntake} from './triage-intake'
 import type { CareTiming } from './admin-analytics'
 // Tipos base do sistema de Avaliacao de Risco Cirurgico
 
 export type UserRole = 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'admin'
 
 export interface User {
+  sectorId?:string
   profileId?: string
   id: string
   email: string
@@ -59,6 +61,8 @@ export type SurgeryUrgency = 'eletiva' | 'urgencia' | 'emergencia'
 export type SurgerySize = 'pequeno' | 'medio' | 'grande'
 
 export interface VitalSigns {
+  hgt?:number
+  glasgow?:number
   bloodPressure?: string
   heartRate?: number
   temperature?: number
@@ -439,6 +443,7 @@ export interface Patient {
   sinaisVitais?: VitalSigns
   observacoesTriagem?: string
   triageData?: {
+    intake?:TriageIntake
     manchester?: ManchesterClassification
     vitalSigns?: VitalSigns
     comorbidities?: Comorbidities
@@ -495,6 +500,7 @@ export interface MedicalDocument {
 }
 
 export type AuditAction =
+  | 'setor_gerenciado'
   | 'atendimento_atualizado'
   | 'atendimento_encerrado'
   | 'usuario_gerenciado'
@@ -576,6 +582,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_triage',
   ],
   triagem: [
+    'cancel_triage_attendance',
+    'forward_triage_sector',
+    'print_triage_sheet',
     'print_medication_sheet',
     'print_patient_history',
     'print_patient_record',

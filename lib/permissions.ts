@@ -40,12 +40,13 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
       (segments.length === 3 && segments[2] === 'documentos' && isDoctor(user) && (hasUserPermission(user, 'issue_prescription') || hasUserPermission(user, 'issue_certificate'))) ||
       (segments.length === 3 && segments[2] === 'exames' && hasUserPermission(user, 'view_exam_results')) ||
       (segments.length === 3 && segments[2] === 'medicacoes' && (hasUserPermission(user, 'view_clinical_data') || hasUserPermission(user, 'administer_medication'))) ||
-      (segments.length === 3 && segments[2] === 'imprimir' && ['print_patient_record', 'print_patient_history', 'print_medication_sheet', 'print_exams', 'issue_prescription', 'issue_certificate'].some(permission => hasUserPermission(user, permission))) ||
+      (segments.length === 3 && segments[2] === 'imprimir' && ['print_patient_record', 'print_patient_history', 'print_medication_sheet', 'print_exams','print_triage_sheet', 'issue_prescription', 'issue_certificate'].some(permission => hasUserPermission(user, permission))) ||
       (segments.length === 3 && segments[2] === 'historico' && hasUserPermission(user, 'view_patient_audit'))
   }
   const role = sectionRoles[section]
   if (!role || !hasUserPermission(user, `view_dashboard_${role}`)) return false
   if (!page) return true
+  if(section==='triagem'&&page==='entrada')return hasUserPermission(user,'create_patient')&&hasUserPermission(user,'forward_to_triage')
   if (page === 'cadastro') return hasUserPermission(user, 'create_patient')
   if (page === 'pacientes') return hasUserPermission(user, 'view_patients_list') && hasUserPermission(user, 'view_patient_basic')
   if (section === 'recepcao' && page === 'entrada') return hasUserPermission(user, 'manage_reception_queue') && hasUserPermission(user, 'view_patient_basic')
@@ -53,7 +54,7 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
   if (section === 'recepcao') return page === 'fila' && hasUserPermission(user, 'manage_reception_queue')
   if (section === 'admin') {
     const adminPermissions: Record<string, string> = {
-      usuarios: 'manage_users', exames: 'create_exam_type', auditoria: 'view_audit', cirurgias: 'view_surgery_audit', configuracoes: 'manage_profiles', relatorios: 'view_reports',
+      setores:'manage_sectors',usuarios: 'manage_users', exames: 'create_exam_type', auditoria: 'view_audit', cirurgias: 'view_surgery_audit', configuracoes: 'manage_profiles', relatorios: 'view_reports',
     }
     if (page === 'configuracoes' && !hasUserPermission(user, 'system_settings')) return false
     return !!adminPermissions[page] && hasUserPermission(user, adminPermissions[page])

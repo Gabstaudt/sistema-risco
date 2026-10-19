@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data-context'
+import {TriageIntakeSummary} from '@/components/shared/triage-intake-summary'
 import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -282,6 +283,7 @@ export default function PatientDetailsPage() {
         
         {/* Triage Tab */}
         {(canViewTriage) && (<TabsContent value="triage">
+          <Card className="mb-5"><CardHeader><CardTitle>Anamnese da triagem</CardTitle></CardHeader><CardContent><TriageIntakeSummary patient={patient}/></CardContent></Card>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

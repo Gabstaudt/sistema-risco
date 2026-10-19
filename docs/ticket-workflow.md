@@ -25,3 +25,11 @@ O encaminhamento exige confirmação e mantém a mesma senha: com triagem segue 
 A recepção pode atualizar queixa e observações. A mudança de destino só é permitida antes da chamada/início do próximo setor. Baixa/cancelamento exigem justificativa, encerram a senha e cancelam solicitações pendentes da entrada atual, preservando resultados concluídos e medicações administradas. Uma nova entrada arquiva o atendimento anterior. A ficha em branco está disponível para impressão A4.
 
 Os dados e fotos permanecem no protótipo local (localStorage e IndexedDB); a integração com o backend deve aplicar as mesmas permissões e transações.
+
+## Atendimento iniciado pela triagem
+
+A triagem pesquisa o cadastro antes de criar uma entrada. Um paciente novo pode ser cadastrado pela enfermagem; um paciente com entrada encerrada informa apenas a nova queixa e as observações. É emitida uma senha para aguardar triagem, mantendo o visual e a ordenação existentes.
+
+Recepção e triagem apresentam Chamar paciente seguido de Paciente não compareceu na chamada atual. A ausência libera a chamada e permite retornar a mesma senha à fila. O cancelamento de uma espera na triagem exige justificativa e permissão própria; não permite encerrar atendimentos em outros setores.
+
+A ficha registra anamnese (400 caracteres), procedência, ECG, doenças preexistentes (100 caracteres), intolerâncias/alergias, medicamentos em uso, HGT, Glasgow, dor, tipo de atendimento, estados, sintomas e detalhes. Não calcula diagnóstico nem substitui Manchester. No encaminhamento, a enfermagem escolhe o setor cadastrado e o profissional vinculado, quando aplicável. A conclusão preserva a senha para a clínica; para outros setores, conclui a chamada da triagem e abre o fluxo de destino. O laboratório recebe o paciente, sem criar solicitações de exame automaticamente. A impressão da ficha é opcional e abre a versão A4 para conferir e imprimir.

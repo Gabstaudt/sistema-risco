@@ -35,7 +35,7 @@ const homeByRole: Record<UserRole, HomeConfig> = {
     actions: [
       { label: 'Atender na triagem', description: 'Abrir a fila de atendimento', href: '/triagem/fila', icon: ClipboardList },
       { label: 'Buscar paciente', description: 'Consultar os pacientes', href: '/triagem/pacientes', icon: Users },
-      { label: 'Cadastrar paciente', description: 'Iniciar um novo atendimento', href: '/triagem/cadastro', icon: UserPlus },
+      { label: 'Novo atendimento', description: 'Pesquisar ou cadastrar paciente', href: '/triagem/cadastro', icon: UserPlus },
     ],
   },
   clinico: {

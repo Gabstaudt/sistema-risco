@@ -20,7 +20,7 @@ export function updateReceptionAttendance(patient:Patient,draft:IntakeDraft,acto
  return reroute?intakeUpdates(draft,professionals):{queixaPrincipal:draft.complaint.trim(),descricaoInicial:draft.notes.trim()}
 }
 export function closeReceptionAttendance(patient:Patient,actor:User,kind:'baixa'|'cancelamento',reason:string):Partial<Patient>{
- if(!hasUserPermission(actor,'manage_attendance'))throw new Error('Sem permissão para encerrar atendimentos.')
+ if(!hasUserPermission(actor,'manage_attendance')&&!(actor.role==='triagem'&&hasUserPermission(actor,'cancel_triage_attendance')&&['aguardando_triagem'].includes(patient.status)))throw new Error('Sem permissão para encerrar este atendimento na triagem.')
  if(!['baixa','cancelamento'].includes(kind))throw new Error('Selecione o tipo de encerramento.')
  if(CLOSED_ATTENDANCES.includes(patient.status)||patient.attendanceClosure)throw new Error('O atendimento já foi encerrado.')
  if(!reason.trim())throw new Error('Informe a justificativa do encerramento.')

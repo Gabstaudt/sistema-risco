@@ -282,7 +282,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!patient) throw new Error('Paciente não encontrado.')
     if (!['concluido', 'liberado', 'contraindicado'].includes(patient.status)) throw new Error('Este paciente já possui um atendimento em andamento.')
     const updates = intakeUpdates(intake, users)
-    const nextTickets = forwardArrivalTicket(current, ticketId, patientId, user).map(ticket=>ticket.id===ticketId&&intake.route==='sem_triagem'?{...ticket,stage:'aguardando_clinico' as const,clinicalAssignedTo:updates.triageAssignedClinicianId,clinicalQueuedAt:new Date().toISOString()}:ticket)
+    const direct=user.role==='triagem'
+    if(direct&&(!hasPermission('create_patient')||!hasPermission('forward_to_triage')||intake.route!=='com_triagem'))throw new Error('Sem permissão para iniciar este atendimento na triagem.')
+    const issued=direct?issueArrivalTicket(current,'comum'):undefined
+    const source=issued?[...current,{...issued,patientId,stage:'aguardando_triagem' as const,forwardedAt:new Date().toISOString()}]:forwardArrivalTicket(current,ticketId,patientId,user)
+    if(issued)ticketId=issued.id
+    const nextTickets = source.map(ticket=>ticket.id===ticketId&&intake.route==='sem_triagem'?{...ticket,stage:'aguardando_clinico' as const,clinicalAssignedTo:updates.triageAssignedClinicianId,clinicalQueuedAt:new Date().toISOString()}:ticket)
     const ticket = nextTickets.find(item => item.id === ticketId)!
     const previous = patient.visitHistory || []
     const currentVisit = previous.find(item => item.id === `${patient.id}-visit-current`)
@@ -296,7 +301,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(PATIENTS_KEY, JSON.stringify(nextPatients)); setPatients(nextPatients)
     addAuditLog({ action: 'senha_encaminhada', patientId, details: `Senha ${ticket.number} encaminhada ${intake.route==='sem_triagem'?'ao clínico, sem triagem (branca)':'à triagem'}.` })
     return { tickets: nextTickets, result: undefined }
-  }), [user, users, mutateTickets, addAuditLog])
+  }), [user, users, hasPermission, mutateTickets, addAuditLog])
 
   const updateAttendance = useCallback((patientId:string,draft:IntakeDraft)=>mutateTickets(current=>{
     if(!user)throw new Error('Faça login para atualizar atendimentos.')
@@ -314,6 +319,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const close=()=>mutateTickets(current=>{
       if(!user)throw new Error('Faça login para encerrar atendimentos.')
       const stored:Patient[]=JSON.parse(localStorage.getItem(PATIENTS_KEY)||'[]');const patient=stored.find(item=>item.id===patientId);if(!patient)throw new Error('Paciente não encontrado.')
+      if(user.role==='triagem'&&current.some(ticket=>ticket.patientId===patientId&&ticket.stage!=='concluida'&&(!['aguardando_triagem','ausente_triagem','chamada_triagem'].includes(ticket.stage)||ticket.stage==='chamada_triagem'&&ticket.calledBy!==user.id)))throw new Error('Este paciente já foi chamado por outro profissional ou iniciou o atendimento.')
       const updates=closeReceptionAttendance(patient,user,kind,reason);const next=normalizePatient({...patient,...updates});const list=stored.map(item=>item.id===patientId?next:item)
       localStorage.setItem(PATIENTS_KEY,JSON.stringify(list));setPatients(list)
       const requests:ExamRequest[]=JSON.parse(localStorage.getItem(EXAM_REQUESTS_KEY)||'[]');const nextRequests=requests.map(exam=>exam.patientId===patientId&&Date.parse(exam.solicitadoEm)>=Date.parse(patient.dataEntrada)&&!['concluido','cancelado'].includes(exam.status)?{...exam,status:'cancelado' as const}:exam);localStorage.setItem(EXAM_REQUESTS_KEY,JSON.stringify(nextRequests));setExamRequests(nextRequests)
@@ -365,7 +371,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if(currentPatient?.attendanceClosure&&updates.status&&!['concluido','liberado','contraindicado'].includes(updates.status))throw new Error('O atendimento foi encerrado.')
     if (!currentPatient || !projectPatientForUser(currentPatient, user)) throw new Error('Paciente não direcionado para este profissional.')
     if (updates.triageData?.completedAt && user?.role === 'triagem') {
-      void mutateTickets(current => ({ tickets: current.map(ticket => ticket.patientId === id && ['chamada_triagem', 'em_triagem'].includes(ticket.stage) && ticket.calledBy === user.id ? { ...ticket, stage: 'aguardando_clinico' as const, clinicalAssignedTo: updates.triageAssignedClinicianId || currentPatient.triageAssignedClinicianId, clinicalQueuedAt: updates.triageData?.completedAt, calledBy: undefined, calledAt: undefined } : ticket), result: undefined }))
+      void mutateTickets(current => ({ tickets: current.map(ticket => ticket.patientId === id && ['chamada_triagem', 'em_triagem'].includes(ticket.stage) && ticket.calledBy === user.id ? { ...ticket, stage: updates.status==='aguardando_clinico'?'aguardando_clinico' as const:'concluida' as const, clinicalAssignedTo: updates.status==='aguardando_clinico'?updates.triageAssignedClinicianId || currentPatient.triageAssignedClinicianId:undefined, clinicalQueuedAt: updates.triageData?.completedAt, calledBy: undefined, calledAt: undefined } : ticket), result: undefined }))
     }
     if (updates.clinicalEvaluation?.completedAt && user?.role === 'clinico') {
       void mutateTickets(current => ({ tickets: current.map(ticket => ticket.patientId === id && ['chamada_clinico', 'em_clinico'].includes(ticket.stage) && ticket.calledBy === user.id ? { ...ticket, stage: 'concluida' as const } : ticket), result: undefined }))

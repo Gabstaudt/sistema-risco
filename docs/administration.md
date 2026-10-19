@@ -31,3 +31,9 @@ Relatório completo ou individual em CSV, JSON e impressão/PDF, mantendo o per�
 ## Integração do backend
 
 O gerenciamento e os relatórios funcionam com os dados locais do protótipo. Em produção, usuários, perfis, credenciais, eventos e indicadores precisam de persistência compartilhada no servidor. O backend deve autenticar, aplicar permissões/escopo, proteger senhas, registrar eventos e garantir as invariantes administrativas de forma atômica. Os cálculos estão isolados em `lib/admin-analytics.ts`; as regras de gestão, em `lib/admin-access.ts`.
+
+## Setores e profissionais
+
+O administrador cadastra, edita, desativa e exporta setores em `/admin/setores`. Cada setor tem um fluxo operacional e pode conter profissionais com perfis de permissões diferentes do mesmo tipo. Usuários são vinculados por `sectorId`; o texto `department` acompanha o nome para compatibilidade. Renomear um setor atualiza esse texto. É necessário realocar os usuários ativos antes de desativar ou mudar o fluxo do setor.
+
+O encaminhamento da triagem usa os setores ativos e apresenta apenas profissionais ativos vinculados ao setor, com a permissão necessária. Setor e perfil de permissões são independentes: pertencer ao setor não concede novos acessos. A migração mantém os setores antigos informados nos usuários e não amplia perfis personalizados.
