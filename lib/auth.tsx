@@ -5,7 +5,7 @@ import type { User } from './types'
 import { normalizeUserProfile, type BackendProfile } from './medical-profile'
 import { hasUserPermission } from './permissions'
 import { users as initialUsers } from './data/users'
-import { ACCESS_KEY, upgradeMedicalRegistry, seedRegistry, resolveRegistryUser, saveManagedUser, saveAccessProfile, saveHospitalSector,saveOwnWorkplace,type WorkplaceDraft, type AccessRegistry, type AccessProfile, type UserDraft } from './admin-access'
+import { ACCESS_KEY, upgradeWardRegistry, seedRegistry, resolveRegistryUser, saveManagedUser, saveAccessProfile, saveHospitalSector,saveOwnWorkplace,type WorkplaceDraft, type AccessRegistry, type AccessProfile, type UserDraft } from './admin-access'
 interface AuthContextType {
  saveWorkplace:(draft:WorkplaceDraft)=>Promise<void>;sectors:HospitalSector[];saveSector:(draft:Omit<HospitalSector,'id'>,id?:string)=>Promise<void>; user:User|null; users:User[]; profiles:AccessProfile[]; isLoading:boolean
  login:(email:string,password:string)=>Promise<{success:boolean;error?:string;redirectPath?:string}>
@@ -29,7 +29,7 @@ export function AuthProvider({children}:{children:ReactNode}) {
  const [registry,setRegistry]=useState<AccessRegistry>(()=>seedRegistry(initialUsers))
  const [isLoading,setIsLoading]=useState(true)
  useEffect(()=>{
-  const stored=localStorage.getItem(ACCESS_KEY);const loaded:AccessRegistry=upgradeMedicalRegistry(stored?JSON.parse(stored):seedRegistry(initialUsers))
+  const stored=localStorage.getItem(ACCESS_KEY);const loaded:AccessRegistry=upgradeWardRegistry(stored?JSON.parse(stored):seedRegistry(initialUsers))
   localStorage.setItem(ACCESS_KEY,JSON.stringify(loaded));setRegistry(loaded)
   try{const current=localStorage.getItem(STORAGE_KEY);if(current)setSessionState(normalizeUserProfile(JSON.parse(current)))}catch{localStorage.removeItem(STORAGE_KEY)}
   setIsLoading(false)

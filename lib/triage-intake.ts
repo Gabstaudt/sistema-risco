@@ -1,7 +1,8 @@
+import {wardAdmission} from './ward'
 import {defaultSectors,userSectorId,type HospitalSector} from './sectors'
 import type {Patient,User,PatientStatus} from './types'
 import {hasUserPermission} from './permissions'
-export const TRIAGE_SECTORS={clinico:'Clínica',laboratorio:'Laboratório',cardiologista:'Cardiologia',anestesista:'Anestesia',cirurgiao:'Cirurgia'} as const
+export const TRIAGE_SECTORS={enfermaria:'Enfermaria',clinico:'Clínica',laboratorio:'Laboratório',cardiologista:'Cardiologia',anestesista:'Anestesia',cirurgiao:'Cirurgia'} as const
 export const PATIENT_STATES=['Consciente','Orientado','Ansioso','Agitado','Não atende ao chamar','Torporoso','Comatoso','Calmo','Desorientado']
 export const TRIAGE_SYMPTOMS=['Ritmo sinusal','Palpitações','Taquicardia','Bradicardia','Palidez','Cianose','Taquipneia','Dispneia em repouso','Dispneia noturna','Sudorese','Bradipneia','Hipóxia','Icterícia']
 export interface TriageIntake {
@@ -14,7 +15,7 @@ export interface TriageIntake {
 export function triageIntake(patient?:Patient):TriageIntake {
  return {anamnesis:'',origin:'',ecg:'',preexistingDiseases:'',intolerances:(patient?.allergies||[]).join(', '),medicationsInUse:'',medications:'',pain:'',careType:'',patientStates:[],symptoms:[],otherDetails:'',sectorId:'sector-clinico',destination:'clinico',professionalId:patient?.triageAssignedClinicianId||'',...patient?.triageData?.intake}
 }
-export function validateTriageIntake(draft:TriageIntake,complete:boolean,users:User[],actor:User,sectors:HospitalSector[]=defaultSectors()):Partial<Patient>{
+export function validateTriageIntake(draft:TriageIntake,complete:boolean,users:User[],actor:User,sectors:HospitalSector[]=defaultSectors(),patient?:Patient):Partial<Patient>{
  if(actor.role!=='triagem'||!hasUserPermission(actor,'register_vital_signs'))throw new Error('Sem permissão para registrar triagem.')
  if(draft.anamnesis.length>400)throw new Error('A anamnese deve ter no máximo 400 caracteres.')
  if(draft.preexistingDiseases.length>100)throw new Error('Doenças preexistentes: máximo de 100 caracteres.')
@@ -26,10 +27,11 @@ export function validateTriageIntake(draft:TriageIntake,complete:boolean,users:U
  if(complete&&!hasUserPermission(actor,'forward_triage_sector'))throw new Error('Sem permissão para encaminhar a outro setor.')
  const sector=sectors.find(sector=>sector.id===(draft.sectorId||'sector-'+draft.destination)&&sector.active&&sector.role===draft.destination)
  if(complete&&!sector)throw new Error('Selecione um setor ativo.')
- const professional=users.find(user=>user.id===draft.professionalId&&user.active&&user.role===draft.destination&&(!sector||userSectorId(user)===sector.id)&&hasUserPermission(user,({clinico:'clinical_evaluation',cardiologista:'classify_cardiac_risk',anestesista:'classify_asa',cirurgiao:'classify_risk',laboratorio:'update_exam_status'} as const)[draft.destination]))
- if(complete&&draft.destination!=='laboratorio'&&!professional)throw new Error('Selecione um profissional ativo do setor.')
- const statuses:Record<keyof typeof TRIAGE_SECTORS,PatientStatus>={clinico:'aguardando_clinico',laboratorio:'aguardando_laboratorio',cardiologista:'aguardando_cardiologista',anestesista:'aguardando_anestesista',cirurgiao:'aguardando_cirurgiao'}
+ const professional=users.find(user=>user.id===draft.professionalId&&user.active&&user.role===draft.destination&&(!sector||userSectorId(user)===sector.id)&&hasUserPermission(user,({clinico:'clinical_evaluation',cardiologista:'classify_cardiac_risk',anestesista:'classify_asa',cirurgiao:'classify_risk',laboratorio:'update_exam_status',enfermaria:'view_ward_care'} as const)[draft.destination]))
+ if(complete&&!['laboratorio','enfermaria'].includes(draft.destination)&&!professional)throw new Error('Selecione um profissional ativo do setor.')
+ const statuses:Record<keyof typeof TRIAGE_SECTORS,PatientStatus>={enfermaria:'em_enfermaria',clinico:'aguardando_clinico',laboratorio:'aguardando_laboratorio',cardiologista:'aguardando_cardiologista',anestesista:'aguardando_anestesista',cirurgiao:'aguardando_cirurgiao'}
  if(!complete)return {}
+ if(draft.destination==='enfermaria'){if(!patient||!sector)throw new Error('Paciente indisponível para entrada na enfermaria.');return wardAdmission(patient,actor,sector,draft.anamnesis||patient.queixaPrincipal||'Encaminhado pela triagem')}
  const specialty=['cardiologista','anestesista','cirurgiao'].includes(draft.destination)?draft.destination as 'cardiologista'|'anestesista'|'cirurgiao':undefined
  return {status:statuses[draft.destination],triageAssignedClinicianId:draft.destination==='clinico'?professional?.id:undefined,triageAssignedClinicianName:draft.destination==='clinico'?professional?.name:undefined,...(specialty?{assessmentRequests:[{specialty,status:'pending',requestedAt:new Date().toISOString(),requestedBy:actor.id,assignedProfessionalId:professional!.id,assignedProfessionalName:professional!.name}]}:{})}
 }

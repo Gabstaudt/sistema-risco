@@ -12,7 +12,7 @@ export function getUserPermissions(user: User | null): readonly string[] {
   if (!user || !user.active || !Object.hasOwn(ROLE_PERMISSIONS, user.role)) return []
   if (user.permissions !== undefined) return Array.isArray(user.permissions) ? user.permissions : []
   const defaults = ROLE_PERMISSIONS[user.role] || []
-  const patientViews = user.role === 'recepcao' ? ['view_patient_basic']
+  const patientViews = user.role === 'enfermaria'?['view_patient_basic','view_triage_data','view_clinical_data']:user.role === 'recepcao' ? ['view_patient_basic']
     : user.role === 'triagem' ? PATIENT_VIEW_PERMISSIONS.filter((permission) => permission !== 'view_patient_audit')
     : PATIENT_VIEW_PERMISSIONS
   return [...defaults, ...patientViews]
@@ -25,7 +25,7 @@ export function hasUserPermission(user: User | null, permission: string): boolea
 }
 
 const sectionRoles: Record<string, UserRole> = {
-  recepcao: 'recepcao', triagem: 'triagem', clinico: 'clinico', laboratorio: 'laboratorio',
+  enfermaria:'enfermaria',recepcao: 'recepcao', triagem: 'triagem', clinico: 'clinico', laboratorio: 'laboratorio',
   cardiologista: 'cardiologista', anestesista: 'anestesista', cirurgiao: 'cirurgiao', admin: 'admin',
 }
 
@@ -52,6 +52,7 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
   if(section==='triagem'&&page==='entrada')return hasUserPermission(user,'create_patient')&&hasUserPermission(user,'forward_to_triage')
   if (page === 'cadastro') return hasUserPermission(user, 'create_patient')
   if (page === 'pacientes') return hasUserPermission(user, 'view_patients_list') && hasUserPermission(user, 'view_patient_basic')
+  if(section==='enfermaria')return hasUserPermission(user,'view_ward_care')
   if (section === 'recepcao' && page === 'entrada') return hasUserPermission(user, 'manage_reception_queue') && hasUserPermission(user, 'view_patient_basic')
   if (section === 'recepcao' && ['novo','atendimentos','atendimento','ficha-em-branco'].includes(page)) return hasUserPermission(user, page==='ficha-em-branco'?'print_blank_attendance':'manage_attendance')
   if (section === 'recepcao') return page === 'fila' && hasUserPermission(user, 'manage_reception_queue')
@@ -72,6 +73,10 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
 /** Explicit allowlists prevent new clinical fields from leaking into reception views. */
 export function projectPatientForUser(patient: Patient, user: User | null): Patient | undefined {
   if (!hasUserPermission(user, 'view_patient_basic') || !isPatientAssignedToDoctor(patient, user)) return undefined
+  const wardSector=user?.sectorId||'sector-enfermaria'
+  const wardStays=patient.wardStays?.filter(stay=>stay.sectorId===wardSector)
+  if(user?.role==='enfermaria'&&(!hasUserPermission(user,'view_ward_care')||!wardStays?.length))return undefined
+  const activeWard=!patient.attendanceClosure&&wardStays?.some(stay=>!stay.dischargedAt&&stay.encounterEntryAt===patient.dataEntrada)
   const basicFields = [
     'id', 'prontuario', 'ticketId', 'ticketNumber', 'nomeCompleto', 'name', 'dataNascimento', 'idade', 'age', 'sexo', 'cpf',
     'cartaoSus', 'telefone', 'endereco', 'responsavel', 'contatoEmergencia', 'unidade', 'dataEntrada', 'dischargeAt',
@@ -79,17 +84,19 @@ export function projectPatientForUser(patient: Patient, user: User | null): Pati
     'cadastradoPor', 'cadastradoEm', 'ultimaAtualizacao', 'ultimoAtualizadoPor', 'updatedAt',
   ] as const
   const fields: (keyof Patient)[] = [...basicFields,...REGISTRATION_TEXT_FIELDS,...REGISTRATION_BOOLEAN_FIELDS,'attendanceRoute','attendanceClosure','receptionClassification','triageAssignedClinicianId','triageAssignedClinicianName']
-  const triage = hasUserPermission(user, 'view_triage_data')
-  const clinical = hasUserPermission(user, 'view_clinical_data')
-  const exams = hasUserPermission(user, 'view_exam_results')
+  const triage = hasUserPermission(user, 'view_triage_data')&&(user?.role!=='enfermaria'||Boolean(activeWard))
+  const clinical = hasUserPermission(user, 'view_clinical_data')&&(user?.role!=='enfermaria'||Boolean(activeWard))
+  const exams = hasUserPermission(user, 'view_exam_results')&&(user?.role!=='enfermaria'||Boolean(activeWard))
   if (triage) fields.push('sinaisVitais', 'observacoesTriagem', 'triageData', 'triageAssignedClinicianId', 'triageAssignedClinicianName', 'triageRiskClassification')
   if (clinical) fields.push('medicalConsultations','medicalTransfers','careTimings', 'surgeryRecords', 'assessmentRequests', 'surgicalRiskRequest', 'scheduledSurgery', 'scheduledDate', 'requestingPhysician', 'riskLevel', 'avaliacaoClinica', 'clinicalEvaluation', 'avaliacaoCirurgica', 'surgicalRiskAssessment', 'cardiologyAssessment', 'anesthesiaAssessment', 'clinicalRequestsSurgicalRisk', 'clinicalAssignedCardiologistId', 'clinicalAssignedCardiologistName', 'cardiologyAssignedAnesthesiologistId', 'cardiologyAssignedAnesthesiologistName', 'clinicalAssignedSurgeonId', 'clinicalAssignedSurgeonName')
   if (exams) fields.push('examResults', 'labRiskClassification', 'labRiskNotes', 'labNurseObservation')
   // A visit contains clinical snapshots: history alone does not grant access to them.
   if (hasUserPermission(user, 'view_patient_history') && triage && clinical && exams) fields.push('visitHistory')
+  if(clinical||hasUserPermission(user,'view_ward_care'))fields.push('wardStays')
   const visible = Object.fromEntries(fields.filter((field) => field in patient).map((field) => [field, patient[field]]))
   return {
     ...visible,
+    ...(user?.role==='enfermaria'?{wardStays}:{}),
     status: !clinical && ['alto_risco', 'contraindicado', 'liberado'].includes(patient.status) ? 'concluido' : patient.status,
     prioridade: triage ? patient.prioridade : 'normal',
     examesSolicitados: exams ? patient.examesSolicitados : [],

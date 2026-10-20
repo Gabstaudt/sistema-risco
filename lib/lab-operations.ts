@@ -27,7 +27,7 @@ export function prescribeMedication(patientId:string,draft:MedicationDraft,user:
  return {...draft,medication:draft.medication.trim(),dose:draft.dose.trim(),route:draft.route.trim(),id:crypto.randomUUID(),patientId,status:'solicitada',requestedAt:new Date().toISOString(),requestedBy:user.id}
 }
 export function administerMedication(order:MedicationOrder,at:string,user:User):MedicationOrder {
- if(user.role!=='laboratorio'||!hasUserPermission(user,'administer_medication'))throw new Error('Sem permissão para registrar a administração.')
+ if(!['laboratorio','enfermaria'].includes(user.role)||!hasUserPermission(user,'administer_medication'))throw new Error('Sem permissão para registrar a administração.')
  if(order.status==='cancelada')throw new Error('Esta solicitação de medicação foi cancelada.')
  if(order.status!=='solicitada')throw new Error('Esta medicação já foi registrada como administrada.')
  if(!Number.isFinite(Date.parse(at))||Date.parse(at)>Date.now()+1000||Math.floor(Date.parse(at)/1000)<Math.floor(Date.parse(order.requestedAt)/1000))throw new Error('Informe um horário válido de administração, após a solicitação e sem data futura.')

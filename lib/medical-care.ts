@@ -1,3 +1,4 @@
+import {wardAdmission} from './ward'
 import type {Patient,User,PatientStatus} from './types'
 import {isDoctor,isPatientAssignedToDoctor} from './medical-profile'
 import {hasUserPermission} from './permissions'
@@ -23,10 +24,11 @@ export function medicalTransfer(patient:Patient,user:User,draft:TransferDraft,us
  assertMedicalCare(patient,user,'transfer_patient')
  if(!draft.reason.trim())throw new Error('Informe o motivo do encaminhamento.')
  const sector=sectors.find(sector=>sector.id===draft.sectorId&&sector.active)
- if(!sector||!['clinico','cardiologista','anestesista','cirurgiao','laboratorio','triagem'].includes(sector.role))throw new Error('Selecione um setor ativo de atendimento.')
+ if(!sector||!['clinico','cardiologista','anestesista','cirurgiao','laboratorio','triagem','enfermaria'].includes(sector.role))throw new Error('Selecione um setor ativo de atendimento.')
+ if(sector.role==='enfermaria'){const updates=wardAdmission(patient,user,sector,draft.reason);const at=new Date().toISOString();return {...updates,medicalConsultations:patient.medicalConsultations?.map(record=>record.physicianId===user.id&&!record.endedAt?{...record,endedAt:at,outcome:'encaminhada' as const,destination:sector.name}:record),medicalTransfers:[...(patient.medicalTransfers||[]),{at,from:user.id,sectorId:sector.id,sectorName:sector.name,reason:draft.reason.trim(),clinicalSnapshot:{clinicalEvaluation:patient.clinicalEvaluation,cardiologyAssessment:patient.cardiologyAssessment,anesthesiaAssessment:patient.anesthesiaAssessment,surgicalRiskAssessment:patient.surgicalRiskAssessment}}]}}
  const permission=({clinico:'clinical_evaluation',cardiologista:'classify_cardiac_risk',anestesista:'classify_asa',cirurgiao:'classify_risk',laboratorio:'update_exam_status',triagem:'register_vital_signs'} as Record<string,string>)[sector.role]
  const target=users.find(target=>target.id===draft.professionalId&&target.id!==user.id&&target.active&&target.workplaceAvailability!=='indisponivel'&&target.role===sector.role&&userSectorId(target)===sector.id&&hasUserPermission(target,permission))
- if(!['laboratorio','triagem'].includes(sector.role)&&!target)throw new Error('Selecione outro médico ativo do setor.')
+ if(!['laboratorio','triagem','enfermaria'].includes(sector.role)&&!target)throw new Error('Selecione outro médico ativo do setor.')
  const now=new Date().toISOString()
  const specialty=['cardiologista','anestesista','cirurgiao'].includes(sector.role)?sector.role as 'cardiologista'|'anestesista'|'cirurgiao':undefined
  const statuses:Partial<Record<User['role'],PatientStatus>>={clinico:'aguardando_clinico',cardiologista:'aguardando_cardiologista',anestesista:'aguardando_anestesista',cirurgiao:'aguardando_cirurgiao',laboratorio:'aguardando_laboratorio',triagem:'aguardando_triagem'}

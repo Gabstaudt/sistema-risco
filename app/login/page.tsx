@@ -23,7 +23,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   
-  const { user, isLoading: isAuthLoading, login, getRedirectPath } = useAuth()
+  const { user, users,isLoading: isAuthLoading, login, getRedirectPath } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -51,6 +51,7 @@ export default function LoginPage() {
     { role: 'Recepcao', email: 'recepcao@hospital.com' },
     { role: 'Triagem', email: 'triagem@hospital.com' },
     { role: 'Clinico', email: 'clinico@hospital.com' },
+    ...(users.some(user=>user.email==='enfermaria@hospital.com'&&user.active)?[{role:'Enfermaria',email:'enfermaria@hospital.com'}]:[]),
     { role: 'Laboratorio', email: 'laboratorio@hospital.com' },
     { role: 'Cardiologista', email: 'cardiologista@hospital.com' },
     { role: 'Anestesista', email: 'anestesista@hospital.com' },

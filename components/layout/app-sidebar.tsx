@@ -76,6 +76,7 @@ const getNavigation = (
   },
 ): NavGroup[] => {
   const roleNavigation: Record<UserRole, NavGroup[]> = {
+    enfermaria:[{title:'Enfermaria',items:[{title:'Pacientes',url:'/enfermaria',icon:Users},{title:'Altas da enfermaria',url:'/enfermaria/altas',icon:History}]}],
     recepcao: [
       {
         title: 'Menu Principal',

@@ -1,9 +1,10 @@
+import type {WardStay} from './ward'
 import type {ConsultationRecord} from './medical-care'
 import type {TriageIntake} from './triage-intake'
 import type { CareTiming } from './admin-analytics'
 // Tipos base do sistema de Avaliacao de Risco Cirurgico
 
-export type UserRole = 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'admin'
+export type UserRole = 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'enfermaria' | 'admin'
 
 export interface User {
   workplaceAvailability?:'disponivel'|'em_atendimento'|'indisponivel'
@@ -15,7 +16,7 @@ export interface User {
   name: string
   role: UserRole
   /** Sala atual de atendimento, informada pelo cadastro/serviço de profissionais. */
-  professionalGroup?: 'medico' | 'recepcao' | 'triagem' | 'laboratorio' | 'admin'
+  professionalGroup?: 'medico' | 'recepcao' | 'triagem' | 'laboratorio' | 'enfermaria' | 'admin'
   medicalSpecialty?: 'clinico' | 'cirurgiao' | 'cardiologista' | 'anestesista'
   professionalRegistration?: string
   consultationRoom?: string
@@ -27,7 +28,8 @@ export interface User {
   createdAt: string
 }
 
-export type PatientStatus = 
+export type PatientStatus =
+  | 'em_enfermaria'
   | 'aguardando_triagem'
   | 'em_triagem'
   | 'aguardando_avaliacao'
@@ -356,6 +358,7 @@ export interface MedicationOrder {
 export type AttendanceRoute = 'com_triagem' | 'sem_triagem'
 export interface AttendanceClosure {kind:'baixa'|'cancelamento';reason:string;at:string;by:string}
 export interface Patient {
+  wardStays?:WardStay[]
   medicalConsultations?:ConsultationRecord[]
   medicalTransfers?:{at:string;from:string;to?:string;sectorId:string;sectorName:string;reason:string;clinicalSnapshot:Partial<Pick<Patient,'clinicalEvaluation'|'cardiologyAssessment'|'anesthesiaAssessment'|'surgicalRiskAssessment'>>}[]
   attendanceRoute?: AttendanceRoute
@@ -504,6 +507,11 @@ export interface MedicalDocument {
 }
 
 export type AuditAction =
+  | 'enfermaria_entrada'
+  | 'enfermaria_sinais_vitais'
+  | 'enfermaria_observacao'
+  | 'enfermaria_reavaliacao'
+  | 'enfermaria_alta'
   | 'consulta_medica_atualizada'
   | 'consulta_medica_finalizada'
   | 'paciente_encaminhado_medico'
@@ -578,6 +586,7 @@ export interface AuditLog {
 
 // Permissoes por perfil
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
+  enfermaria:['view_dashboard_enfermaria','view_patients_list','search_patient','view_ward_care','ward_admit','ward_record_vitals','ward_observations','ward_reassess','ward_discharge','administer_medication','print_medication_sheet','print_patient_record'],
   recepcao: [
     'manage_attendance',
     'print_blank_attendance',
@@ -740,6 +749,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
+  enfermaria:'Enfermaria',
   recepcao: 'Recepcao',
   triagem: 'Triagem',
   clinico: 'Medico Clinico',
@@ -751,6 +761,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 export const STATUS_LABELS: Record<PatientStatus, string> = {
+  em_enfermaria:'Em acompanhamento na enfermaria',
   aguardando_triagem: 'Aguardando Triagem',
   em_triagem: 'Em Triagem',
   aguardando_avaliacao: 'Aguardando Avaliacao',

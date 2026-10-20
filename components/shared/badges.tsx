@@ -7,6 +7,7 @@ interface StatusBadgeProps {
 }
 
 const statusStyles: Record<PatientStatus, string> = {
+  em_enfermaria:'clinical-info',
   aguardando_triagem: 'clinical-warning',
   em_triagem: 'clinical-info',
   aguardando_avaliacao: 'clinical-warning',

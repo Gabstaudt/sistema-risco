@@ -108,7 +108,7 @@ function TriageForm({patientId}:{patientId:string}) {
     let destinationUpdates
     try {
       manchester = createManchesterRecord(triageRiskClassification, flowchart, discriminator, user.id, complete)
-      destinationUpdates=validateTriageIntake(intake,complete,users,user,sectors)
+      destinationUpdates=validateTriageIntake(intake,complete,users,user,sectors,patient)
       if(vitalSigns.glasgow!==undefined&&(!Number.isInteger(vitalSigns.glasgow)||vitalSigns.glasgow<3||vitalSigns.glasgow>15))throw new Error('Glasgow deve ser um número inteiro entre 3 e 15.')
       if(vitalSigns.hgt!==undefined&&(!Number.isFinite(vitalSigns.hgt)||vitalSigns.hgt<0))throw new Error('Informe HGT válido.')
     } catch (error) {
@@ -465,7 +465,7 @@ function TriageForm({patientId}:{patientId:string}) {
             type="button"
             className="h-14 w-full px-6 text-base sm:w-auto"
             onClick={() => handleSave(true)}
-            disabled={isSaving || (intake.destination!=='laboratorio'&&!intake.professionalId) || !triageRiskClassification}
+            disabled={isSaving || (!['laboratorio','enfermaria'].includes(intake.destination)&&!intake.professionalId) || !triageRiskClassification}
           >
             <Save className="mr-2 h-4 w-4" />
             Concluir Triagem

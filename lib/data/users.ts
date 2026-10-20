@@ -2,6 +2,7 @@ import { professionalHierarchy } from '../medical-profile'
 import { User } from '../types'
 
 const seedUsers: User[] = [
+ {id:'user-enfermaria',name:'Equipe de Enfermaria (exemplo)',email:'enfermaria@hospital.com',password:'123456',role:'enfermaria',active:true,createdAt:'2026-10-20T08:00:00-03:00'},
   {
     id: 'user-1',
     email: 'recepcao@hospital.com',

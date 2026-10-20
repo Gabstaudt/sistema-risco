@@ -1,3 +1,4 @@
+import {wardDemoPatients} from './ward'
 import { Patient, PatientEncounter, ExamRequest, ExamResult } from '../types'
 
 // Funcao para calcular idade
@@ -1781,7 +1782,7 @@ const surgicalQueueMocks: Patient[] = [
   }
 })
 
-export const patients: Patient[] = [...basePatients, ...surgicalQueueMocks].map(patient => hydratePatient({
+export const patients: Patient[] = [...basePatients, ...surgicalQueueMocks,...wardDemoPatients].map(patient => hydratePatient({
   ...patient,
   triageAssignedClinicianId: patient.triageAssignedClinicianId || (!['aguardando_triagem', 'em_triagem'].includes(patient.status) ? 'user-3' : undefined),
   clinicalAssignedCardiologistId: patient.clinicalAssignedCardiologistId || (patient.clinicalRequestsSurgicalRisk ? 'user-8' : undefined),
