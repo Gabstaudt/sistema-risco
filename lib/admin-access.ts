@@ -6,11 +6,12 @@ import { getUserPermissions, hasUserPermission } from './permissions'
 import { normalizeUserProfile, professionalHierarchy } from './medical-profile'
 
 export interface AccessProfile { id:string; name:string; role:UserRole; permissions:string[]; active:boolean; builtIn?:boolean }
-export interface AccessRegistry { medicalWorkVersion?:number; sectors?:HospitalSector[]; triageVersion?:number; receptionVersion?:number; users:User[]; profiles:AccessProfile[] }
+export interface AccessRegistry { pharmacyVersion?:number; medicalWorkVersion?:number; sectors?:HospitalSector[]; triageVersion?:number; receptionVersion?:number; users:User[]; profiles:AccessProfile[] }
 export type UserDraft = Pick<User,'name'|'email'|'password'|'active'|'department'|'consultationRoom'|'professionalRegistration'> & { profileId:string;sectorId?:string }
 export const ACCESS_KEY = 'medrisk-access-registry'
 export const defaultProfiles = ():AccessProfile[] => (Object.keys(ROLE_PERMISSIONS) as UserRole[]).map(role=>({id:`profile-${role}`,name:ROLE_LABELS[role],role,permissions:[...new Set(getUserPermissions({id:'template',role,active:true} as User))].filter(permission=>permission!=='view_all_data'),active:true,builtIn:true}))
 export const PERMISSION_LABELS:Record<string,string> = {
+ manage_pharmacy:'Gerenciar farmácia, estoque e separação de medicamentos',
  view_ward_care:'Consultar pacientes e registros da enfermaria',ward_admit:'Registrar entrada na enfermaria',ward_record_vitals:'Registrar sinais vitais na enfermaria',ward_observations:'Registrar observações na enfermaria',ward_reassess:'Reavaliar paciente na enfermaria',ward_discharge:'Registrar alta da enfermaria',manage_own_workplace:'Alterar o próprio consultório e setor',medical_consultation:'Registrar e finalizar consulta médica',transfer_patient:'Encaminhar paciente para outro médico ou setor',issue_admission_documents:'Emitir fichas de internação',view_medical_reports:'Consultar relatórios dos próprios atendimentos',cancel_triage_attendance:'Cancelar atendimento aguardando triagem',forward_triage_sector:'Encaminhar da triagem para outro setor',print_triage_sheet:'Imprimir ficha de triagem',manage_attendance:'Atualizar e encerrar atendimentos',print_blank_attendance:'Imprimir ficha em branco',manage_profiles:'Gerenciar perfis e permissões',manage_users:'Gerenciar usuários',system_settings:'Acessar configurações',view_reports:'Consultar e exportar relatórios',view_audit:'Consultar auditoria',view_surgery_audit:'Auditar cirurgias',manage_sectors:'Gerenciar setores',
  view_patient_basic:'Consultar cadastro do paciente',view_triage_data:'Consultar triagem',view_clinical_data:'Consultar avaliações médicas',view_exam_results:'Consultar exames e resultados',view_patient_history:'Consultar histórico de atendimentos',view_patient_audit:'Consultar histórico de execução',view_all_data:'Acesso a todos os dados clínicos (inclui as permissões de leitura)',view_patients_list:'Listar pacientes',view_patient_minimal:'Consultar ficha do paciente',search_patient:'Pesquisar pacientes',
  create_patient:'Cadastrar pacientes',edit_patient_basic:'Editar cadastro do paciente',manage_reception_queue:'Gerenciar fila da recepção',call_triage_ticket:'Chamar senhas da triagem',forward_to_triage:'Encaminhar à triagem',register_vital_signs:'Registrar sinais vitais',edit_vital_signs:'Editar sinais vitais',register_complaint:'Registrar queixas',forward_to_clinical:'Encaminhar ao clínico',
@@ -25,7 +26,7 @@ export function resolveRegistryUser(user:User,profiles:AccessProfile[]):User {
  const profile=profiles.find(profile=>profile.id===user.profileId)
  return normalizeUserProfile({...user,role:profile?.role||user.role,active:user.active&&Boolean(profile?.active),permissions:profile?.permissions||[]})
 }
-export function seedRegistry(users:User[]):AccessRegistry {return {medicalWorkVersion:1,sectors:defaultSectors(),triageVersion:1,receptionVersion:1,profiles:defaultProfiles(),users:users.map(user=>({...user,sectorId:'sector-'+user.role,department:defaultSectors().find(s=>s.role===user.role)?.name,profileId:`profile-${user.role}`}))}}
+export function seedRegistry(users:User[]):AccessRegistry {return {pharmacyVersion:1,medicalWorkVersion:1,sectors:defaultSectors(),triageVersion:1,receptionVersion:1,profiles:defaultProfiles(),users:users.map(user=>({...user,sectorId:'sector-'+user.role,department:defaultSectors().find(s=>s.role===user.role)?.name,profileId:`profile-${user.role}`}))}}
 function assertAdmin(actor:User,permission:string){if(!hasUserPermission(actor,permission))throw new Error('Sem permissão para realizar esta alteração.')}
 function preserveAdmin(registry:AccessRegistry){
  if(!registry.users.some(user=>{const effective=resolveRegistryUser(user,registry.profiles);return effective.active&&effective.role==='admin'&&['manage_users','manage_profiles','system_settings','view_dashboard_admin'].every(permission=>hasUserPermission(effective,permission))}))throw new Error('Mantenha ao menos um administrador ativo com acesso a usuários, perfis e configurações.')
@@ -134,5 +135,12 @@ export function upgradeWardRegistry(registry:AccessRegistry):AccessRegistry{
  const current=upgradeMedicalRegistry(registry)
  const profiles=current.profiles.some(profile=>profile.id==='profile-enfermaria')?current.profiles:[...current.profiles,defaultProfiles().find(profile=>profile.role==='enfermaria')!]
  const sectors=(current.sectors||defaultSectors()).some(sector=>sector.id==='sector-enfermaria')?current.sectors!:[...(current.sectors||[]),defaultSectors().find(sector=>sector.role==='enfermaria')!]
- return {...current,profiles,sectors}
+ const pharmacyProfile=defaultProfiles().find(profile=>profile.role==='farmacia')!
+ const withPharmacy=profiles.some(profile=>profile.id===pharmacyProfile.id)?profiles:[...profiles,pharmacyProfile]
+ const pharmacySector=defaultSectors().find(sector=>sector.role==='farmacia')!
+ const allSectors=sectors.some(sector=>sector.id===pharmacySector.id)?sectors:[...sectors,pharmacySector]
+ if((current.pharmacyVersion||0)>=1)return {...current,profiles:withPharmacy,sectors:allSectors}
+ const canonicalAdmin=defaultProfiles().find(profile=>profile.id==='profile-admin')!
+ const upgraded=withPharmacy.map(profile=>{const old=canonicalAdmin.permissions.filter(permission=>permission!=='manage_pharmacy');return profile.id==='profile-admin'&&profile.builtIn&&profile.name===canonicalAdmin.name&&profile.permissions.length===old.length&&profile.permissions.every(permission=>old.includes(permission))?{...profile,permissions:[...profile.permissions,'manage_pharmacy']}:profile})
+ return {...current,pharmacyVersion:1,profiles:upgraded,sectors:allSectors}
 }

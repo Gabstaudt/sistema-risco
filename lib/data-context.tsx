@@ -1,4 +1,7 @@
 'use client'
+import {deductAdministeredMedication} from './pharmacy'
+import {readMedicationOrders,readPharmacy,writePharmacy,pharmacyLock,PHARMACY_EVENT} from './pharmacy-storage'
+import {validateExamConfiguration, examReferenceForAge, patientAgeAtRequest} from './laboratory-settings'
 import {activeWardStay,wardAdmission,appendWardRecord,dischargeWard,assertWardAccess,wardDateVisible,wardMedicationVisible,type WardRecordDraft} from './ward'
 import {wardDemoMedications} from './data/ward'
 import {consultation,medicalTransfer,assertMedicalCare,type ConsultationRecord,type TransferDraft} from './medical-care'
@@ -132,6 +135,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const visibleExamRequests = hasPermission('view_exam_results') ? examRequests.filter(exam => visibleIds.has(exam.patientId)&&(user?.role!=='enfermaria'||Boolean(patients.find(p=>p.id===exam.patientId)&&wardDateVisible(patients.find(p=>p.id===exam.patientId)!,exam.solicitadoEm,user)))) : []
   const visibleAuditLogs = hasPermission('view_patient_audit') ? auditLogs.filter(log => !log.patientId || visibleIds.has(log.patientId)) : []
 
+  useEffect(()=>{const refresh=()=>setMedicationOrders(readMedicationOrders());window.addEventListener(PHARMACY_EVENT,refresh);const onStorage=(event:StorageEvent)=>{if(event.key==='medrisk-pharmacy')refresh()};window.addEventListener('storage',onStorage);return()=>{window.removeEventListener(PHARMACY_EVENT,refresh);window.removeEventListener('storage',onStorage)}},[])
+
   // Carregar dados do localStorage ou usar dados iniciais
   useEffect(() => {
     const savedPatients = localStorage.getItem(PATIENTS_KEY)
@@ -139,7 +144,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const savedExamRequests = localStorage.getItem(EXAM_REQUESTS_KEY)
     const savedAudit = localStorage.getItem(AUDIT_KEY)
     setMedicalDocuments(JSON.parse(localStorage.getItem(DOCUMENTS_KEY) || '[]'))
-    const savedMedications:MedicationOrder[]=JSON.parse(localStorage.getItem(MEDICATIONS_KEY)||'[]')
+    const savedMedications:MedicationOrder[]=readMedicationOrders()
     const wardSeeded=localStorage.getItem('medrisk-ward-demo-seeded')
     const orders=wardSeeded?savedMedications:[...savedMedications,...wardDemoMedications.filter(order=>!savedMedications.some(item=>item.id===order.id))]
     if(!wardSeeded){localStorage.setItem('medrisk-ward-demo-seeded','1');localStorage.setItem(MEDICATIONS_KEY,JSON.stringify(orders))}
@@ -223,7 +228,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const sync = (event: StorageEvent) => {
-      if (event.key === MEDICATIONS_KEY && event.newValue) setMedicationOrders(JSON.parse(event.newValue))
+      if (event.key === MEDICATIONS_KEY && event.newValue) setMedicationOrders(readMedicationOrders())
       if (event.key === EXAM_TYPES_KEY && event.newValue) setExamTypes(JSON.parse(event.newValue))
       if (event.key === EXAM_REQUESTS_KEY && event.newValue) setExamRequests(JSON.parse(event.newValue))
       if (event.key === TICKETS_KEY && event.newValue) setTickets(JSON.parse(event.newValue))
@@ -339,7 +344,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const updates=closeReceptionAttendance(patient,user,kind,reason);const next=normalizePatient({...patient,...updates,wardStays:patient.wardStays?.map(stay=>!stay.dischargedAt?{...stay,dischargedAt:updates.dischargeAt,dischargedBy:user.id,dischargedByName:user.name,dischargeKind:'encerramento_administrativo' as const,dischargeNotes:reason.trim()}:stay),medicalConsultations:patient.medicalConsultations?.map(record=>!record.endedAt?{...record,endedAt:updates.dischargeAt,outcome:'cancelada' as const,destination:reason.trim()}:record)});const list=stored.map(item=>item.id===patientId?next:item)
       localStorage.setItem(PATIENTS_KEY,JSON.stringify(list));setPatients(list)
       const requests:ExamRequest[]=JSON.parse(localStorage.getItem(EXAM_REQUESTS_KEY)||'[]');const nextRequests=requests.map(exam=>exam.patientId===patientId&&Date.parse(exam.solicitadoEm)>=Date.parse(patient.dataEntrada)&&!['concluido','cancelado'].includes(exam.status)?{...exam,status:'cancelado' as const}:exam);localStorage.setItem(EXAM_REQUESTS_KEY,JSON.stringify(nextRequests));setExamRequests(nextRequests)
-      const orders:MedicationOrder[]=JSON.parse(localStorage.getItem(MEDICATIONS_KEY)||'[]');const nextOrders=orders.map(order=>order.patientId===patientId&&Date.parse(order.requestedAt)>=Date.parse(patient.dataEntrada)&&order.status==='solicitada'?{...order,status:'cancelada' as const,cancelledReason:reason.trim()}:order);localStorage.setItem(MEDICATIONS_KEY,JSON.stringify(nextOrders));setMedicationOrders(nextOrders)
+      const orders:MedicationOrder[]=readMedicationOrders();const nextOrders=orders.map(order=>order.patientId===patientId&&Date.parse(order.requestedAt)>=Date.parse(patient.dataEntrada)&&order.status==='solicitada'?{...order,status:'cancelada' as const,cancelledReason:reason.trim()}:order);localStorage.setItem(MEDICATIONS_KEY,JSON.stringify(nextOrders));setMedicationOrders(nextOrders)
       addAuditLog({action:'atendimento_encerrado',patientId,details:`${kind==='cancelamento'?'Cancelamento':'Baixa administrativa'}: ${reason.trim()}`})
       return {tickets:current.map(ticket=>ticket.patientId===patientId&&ticket.stage!=='concluida'?{...ticket,stage:'concluida' as const,calledBy:undefined,calledAt:undefined}:ticket),result:undefined}
     })
@@ -641,6 +646,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!examTypeData.name.trim() || !examTypeData.category.trim()) throw new Error('Informe nome e categoria do exame.')
     if (examTypeData.resultMode && !['single_file', 'multiple_images', 'individual'].includes(examTypeData.resultMode)) throw new Error('Formato de resultado inválido.')
     if (examTypeData.resultMode === 'multiple_images' && !examTypeData.category.toLowerCase().includes('imagem')) throw new Error('Selecione a categoria Imagem para múltiplas imagens.')
+    validateExamConfiguration(examTypeData, undefined, user)
     const newExamType: ExamType = {
       ...examTypeData,
       name: examTypeData.name.trim(),
@@ -667,6 +673,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = { ...previous, ...draft, id: previous.id, createdAt: previous.createdAt, createdBy: previous.createdBy }
     if (!next.name.trim() || !next.category.trim()) throw new Error('Informe nome e categoria do exame.')
     if (next.resultMode === 'multiple_images' && !next.category.toLowerCase().includes('imagem')) throw new Error('Múltiplas imagens exigem a categoria Imagem.')
+    validateExamConfiguration(next, previous, user)
     setExamTypes(current => current.map(exam => exam.id === id ? next : exam))
     addAuditLog({action:'cadastro_exame',description:`Tipo de exame atualizado: ${next.name}`})
   }, [user, hasPermission, examTypes, addAuditLog])
@@ -688,6 +695,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         resultMode: examType?.resultMode || (examType?.category.toLowerCase().includes('imagem') ? 'multiple_images' : 'single_file'),
         status: 'solicitado' as ExamStatus,
         justificativa,
+        valorReferencia: examType ? examReferenceForAge(examType, patientAgeAtRequest(patients.find(patient=>patient.id===patientId))) : undefined,
         solicitadoPor: user?.id || '',
         solicitadoEm: new Date().toISOString(),
       }
@@ -762,14 +770,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return document
   }, [user, patients, isInitialized, addAuditLog])
 
-  const changeMedications = useCallback(async (change: (orders: MedicationOrder[]) => MedicationOrder[]) => {
+  const changeMedications = useCallback(async (change: (orders: MedicationOrder[]) => MedicationOrder[] | Promise<MedicationOrder[]>, authoritativeAdministration=false) => {
     if (!isInitialized) throw new Error('Aguarde o carregamento.')
-    const run = () => {
-      const orders: MedicationOrder[] = JSON.parse(localStorage.getItem(MEDICATIONS_KEY) || '[]')
-      const next = change(orders)
-      localStorage.setItem(MEDICATIONS_KEY, JSON.stringify(next)); setMedicationOrders(next)
+    const run = async () => {
+      const orders: MedicationOrder[] = readMedicationOrders()
+      const next = await change(orders)
+      try {localStorage.setItem(MEDICATIONS_KEY, JSON.stringify(next))}catch(error){if(!authoritativeAdministration)throw error}
+      setMedicationOrders(next)
     }
-    if (navigator.locks) await navigator.locks.request('medrisk-medications', run); else run()
+    if (navigator.locks) await navigator.locks.request('medrisk-medications', run); else await run()
   }, [isInitialized])
 
   const prescribeMedicationOrder = useCallback(async (patientId: string, draft: MedicationDraft) => {
@@ -785,13 +794,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const recordMedicationAdministration = useCallback(async (id: string, at: string) => {
     if (!user) throw new Error('Faça login para registrar a administração.')
     let updated: MedicationOrder | undefined
-    await changeMedications(orders => {
+    await changeMedications(async orders => {
       const order = orders.find(item => item.id === id)
       if (!order) throw new Error('Medicação não encontrada.')
       if(user.role==='enfermaria'){const patient=(JSON.parse(localStorage.getItem(PATIENTS_KEY)||'[]') as Patient[]).find(p=>p.id===order.patientId);if(!patient)throw new Error('Paciente não encontrado.');assertWardAccess(patient,user,'administer_medication');const stay=activeWardStay(patient)!;if(Math.floor(Date.parse(at)/1000)<Math.floor(Date.parse(stay.admittedAt)/1000))throw new Error('A administração deve ocorrer após a entrada na enfermaria.');if(!wardMedicationVisible(patient,order,user))throw new Error('Medicação não pertence a esta entrada hospitalar.')}
       updated = administerMedication(order, at, user)
+      await pharmacyLock(()=>{writePharmacy(deductAdministeredMedication(readPharmacy(),updated!,user))})
       return orders.map(item => item.id === id ? updated! : item)
-    })
+    }, true)
     addAuditLog({ action: 'medicacao_administrada', patientId: updated?.patientId, details: `${updated?.medication} administrada em ${updated?.administeredAt}.` })
   }, [user, changeMedications, addAuditLog])
 
@@ -833,7 +843,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       medicalDocuments: hasPermission('view_clinical_data') ? medicalDocuments.filter(document => visibleIds.has(document.patientId)&&(user?.role!=='enfermaria'||Boolean(patients.find(p=>p.id===document.patientId)&&wardDateVisible(patients.find(p=>p.id===document.patientId)!,document.issuedAt,user)))) : [],
       consultations:(hasPermission('medical_consultation')||hasPermission('view_medical_reports'))?patients.flatMap(patient=>(patient.medicalConsultations||[]).filter(record=>record.physicianId===user?.id)):[],saveConsultation,transferMedicalPatient,callMedicalPatient,
       createMedicalDocument,
-      medicationOrders: hasPermission('view_clinical_data') || hasPermission('administer_medication') ? medicationOrders.filter(order => visibleIds.has(order.patientId)&&(user?.role!=='enfermaria'||Boolean(patients.find(p=>p.id===order.patientId)&&wardMedicationVisible(patients.find(p=>p.id===order.patientId)!,order,user)))) : [],
+      medicationOrders: hasPermission('manage_pharmacy') || hasPermission('view_clinical_data') || hasPermission('administer_medication') ? medicationOrders.filter(order => visibleIds.has(order.patientId)&&(user?.role!=='enfermaria'||Boolean(patients.find(p=>p.id===order.patientId)&&wardMedicationVisible(patients.find(p=>p.id===order.patientId)!,order,user)))) : [],
       prescribeMedicationOrder, recordMedicationAdministration,
       isDataReady: isInitialized,
       publicCalls: tickets.filter(ticket => ['chamada_recepcao', 'chamada_triagem', 'chamada_clinico','chamada_medico'].includes(ticket.stage)).map(({number, stage, category, calledAt, day, destination}) => ({number, stage, category, calledAt, day, destination})),

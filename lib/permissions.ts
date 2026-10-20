@@ -12,7 +12,7 @@ export function getUserPermissions(user: User | null): readonly string[] {
   if (!user || !user.active || !Object.hasOwn(ROLE_PERMISSIONS, user.role)) return []
   if (user.permissions !== undefined) return Array.isArray(user.permissions) ? user.permissions : []
   const defaults = ROLE_PERMISSIONS[user.role] || []
-  const patientViews = user.role === 'enfermaria'?['view_patient_basic','view_triage_data','view_clinical_data']:user.role === 'recepcao' ? ['view_patient_basic']
+  const patientViews = user.role === 'enfermaria'?['view_patient_basic','view_triage_data','view_clinical_data']:['recepcao','farmacia'].includes(user.role) ? ['view_patient_basic']
     : user.role === 'triagem' ? PATIENT_VIEW_PERMISSIONS.filter((permission) => permission !== 'view_patient_audit')
     : PATIENT_VIEW_PERMISSIONS
   return [...defaults, ...patientViews]
@@ -25,7 +25,7 @@ export function hasUserPermission(user: User | null, permission: string): boolea
 }
 
 const sectionRoles: Record<string, UserRole> = {
-  enfermaria:'enfermaria',recepcao: 'recepcao', triagem: 'triagem', clinico: 'clinico', laboratorio: 'laboratorio',
+  farmacia:'farmacia',enfermaria:'enfermaria',recepcao: 'recepcao', triagem: 'triagem', clinico: 'clinico', laboratorio: 'laboratorio',
   cardiologista: 'cardiologista', anestesista: 'anestesista', cirurgiao: 'cirurgiao', admin: 'admin',
 }
 
@@ -52,13 +52,15 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
   if(section==='triagem'&&page==='entrada')return hasUserPermission(user,'create_patient')&&hasUserPermission(user,'forward_to_triage')
   if (page === 'cadastro') return hasUserPermission(user, 'create_patient')
   if (page === 'pacientes') return hasUserPermission(user, 'view_patients_list') && hasUserPermission(user, 'view_patient_basic')
+  if(section==='farmacia')return hasUserPermission(user,'manage_pharmacy')
   if(section==='enfermaria')return hasUserPermission(user,'view_ward_care')
   if (section === 'recepcao' && page === 'entrada') return hasUserPermission(user, 'manage_reception_queue') && hasUserPermission(user, 'view_patient_basic')
   if (section === 'recepcao' && ['novo','atendimentos','atendimento','ficha-em-branco'].includes(page)) return hasUserPermission(user, page==='ficha-em-branco'?'print_blank_attendance':'manage_attendance')
   if (section === 'recepcao') return page === 'fila' && hasUserPermission(user, 'manage_reception_queue')
   if (section === 'admin') {
+    if (page === 'exames' && segments[2] === 'configuracoes') return hasUserPermission(user, 'system_settings') && hasUserPermission(user, 'create_exam_type')
     const adminPermissions: Record<string, string> = {
-      setores:'manage_sectors',usuarios: 'manage_users', exames: 'create_exam_type', auditoria: 'view_audit', cirurgias: 'view_surgery_audit', configuracoes: 'manage_profiles', relatorios: 'view_reports',
+      farmacia:'manage_pharmacy',setores:'manage_sectors',usuarios: 'manage_users', exames: 'create_exam_type', auditoria: 'view_audit', cirurgias: 'view_surgery_audit', configuracoes: 'manage_profiles', relatorios: 'view_reports',
     }
     if (page === 'configuracoes' && !hasUserPermission(user, 'system_settings')) return false
     return !!adminPermissions[page] && hasUserPermission(user, adminPermissions[page])

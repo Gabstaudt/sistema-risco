@@ -15,7 +15,7 @@ test('administrator creates and edits physicians with a managed profile, unique 
  assert.throws(()=>saveManagedUser(registry,{...admin,permissions:[]},doctor),/permissão/)
 })
 test('all profile types are present and custom profile changes affect linked users without overwriting explicit backend grants',()=>{
- assert.equal(registry.profiles.length,9)
+ assert.equal(registry.profiles.length,10)
  const edited=saveAccessProfile(registry,admin,{name:'Clínico restrito',role:'clinico',active:true,permissions:['view_dashboard_clinico','view_patient_basic']})
  const profile=edited.profiles.find(profile=>profile.name==='Clínico restrito')!
  const withUser=saveManagedUser(edited,admin,{...doctor,profileId:profile.id})

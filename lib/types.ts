@@ -4,7 +4,7 @@ import type {TriageIntake} from './triage-intake'
 import type { CareTiming } from './admin-analytics'
 // Tipos base do sistema de Avaliacao de Risco Cirurgico
 
-export type UserRole = 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'enfermaria' | 'admin'
+export type UserRole = 'farmacia' | 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'enfermaria' | 'admin'
 
 export interface User {
   workplaceAvailability?:'disponivel'|'em_atendimento'|'indisponivel'
@@ -16,7 +16,7 @@ export interface User {
   name: string
   role: UserRole
   /** Sala atual de atendimento, informada pelo cadastro/serviço de profissionais. */
-  professionalGroup?: 'medico' | 'recepcao' | 'triagem' | 'laboratorio' | 'enfermaria' | 'admin'
+  professionalGroup?: 'medico' | 'farmacia' | 'recepcao' | 'triagem' | 'laboratorio' | 'enfermaria' | 'admin'
   medicalSpecialty?: 'clinico' | 'cirurgiao' | 'cardiologista' | 'anestesista'
   professionalRegistration?: string
   consultationRoom?: string
@@ -145,7 +145,16 @@ export interface ClinicalEvaluation {
 export type ExamResultMode = 'single_file' | 'multiple_images' | 'individual'
 export interface ExamAttachmentFile { id: string; name: string; type: string; size: number; uploadedAt: string; uploadedBy: string }
 
+export interface ExamAgeRange {
+  id: string
+  name: string
+  minYears: number
+  maxYears?: number
+  reference: string
+}
+
 export interface ExamType {
+  ageRanges?: ExamAgeRange[]
   active?: boolean
   resultMode?: ExamResultMode
   id: string
@@ -586,6 +595,7 @@ export interface AuditLog {
 
 // Permissoes por perfil
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
+  farmacia:['view_dashboard_farmacia','manage_pharmacy','view_patient_basic','view_patients_list'],
   enfermaria:['view_dashboard_enfermaria','view_patients_list','search_patient','view_ward_care','ward_admit','ward_record_vitals','ward_observations','ward_reassess','ward_discharge','administer_medication','print_medication_sheet','print_patient_record'],
   recepcao: [
     'manage_attendance',
@@ -726,6 +736,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'return_to_lab',
   ],
   admin: [
+    'manage_pharmacy',
     'manage_attendance',
     'print_blank_attendance',
     'manage_profiles',
@@ -749,6 +760,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
+  farmacia:'Farmácia',
   enfermaria:'Enfermaria',
   recepcao: 'Recepcao',
   triagem: 'Triagem',

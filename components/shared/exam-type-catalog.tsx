@@ -1,6 +1,7 @@
 'use client'
 
-import type { ExamResultMode } from '@/lib/types'
+import {canConfigureLaboratory} from '@/lib/laboratory-settings'
+import type { ExamAgeRange, ExamResultMode } from '@/lib/types'
 import { useState } from 'react'
 import { Header } from '@/components/layout/header'
 import { useData } from '@/lib/data-context'
@@ -16,11 +17,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Plus, Search, FlaskConical } from 'lucide-react'
 
-const EXAM_CATEGORIES = ['Laboratorial', 'Imagem', 'Cardiologia', 'Pneumologia', 'Outros']
+const EXAM_CATEGORIES = ['Hematologia', 'Laboratorial', 'Imagem', 'Cardiologia', 'Cardiologico', 'Pneumologia', 'Especialidade', 'Outros']
 
 export function ExamTypeCatalog({embedded=false}:{embedded?:boolean}) {
   const Heading=embedded?'h2':'h1'
   const { user, hasPermission } = useAuth()
+  const canConfigure = canConfigureLaboratory(user)
+  const [ageRanges, setAgeRanges] = useState<ExamAgeRange[]>([])
   const [error, setError] = useState('')
   const { examTypes, createExamType, updateExamType } = useData()
 
@@ -65,6 +68,7 @@ export function ExamTypeCatalog({embedded=false}:{embedded?:boolean}) {
       category: formData.category,
       resultMode: formData.resultMode,
       active: formData.active,
+      ageRanges,
       description: formData.description || undefined,
       valueReference: formData.valueReference || undefined,
       createdBy: user?.id || '',
@@ -104,12 +108,12 @@ export function ExamTypeCatalog({embedded=false}:{embedded?:boolean}) {
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             {hasPermission('create_exam_type') && <DialogTrigger asChild>
-              <Button className="w-full lg:w-auto" onClick={()=>{setEditing(undefined);setError('');setFormData({name:'',category:'',description:'',valueReference:'',resultMode:'single_file',active:true})}}>
+              <Button className="w-full lg:w-auto" onClick={()=>{setEditing(undefined);setError('');setAgeRanges([]);setFormData({name:'',category:'',description:'',valueReference:'',resultMode:'single_file',active:true})}}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Tipo de Exame
               </Button>
             </DialogTrigger>}
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-[680px]">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle>{editing?'Editar tipo de exame':'Cadastrar Tipo de Exame'}</DialogTitle>
@@ -142,7 +146,8 @@ export function ExamTypeCatalog({embedded=false}:{embedded?:boolean}) {
                     </Select>
                   </div>
                   <div className="space-y-2"><Label htmlFor="result-mode">Formato do resultado *</Label><select id="result-mode" className="h-12 w-full rounded-md border bg-background px-3" value={formData.resultMode} onChange={event=>setFormData(prev=>({...prev,resultMode:event.target.value as ExamResultMode}))}><option value="single_file">Arquivo único</option><option value="individual">Registro individual (um resultado por solicitação)</option>{formData.category === 'Imagem' && <option value="multiple_images">Uma ou mais imagens</option>}</select></div>
-                  <div className="space-y-2"><Label htmlFor="exam-active">Situação</Label><select id="exam-active" className="h-12 w-full rounded-md border bg-background px-3" value={formData.active?'active':'inactive'} onChange={event=>setFormData(prev=>({...prev,active:event.target.value==='active'}))}><option value="active">Ativo</option><option value="inactive">Inativo</option></select></div>
+                  <div className="space-y-2"><Label htmlFor="exam-active">Situação</Label><select disabled={!canConfigure} id="exam-active" className="h-12 w-full rounded-md border bg-background px-3" value={formData.active?'active':'inactive'} onChange={event=>setFormData(prev=>({...prev,active:event.target.value==='active'}))}><option value="active">Ativo</option><option value="inactive">Inativo</option></select></div>
+                  {canConfigure && <fieldset className="space-y-3 rounded-lg border p-3"><legend className="px-1 font-medium">Faixas etárias · anos completos</legend>{ageRanges.map((range,index)=><div key={range.id} className="grid gap-2 rounded-md border p-3 sm:grid-cols-2"><Label className="space-y-1">Nome da faixa<Input aria-label={`Nome da faixa ${index+1}`} value={range.name} onChange={event=>setAgeRanges(previous=>previous.map(item=>item.id===range.id?{...item,name:event.target.value}:item))}/></Label><div className="flex items-end"><Button type="button" variant="outline" onClick={()=>setAgeRanges(previous=>previous.filter(item=>item.id!==range.id))}>Remover faixa {index+1}</Button></div><Label className="space-y-1">Idade mínima<Input aria-label={`Idade mínima da faixa ${index+1}`} type="number" min="0" step="1" required value={range.minYears} onChange={event=>setAgeRanges(previous=>previous.map(item=>item.id===range.id?{...item,minYears:event.target.value===''?NaN:Number(event.target.value)}:item))}/></Label><Label className="space-y-1">Idade máxima (opcional)<Input aria-label={`Idade máxima da faixa ${index+1}`} type="number" min="0" step="1" value={range.maxYears??''} onChange={event=>setAgeRanges(previous=>previous.map(item=>item.id===range.id?{...item,maxYears:event.target.value===''?undefined:Number(event.target.value)}:item))}/></Label><Label className="space-y-1 sm:col-span-2">Referência da faixa<Textarea aria-label={`Referência da faixa ${index+1}`} value={range.reference} onChange={event=>setAgeRanges(previous=>previous.map(item=>item.id===range.id?{...item,reference:event.target.value}:item))}/></Label></div>)}<Button type="button" variant="outline" onClick={()=>setAgeRanges(previous=>[...previous,{id:crypto.randomUUID(),name:'',minYears:0,reference:''}])}>Adicionar faixa etária</Button></fieldset>}
                   {error && <p role="alert" className="text-destructive">{error}</p>}
                   <div className="space-y-2">
                     <Label htmlFor="description">Descricao</Label>
@@ -176,7 +181,7 @@ export function ExamTypeCatalog({embedded=false}:{embedded?:boolean}) {
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-7">
           <Card className="xl:col-span-1">
             <CardContent className="p-4">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
@@ -264,8 +269,8 @@ export function ExamTypeCatalog({embedded=false}:{embedded?:boolean}) {
                             {exam.description || '-'}
                           </TableCell>
                           <TableCell className="whitespace-normal break-words text-sm text-muted-foreground">
-                            {exam.valueReference || '-'}
-                          </TableCell><TableCell>{exam.active===false?'Inativo':'Ativo'}</TableCell><TableCell>{hasPermission('create_exam_type')&&<Button variant="outline" onClick={()=>{setEditing(exam.id);setError('');setFormData({name:exam.name,category:exam.category,description:exam.description||'',valueReference:exam.valueReference||'',resultMode:exam.resultMode||'single_file',active:exam.active!==false});setIsDialogOpen(true)}}>Editar exame</Button>}</TableCell>
+                            {exam.valueReference || '-'}{exam.ageRanges?.map(range=><p key={range.id} className="mt-2">{range.name}: {range.minYears}–{range.maxYears??'∞'} anos{range.reference ? ` · ${range.reference}` : ''}</p>)}
+                          </TableCell><TableCell>{exam.active===false?'Inativo':'Ativo'}</TableCell><TableCell>{hasPermission('create_exam_type')&&<Button variant="outline" onClick={()=>{setEditing(exam.id);setError('');setAgeRanges(exam.ageRanges||[]);setFormData({name:exam.name,category:exam.category,description:exam.description||'',valueReference:exam.valueReference||'',resultMode:exam.resultMode||'single_file',active:exam.active!==false});setIsDialogOpen(true)}}>Editar exame</Button>}</TableCell>
                         </TableRow>
                       ))
                     )}

@@ -76,6 +76,7 @@ const getNavigation = (
   },
 ): NavGroup[] => {
   const roleNavigation: Record<UserRole, NavGroup[]> = {
+    farmacia:[{title:'Farmácia',items:[{title:'Estoque',url:'/farmacia',icon:ClipboardList},{title:'Fornecedores',url:'/farmacia/fornecedores',icon:Users},{title:'Produtos',url:'/farmacia/produtos',icon:TestTube},{title:'Programas de saúde',url:'/farmacia/programas',icon:Heart},{title:'Movimentações',url:'/farmacia/movimentacoes',icon:History},{title:'Separação de medicamentos',url:'/farmacia/separacao',icon:Syringe},{title:'Medicamentos vencidos',url:'/farmacia/vencidos',icon:AlertCircle}]}],
     enfermaria:[{title:'Enfermaria',items:[{title:'Pacientes',url:'/enfermaria',icon:Users},{title:'Altas da enfermaria',url:'/enfermaria/altas',icon:History}]}],
     recepcao: [
       {
@@ -219,6 +220,7 @@ const getNavigation = (
       {
         title: 'Sistema',
         items: [
+          { title: 'Farmácia e estoque', url: '/admin/farmacia', icon: ClipboardList },
           { title: 'Tipos de Exames', url: '/admin/exames', icon: TestTube },
           { title: 'Cirurgias por tipo', url: '/admin/cirurgias', icon: Syringe },
           { title: 'Relatórios', url: '/admin/relatorios', icon: FileText },

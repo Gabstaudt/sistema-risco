@@ -27,7 +27,7 @@ export function isPatientAssignedToDoctor(patient: Patient, user: User | null) {
 export type BackendProfile = Omit<User, 'role'> & { role: UserRole | 'medico' }
 export function normalizeUserProfile(input: BackendProfile): User {
   const role = input.role === 'medico' ? input.medicalSpecialty : input.role
-  if (!role || !['recepcao', 'triagem', 'laboratorio','enfermaria', 'admin', ...MEDICAL_SPECIALTIES].includes(role)) throw new Error('Perfil profissional inválido.')
+  if (!role || !['farmacia','recepcao', 'triagem', 'laboratorio','enfermaria', 'admin', ...MEDICAL_SPECIALTIES].includes(role)) throw new Error('Perfil profissional inválido.')
   const hierarchy = professionalHierarchy(role)
   return { ...input, role, professionalGroup: hierarchy.group, medicalSpecialty: hierarchy.specialty }
 }

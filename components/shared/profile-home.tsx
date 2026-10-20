@@ -24,6 +24,7 @@ type HomeAction = {
 type HomeConfig = { title: string; actions: [HomeAction, HomeAction] | [HomeAction, HomeAction, HomeAction] }
 
 const homeByRole: Record<UserRole, HomeConfig> = {
+  farmacia:{title:'Farmácia',actions:[{label:'Estoque',description:'Produtos e lotes disponíveis',href:'/farmacia',icon:ClipboardList},{label:'Separar medicações',description:'Atender solicitações de medicamentos',href:'/farmacia/separacao',icon:FileCheck}]},
   enfermaria:{title:'Enfermaria',actions:[{label:'Pacientes',description:'Acompanhamento na enfermaria',href:'/enfermaria',icon:Users},{label:'Altas',description:'Histórico da enfermaria',href:'/enfermaria/altas',icon:History}]},
   recepcao: {
     title: 'Recepção',
