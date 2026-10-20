@@ -19,6 +19,7 @@ export function getUserPermissions(user: User | null): readonly string[] {
 }
 
 export function hasUserPermission(user: User | null, permission: string): boolean {
+  if(user?.previewMode&&!/^(view_|search_|print_|calculate_)/.test(permission))return false
   const permissions = getUserPermissions(user)
   return permissions.includes(permission) ||
     (PATIENT_VIEW_PERMISSIONS.includes(permission as typeof PATIENT_VIEW_PERMISSIONS[number]) && permissions.includes('view_all_data'))
@@ -31,6 +32,7 @@ const sectionRoles: Record<string, UserRole> = {
 
 /** Shared by the route guard, navigation and home shortcuts. */
 export function canAccessRoute(pathname: string, user: User | null): boolean {
+  if(user?.previewMode)user={...user,previewMode:false}
   if (!user) return false
   const segments = pathname.split('/').filter(Boolean)
   const [section, page] = segments
@@ -42,7 +44,7 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
       (segments.length===3&&segments[2]==='atendimento'&&isDoctor(user)&&hasUserPermission(user,'medical_consultation')) ||
       (segments.length === 3 && segments[2] === 'exames' && hasUserPermission(user, 'view_exam_results')) ||
       (segments.length === 3 && segments[2] === 'medicacoes' && (hasUserPermission(user, 'view_clinical_data') || hasUserPermission(user, 'administer_medication'))) ||
-      (segments.length === 3 && segments[2] === 'imprimir' && ['print_patient_record', 'print_patient_history', 'print_medication_sheet', 'print_exams','print_triage_sheet','issue_admission_documents', 'issue_prescription', 'issue_certificate'].some(permission => hasUserPermission(user, permission))) ||
+      (segments.length === 3 && segments[2] === 'imprimir' && ['print_blank_attendance','print_patient_record', 'print_patient_history', 'print_medication_sheet', 'print_exams','print_triage_sheet','issue_admission_documents', 'issue_prescription', 'issue_certificate'].some(permission => hasUserPermission(user, permission))) ||
       (segments.length === 3 && segments[2] === 'historico' && hasUserPermission(user, 'view_patient_audit'))
   }
   if(section==='medico')return isDoctor(user)&&hasUserPermission(user,page==='local'?'manage_own_workplace':page==='relatorios'?'view_medical_reports':'medical_consultation')
@@ -60,7 +62,7 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
   if (section === 'admin') {
     if (page === 'exames' && segments[2] === 'configuracoes') return hasUserPermission(user, 'system_settings') && hasUserPermission(user, 'create_exam_type')
     const adminPermissions: Record<string, string> = {
-      farmacia:'manage_pharmacy',setores:'manage_sectors',usuarios: 'manage_users', exames: 'create_exam_type', auditoria: 'view_audit', cirurgias: 'view_surgery_audit', configuracoes: 'manage_profiles', relatorios: 'view_reports',
+      profissionais:'manage_users',unidade:'system_settings',modelos:'view_reports',producao:'view_reports',visualizar:'manage_profiles',farmacia:'manage_pharmacy',setores:'manage_sectors',usuarios: 'manage_users', exames: 'create_exam_type', auditoria: 'view_audit', cirurgias: 'view_surgery_audit', configuracoes: 'manage_profiles', relatorios: 'view_reports',
     }
     if (page === 'configuracoes' && !hasUserPermission(user, 'system_settings')) return false
     return !!adminPermissions[page] && hasUserPermission(user, adminPermissions[page])

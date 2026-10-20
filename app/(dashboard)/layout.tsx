@@ -1,5 +1,6 @@
 'use client'
 
+import {ProfilePreviewBanner} from '@/components/shared/profile-preview-banner'
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { canAccessRoute } from '@/lib/permissions'
@@ -46,6 +47,7 @@ export default function DashboardLayout({
       <AppSidebar />
       <DoctorWorkplace automatic/>
       <SidebarInset>
+        <ProfilePreviewBanner/>
         {canAccess ? children : (
           <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-lg font-semibold">Acesso não autorizado</p>

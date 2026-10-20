@@ -1,4 +1,5 @@
 'use client'
+import {useUnit} from '@/lib/use-unit'
 
 import Link from 'next/link'
 import { BrandLogo } from '@/components/shared/brand-logo'
@@ -215,6 +216,8 @@ const getNavigation = (
           {title:'Setores',url:'/admin/setores',icon:Users},
           { title: 'Início', url: '/admin', icon: LayoutDashboard },
           { title: 'Usuarios', url: '/admin/usuarios', icon: Users },
+          {title:'Profissionais de saúde',url:'/admin/profissionais',icon:Stethoscope},
+          {title:'Pacientes cadastrados',url:'/admin/pacientes',icon:Users},
         ],
       },
       {
@@ -225,6 +228,10 @@ const getNavigation = (
           { title: 'Cirurgias por tipo', url: '/admin/cirurgias', icon: Syringe },
           { title: 'Relatórios', url: '/admin/relatorios', icon: FileText },
           { title: 'Auditoria', url: '/admin/auditoria', icon: History },
+          {title:'Visualizar outro perfil',url:'/admin/visualizar',icon:Users},
+          {title:'Dados da unidade',url:'/admin/unidade',icon:Settings},
+          {title:'Modelos de fichas',url:'/admin/modelos',icon:FileText},
+          {title:'Produção / BPA',url:'/admin/producao',icon:ClipboardList},
           { title: 'Perfis e permissões', url: '/admin/configuracoes', icon: Settings },
         ],
       },
@@ -235,6 +242,7 @@ const getNavigation = (
 }
 
 export function AppSidebar() {
+  const {unit}=useUnit()
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const { getStats, tickets } = useData()
@@ -262,6 +270,7 @@ export function AppSidebar() {
           <BrandLogo variant="negative" className="w-full max-w-[240px]" />
           <span className="px-4 text-xs text-sidebar-foreground/75">{isDoctor(user) ? `Médico · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}</span>
         </Link>
+        {unit.updatedAt&&<div className="flex items-center gap-2 px-4 text-xs text-sidebar-foreground/85">{unit.logo&&<img src={unit.logo} alt={`Logo ${unit.name}`} className="h-8 w-8 rounded bg-white object-contain"/>}<span>{unit.name}</span></div>}
       </SidebarHeader>
 
       <SidebarSeparator />

@@ -7,6 +7,12 @@ import type { CareTiming } from './admin-analytics'
 export type UserRole = 'farmacia' | 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'enfermaria' | 'admin'
 
 export interface User {
+  previewMode?:boolean
+  isHealthProfessional?:boolean
+  cboCode?:string
+  occupationName?:string
+  unitName?:string
+  professionalCns?:string
   workplaceAvailability?:'disponivel'|'em_atendimento'|'indisponivel'
   sectorId?:string
   profileId?: string
@@ -184,6 +190,11 @@ export type LabUrgency =
   | 'nao_urgente'
 
 export interface ExamRequest {
+  performedCboCode?:string
+  performedOccupation?:string
+  performedSector?:string
+  performedUnit?:string
+  performedProfessionalCns?:string
   id: string
   patientId: string
   examTypeId: string

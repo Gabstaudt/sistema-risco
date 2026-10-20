@@ -7,7 +7,7 @@ import { normalizeUserProfile, professionalHierarchy } from './medical-profile'
 
 export interface AccessProfile { id:string; name:string; role:UserRole; permissions:string[]; active:boolean; builtIn?:boolean }
 export interface AccessRegistry { pharmacyVersion?:number; medicalWorkVersion?:number; sectors?:HospitalSector[]; triageVersion?:number; receptionVersion?:number; users:User[]; profiles:AccessProfile[] }
-export type UserDraft = Pick<User,'name'|'email'|'password'|'active'|'department'|'consultationRoom'|'professionalRegistration'> & { profileId:string;sectorId?:string }
+export type UserDraft = Pick<User,'name'|'email'|'password'|'active'|'department'|'consultationRoom'|'professionalRegistration'> & { profileId:string;sectorId?:string;isHealthProfessional?:boolean;cboCode?:string;occupationName?:string;unitName?:string;professionalCns?:string }
 export const ACCESS_KEY = 'medrisk-access-registry'
 export const defaultProfiles = ():AccessProfile[] => (Object.keys(ROLE_PERMISSIONS) as UserRole[]).map(role=>({id:`profile-${role}`,name:ROLE_LABELS[role],role,permissions:[...new Set(getUserPermissions({id:'template',role,active:true} as User))].filter(permission=>permission!=='view_all_data'),active:true,builtIn:true}))
 export const PERMISSION_LABELS:Record<string,string> = {
@@ -39,12 +39,16 @@ export function saveManagedUser(registry:AccessRegistry,actor:User,draft:UserDra
  if(!profile||!profile.active)throw new Error('Selecione um perfil ativo.')
  const sector=(registry.sectors||defaultSectors()).find(sector=>sector.id===(draft.sectorId||previous?.sectorId||'sector-'+profile.role))
  if(!sector?.active||sector.role!==profile.role)throw new Error('Selecione um setor ativo compatível com o perfil.')
+ const cbo=(draft.cboCode||'').replace(/\D/g,'');const cns=(draft.professionalCns||'').replace(/\D/g,'')
+ if(draft.cboCode&&!/^\d{6}$/.test(cbo))throw new Error('Informe o CBO com 6 dígitos.')
+ if(draft.professionalCns&&!/^\d{15}$/.test(cns))throw new Error('Informe o CNS do profissional com 15 dígitos.')
+ if(draft.isHealthProfessional&&(!cbo||!draft.occupationName?.trim()||!draft.unitName?.trim()))throw new Error('Informe CBO, classificação da ocupação e unidade do profissional.')
  const email=draft.email.trim().toLowerCase()
  if(!draft.name.trim()||!/^\S+@\S+\.\S+$/.test(email))throw new Error('Informe nome e e-mail válidos.')
  if(registry.users.some(user=>user.id!==id&&user.email.toLowerCase()===email))throw new Error('Este e-mail já está cadastrado.')
  if((!previous||draft.password)&&draft.password.length<6)throw new Error('A senha deve ter pelo menos 6 caracteres.')
  if(professionalHierarchy(profile.role).group==='medico'&&(draft.active||!previous)&&!draft.professionalRegistration?.trim())throw new Error('Informe CRM e UF do médico.')
- const next:User=normalizeUserProfile({...previous,...draft,sectorId:sector.id,department:sector.name,email,name:draft.name.trim(),password:draft.password||previous?.password||'',id:previous?.id||crypto.randomUUID(),role:profile.role,profileId:profile.id,permissions:undefined,createdAt:previous?.createdAt||new Date().toISOString()})
+ const next:User=normalizeUserProfile({...previous,...draft,cboCode:cbo,professionalCns:cns,occupationName:draft.occupationName?.trim(),unitName:draft.unitName?.trim(),sectorId:sector.id,department:sector.name,email,name:draft.name.trim(),password:draft.password||previous?.password||'',id:previous?.id||crypto.randomUUID(),role:profile.role,profileId:profile.id,permissions:undefined,createdAt:previous?.createdAt||new Date().toISOString()})
  const result={...registry,users:[...registry.users.filter(user=>user.id!==next.id),next]};preserveAdmin(result);return result
 }
 export function saveAccessProfile(registry:AccessRegistry,actor:User,draft:Omit<AccessProfile,'id'|'builtIn'>,id?:string):AccessRegistry {

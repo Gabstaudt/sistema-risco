@@ -3,7 +3,7 @@ import type {Patient,User,PatientStatus} from './types'
 import {isDoctor,isPatientAssignedToDoctor} from './medical-profile'
 import {hasUserPermission} from './permissions'
 import {userSectorId,type HospitalSector} from './sectors'
-export interface ConsultationRecord {id:string;patientId:string;patientName:string;prontuario:string;encounterEntryAt:string;physicianId:string;physicianName:string;specialty:User['role'];startedAt:string;endedAt?:string;anamnesis:string;outcome:'em_atendimento'|'finalizada'|'encaminhada'|'cancelada';destination?:string}
+export interface ConsultationRecord {cboCode?:string;occupationName?:string;unitName?:string;sectorId?:string;sectorName?:string;professionalCns?:string;id:string;patientId:string;patientName:string;prontuario:string;encounterEntryAt:string;physicianId:string;physicianName:string;specialty:User['role'];startedAt:string;endedAt?:string;anamnesis:string;outcome:'em_atendimento'|'finalizada'|'encaminhada'|'cancelada';destination?:string}
 export interface TransferDraft {sectorId:string;professionalId:string;reason:string}
 export const DOCTOR_WORK_PERMISSIONS=['manage_own_workplace','medical_consultation','transfer_patient','issue_admission_documents','view_medical_reports','print_triage_sheet']
 export function assertMedicalCare(patient:Patient,user:User,permission='medical_consultation'){
@@ -17,7 +17,7 @@ export function consultation(patient:Patient,user:User,action:'start'|'save'|'fi
  if(!current&&action!=='start')throw new Error('Inicie a consulta antes de registrar a anamnese.')
  if(current&&action==='start')return records
  if(action==='finish'&&!anamnesis?.trim()&&!current?.anamnesis.trim())throw new Error('Registre a anamnese antes de finalizar a consulta.')
- const record:ConsultationRecord=current?{...current,anamnesis:anamnesis??current.anamnesis,...(action==='finish'?{endedAt:now.toISOString(),outcome:'finalizada' as const}:{})}:{id:crypto.randomUUID(),patientId:patient.id,patientName:patient.nomeCompleto,prontuario:patient.prontuario,encounterEntryAt:patient.dataEntrada,physicianId:user.id,physicianName:user.name,specialty:user.role,startedAt:now.toISOString(),anamnesis:'',outcome:'em_atendimento'}
+ const record:ConsultationRecord=current?{...current,anamnesis:anamnesis??current.anamnesis,...(action==='finish'?{endedAt:now.toISOString(),outcome:'finalizada' as const}:{})}:{id:crypto.randomUUID(),patientId:patient.id,patientName:patient.nomeCompleto,prontuario:patient.prontuario,encounterEntryAt:patient.dataEntrada,physicianId:user.id,physicianName:user.name,cboCode:user.cboCode||'',occupationName:user.occupationName||'',unitName:user.unitName||'',sectorId:user.sectorId||'',sectorName:user.department||'',professionalCns:user.professionalCns||'',specialty:user.role,startedAt:now.toISOString(),anamnesis:'',outcome:'em_atendimento'}
  return [...records.filter(item=>item.id!==record.id),record]
 }
 export function medicalTransfer(patient:Patient,user:User,draft:TransferDraft,users:User[],sectors:HospitalSector[]):Partial<Patient>{

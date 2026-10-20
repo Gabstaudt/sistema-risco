@@ -7,7 +7,8 @@ import {PHARMACY_EVENT,readPharmacy,readMedicationOrders,writePharmacy,medicatio
 import type {MedicationOrder,User} from './types'
 export function usePharmacy(){
  const {user}=useAuth();const [state,setState]=useState(emptyPharmacy);const [ready,setReady]=useState(false)
- const permitted=hasUserPermission(user,'manage_pharmacy')||hasUserPermission(user,'administer_medication')
+ const readUser=user?.previewMode?{...user,previewMode:false}:user
+ const permitted=hasUserPermission(readUser,'manage_pharmacy')||hasUserPermission(readUser,'administer_medication')||hasUserPermission(readUser,'view_reports')
  const refresh=useCallback(()=>{if(permitted)setState(reconcileSeparations(readPharmacy(),readMedicationOrders()));else setState(emptyPharmacy());setReady(true)},[permitted])
  useEffect(()=>{refresh();const onStorage=(event:StorageEvent)=>{if(!event.key||[PHARMACY_KEY,MEDICATION_STORAGE_KEY].includes(event.key))refresh()};window.addEventListener('storage',onStorage);window.addEventListener(PHARMACY_EVENT,refresh);return()=>{window.removeEventListener('storage',onStorage);window.removeEventListener(PHARMACY_EVENT,refresh)}},[refresh])
  const transact=useCallback(async(change:(state:PharmacyState,user:User,orders:MedicationOrder[])=>PharmacyState,description='Alteração na farmácia')=>{

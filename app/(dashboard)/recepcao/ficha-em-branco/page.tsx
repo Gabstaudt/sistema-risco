@@ -1,7 +1,7 @@
 'use client'
 import {useAuth} from '@/lib/auth'
 import {Button} from '@/components/ui/button'
-import {BrandLogo} from '@/components/shared/brand-logo'
+import {UnitBrand} from '@/components/shared/unit-brand'
 export default function BlankAttendance(){
  const {hasPermission}=useAuth()
  if(!hasPermission('print_blank_attendance'))return <p className="p-6">Sem permissão para imprimir esta ficha.</p>
@@ -26,5 +26,5 @@ export default function BlankAttendance(){
   main{display:block!important;padding:0!important;min-height:0!important;height:auto!important;margin:0!important}
   .blank-sheet{width:186mm;height:270mm;max-width:none;margin:0;border:0!important;border-radius:0;padding:0;box-shadow:none!important;break-inside:avoid;page-break-inside:avoid}
  }
- `}</style><div className="print-actions mb-5"><Button className="h-12" onClick={()=>window.print()}>Imprimir ficha em branco</Button></div><div className="blank-preview"><article className="blank-sheet mx-auto rounded-lg border bg-white text-black"><BrandLogo/><h1 className="text-xl font-bold">Ficha de atendimento</h1><div className="blank-fields">{['Data / hora','Senha / prontuário','Nome completo','Nome social','Data de nascimento','Sexo','CPF','CNS','Nome da mãe','Nome do pai','Responsável / contato','Telefone','Endereço','Profissional / setor'].map(label=><div key={label} className="blank-field">{label}:</div>)}</div><p className="text-sm">Encaminhamento: ☐ Com triagem　 ☐ Sem triagem / branca</p>{['Queixa / motivo do atendimento','Sinais vitais e observações da triagem','Avaliação / evolução','Conduta / solicitações'].map(label=><section className="blank-notes" key={label}><h2 className="text-sm font-semibold">{label}</h2><div className="blank-writing"/></section>)}<div className="blank-signature">Assinatura e identificação do profissional: ____________________________________</div></article></div></main>
+ `}</style><div className="print-actions mb-5"><Button className="h-12" onClick={()=>window.print()}>Imprimir ficha em branco</Button></div><div className="blank-preview"><article className="blank-sheet mx-auto rounded-lg border bg-white text-black"><UnitBrand compact/><h1 className="text-xl font-bold">Ficha de atendimento</h1><div className="blank-fields">{['Data / hora','Senha / prontuário','Nome completo','Nome social','Data de nascimento','Sexo','CPF','CNS','Nome da mãe','Nome do pai','Responsável / contato','Telefone','Endereço','Profissional / setor'].map(label=><div key={label} className="blank-field">{label}:</div>)}</div><p className="text-sm">Encaminhamento: ☐ Com triagem　 ☐ Sem triagem / branca</p>{['Queixa / motivo do atendimento','Sinais vitais e observações da triagem','Avaliação / evolução','Conduta / solicitações'].map(label=><section className="blank-notes" key={label}><h2 className="text-sm font-semibold">{label}</h2><div className="blank-writing"/></section>)}<div className="blank-signature">Assinatura e identificação do profissional: ____________________________________</div></article></div></main>
 }
