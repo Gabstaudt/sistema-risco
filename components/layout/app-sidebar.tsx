@@ -228,7 +228,7 @@ const getNavigation = (
     ],
   }
 
-  return roleNavigation[role] || []
+  return [...(roleNavigation[role]||[]),...(['clinico','cardiologista','anestesista','cirurgiao'].includes(role)?[{title:'Atendimento médico',items:[{title:'Meus atendimentos',url:'/medico/atendimentos',icon:Stethoscope},{title:'Meu consultório e setor',url:'/medico/local',icon:Settings},{title:'Meus relatórios',url:'/medico/relatorios',icon:FileText}]}]:[])]
 }
 
 export function AppSidebar() {

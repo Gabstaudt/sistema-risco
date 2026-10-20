@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { canAccessRoute } from '@/lib/permissions'
 import { useAuth } from '@/lib/auth'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
+import {DoctorWorkplace} from '@/components/shared/doctor-workplace'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { Loader2 } from 'lucide-react'
 
@@ -38,9 +39,12 @@ export default function DashboardLayout({
     return null
   }
 
+  if (canAccess && pathname === '/recepcao/ficha-em-branco') return <>{children}</>
+
   return (
     <SidebarProvider>
       <AppSidebar />
+      <DoctorWorkplace automatic/>
       <SidebarInset>
         {canAccess ? children : (
           <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 p-6 text-center">

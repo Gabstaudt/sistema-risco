@@ -5,9 +5,9 @@ import type { User } from './types'
 import { normalizeUserProfile, type BackendProfile } from './medical-profile'
 import { hasUserPermission } from './permissions'
 import { users as initialUsers } from './data/users'
-import { ACCESS_KEY, upgradeSectorRegistry, seedRegistry, resolveRegistryUser, saveManagedUser, saveAccessProfile, saveHospitalSector, type AccessRegistry, type AccessProfile, type UserDraft } from './admin-access'
+import { ACCESS_KEY, upgradeMedicalRegistry, seedRegistry, resolveRegistryUser, saveManagedUser, saveAccessProfile, saveHospitalSector,saveOwnWorkplace,type WorkplaceDraft, type AccessRegistry, type AccessProfile, type UserDraft } from './admin-access'
 interface AuthContextType {
- sectors:HospitalSector[];saveSector:(draft:Omit<HospitalSector,'id'>,id?:string)=>Promise<void>; user:User|null; users:User[]; profiles:AccessProfile[]; isLoading:boolean
+ saveWorkplace:(draft:WorkplaceDraft)=>Promise<void>;sectors:HospitalSector[];saveSector:(draft:Omit<HospitalSector,'id'>,id?:string)=>Promise<void>; user:User|null; users:User[]; profiles:AccessProfile[]; isLoading:boolean
  login:(email:string,password:string)=>Promise<{success:boolean;error?:string;redirectPath?:string}>
  logout:()=>void; setSession:(user:BackendProfile|null)=>void; hasPermission:(permission:string)=>boolean; getRedirectPath:()=>string
  saveUser:(draft:UserDraft,id?:string)=>Promise<void>
@@ -20,7 +20,7 @@ function sessionFor(session:User|null,registry:AccessRegistry):User|null {
  const managed=registry.users.find(user=>user.id===session.id)
  if(managed&&!managed.active)return null
  // Effective backend grants remain authoritative for a backend-owned session.
- if(session.permissions!==undefined&&!session.profileId)return normalizeUserProfile(session)
+ if(session.permissions!==undefined&&!session.profileId)return normalizeUserProfile({...session,...(managed?{sectorId:managed.sectorId,department:managed.department,consultationRoom:managed.consultationRoom,workplaceAvailability:managed.workplaceAvailability}:{})})
  const effective=resolveRegistryUser(managed||session,registry.profiles)
  return effective.active?effective:null
 }
@@ -29,7 +29,7 @@ export function AuthProvider({children}:{children:ReactNode}) {
  const [registry,setRegistry]=useState<AccessRegistry>(()=>seedRegistry(initialUsers))
  const [isLoading,setIsLoading]=useState(true)
  useEffect(()=>{
-  const stored=localStorage.getItem(ACCESS_KEY);const loaded:AccessRegistry=upgradeSectorRegistry(stored?JSON.parse(stored):seedRegistry(initialUsers))
+  const stored=localStorage.getItem(ACCESS_KEY);const loaded:AccessRegistry=upgradeMedicalRegistry(stored?JSON.parse(stored):seedRegistry(initialUsers))
   localStorage.setItem(ACCESS_KEY,JSON.stringify(loaded));setRegistry(loaded)
   try{const current=localStorage.getItem(STORAGE_KEY);if(current)setSessionState(normalizeUserProfile(JSON.parse(current)))}catch{localStorage.removeItem(STORAGE_KEY)}
   setIsLoading(false)
@@ -46,9 +46,9 @@ export function AuthProvider({children}:{children:ReactNode}) {
   const found=current.users.find(user=>user.email.toLowerCase()===email.trim().toLowerCase()&&user.password===password)
   const effective=found?resolveRegistryUser(found,current.profiles):null
   if(!effective?.active)return {success:false,error:'E-mail ou senha incorretos, ou acesso inativo.'}
-  setRegistry(current);setSession(effective);return {success:true,redirectPath:`/${effective.role}`}
+  sessionStorage.removeItem('medrisk-workplace-confirmed-'+effective.id);setRegistry(current);setSession(effective);return {success:true,redirectPath:`/${effective.role}`}
  },[registry,setSession])
- const mutate=useCallback(async(change:(registry:AccessRegistry,actor:User)=>AccessRegistry,action:'usuario_gerenciado'|'perfil_gerenciado'|'setor_gerenciado',description:string)=>{
+ const mutate=useCallback(async(change:(registry:AccessRegistry,actor:User)=>AccessRegistry,action:'usuario_gerenciado'|'perfil_gerenciado'|'setor_gerenciado'|'local_medico_atualizado',description:string)=>{
   const run=()=>{
    const current:AccessRegistry=JSON.parse(localStorage.getItem(ACCESS_KEY)||JSON.stringify(registry))
    const actor=sessionFor(session,current);if(!actor)throw new Error('Faça login para gerenciar acessos.')
@@ -60,10 +60,11 @@ export function AuthProvider({children}:{children:ReactNode}) {
  const saveUser=useCallback((draft:UserDraft,id?:string)=>mutate((current,actor)=>saveManagedUser(current,actor,draft,id),'usuario_gerenciado',`${id?'Atualizado':'Criado'} usuário: ${draft.name}`),[mutate])
  const saveProfile=useCallback((draft:Omit<AccessProfile,'id'|'builtIn'>,id?:string)=>mutate((current,actor)=>saveAccessProfile(current,actor,draft,id),'perfil_gerenciado',`${id?'Atualizado':'Criado'} perfil: ${draft.name}`),[mutate])
  const saveSector=useCallback((draft:Omit<HospitalSector,'id'>,id?:string)=>mutate((current,actor)=>saveHospitalSector(current,actor,draft,id),'setor_gerenciado',`${id?'Atualizado':'Criado'} setor: ${draft.name}`),[mutate])
+ const saveWorkplace=useCallback((draft:WorkplaceDraft)=>mutate((current,actor)=>saveOwnWorkplace(current,actor,draft),'local_medico_atualizado',`Local de atendimento atualizado: ${draft.consultationRoom}`),[mutate])
  const hasPermission=useCallback((permission:string)=>hasUserPermission(user,permission),[user])
  const logout=useCallback(()=>setSession(null),[setSession])
  const getRedirectPath=useCallback(()=>user?`/${user.role}`:'/login',[user])
  const directory=useMemo(()=>registry.users.map(item=>({...resolveRegistryUser(item,registry.profiles),password:''})),[registry])
- return <AuthContext.Provider value={{sectors:registry.sectors||defaultSectors(),saveSector,user,users:directory,profiles:registry.profiles,isLoading,login,logout,setSession,hasPermission,getRedirectPath,saveUser,saveProfile}}>{children}</AuthContext.Provider>
+ return <AuthContext.Provider value={{saveWorkplace,sectors:registry.sectors||defaultSectors(),saveSector,user,users:directory,profiles:registry.profiles,isLoading,login,logout,setSession,hasPermission,getRedirectPath,saveUser,saveProfile}}>{children}</AuthContext.Provider>
 }
 export function useAuth(){const context=useContext(AuthContext);if(!context)throw new Error('useAuth must be used within an AuthProvider');return context}

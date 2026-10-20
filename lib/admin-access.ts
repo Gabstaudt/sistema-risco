@@ -1,15 +1,17 @@
+import {DOCTOR_WORK_PERMISSIONS} from './medical-care'
+import {isDoctor} from './medical-profile'
 import {defaultSectors,type HospitalSector} from './sectors'
 import { ROLE_LABELS, ROLE_PERMISSIONS, type User, type UserRole } from './types'
 import { getUserPermissions, hasUserPermission } from './permissions'
 import { normalizeUserProfile, professionalHierarchy } from './medical-profile'
 
 export interface AccessProfile { id:string; name:string; role:UserRole; permissions:string[]; active:boolean; builtIn?:boolean }
-export interface AccessRegistry { sectors?:HospitalSector[]; triageVersion?:number; receptionVersion?:number; users:User[]; profiles:AccessProfile[] }
+export interface AccessRegistry { medicalWorkVersion?:number; sectors?:HospitalSector[]; triageVersion?:number; receptionVersion?:number; users:User[]; profiles:AccessProfile[] }
 export type UserDraft = Pick<User,'name'|'email'|'password'|'active'|'department'|'consultationRoom'|'professionalRegistration'> & { profileId:string;sectorId?:string }
 export const ACCESS_KEY = 'medrisk-access-registry'
 export const defaultProfiles = ():AccessProfile[] => (Object.keys(ROLE_PERMISSIONS) as UserRole[]).map(role=>({id:`profile-${role}`,name:ROLE_LABELS[role],role,permissions:[...new Set(getUserPermissions({id:'template',role,active:true} as User))].filter(permission=>permission!=='view_all_data'),active:true,builtIn:true}))
 export const PERMISSION_LABELS:Record<string,string> = {
- cancel_triage_attendance:'Cancelar atendimento aguardando triagem',forward_triage_sector:'Encaminhar da triagem para outro setor',print_triage_sheet:'Imprimir ficha de triagem',manage_attendance:'Atualizar e encerrar atendimentos',print_blank_attendance:'Imprimir ficha em branco',manage_profiles:'Gerenciar perfis e permissões',manage_users:'Gerenciar usuários',system_settings:'Acessar configurações',view_reports:'Consultar e exportar relatórios',view_audit:'Consultar auditoria',view_surgery_audit:'Auditar cirurgias',manage_sectors:'Gerenciar setores',
+ manage_own_workplace:'Alterar o próprio consultório e setor',medical_consultation:'Registrar e finalizar consulta médica',transfer_patient:'Encaminhar paciente para outro médico ou setor',issue_admission_documents:'Emitir fichas de internação',view_medical_reports:'Consultar relatórios dos próprios atendimentos',cancel_triage_attendance:'Cancelar atendimento aguardando triagem',forward_triage_sector:'Encaminhar da triagem para outro setor',print_triage_sheet:'Imprimir ficha de triagem',manage_attendance:'Atualizar e encerrar atendimentos',print_blank_attendance:'Imprimir ficha em branco',manage_profiles:'Gerenciar perfis e permissões',manage_users:'Gerenciar usuários',system_settings:'Acessar configurações',view_reports:'Consultar e exportar relatórios',view_audit:'Consultar auditoria',view_surgery_audit:'Auditar cirurgias',manage_sectors:'Gerenciar setores',
  view_patient_basic:'Consultar cadastro do paciente',view_triage_data:'Consultar triagem',view_clinical_data:'Consultar avaliações médicas',view_exam_results:'Consultar exames e resultados',view_patient_history:'Consultar histórico de atendimentos',view_patient_audit:'Consultar histórico de execução',view_all_data:'Acesso a todos os dados clínicos (inclui as permissões de leitura)',view_patients_list:'Listar pacientes',view_patient_minimal:'Consultar ficha do paciente',search_patient:'Pesquisar pacientes',
  create_patient:'Cadastrar pacientes',edit_patient_basic:'Editar cadastro do paciente',manage_reception_queue:'Gerenciar fila da recepção',call_triage_ticket:'Chamar senhas da triagem',forward_to_triage:'Encaminhar à triagem',register_vital_signs:'Registrar sinais vitais',edit_vital_signs:'Editar sinais vitais',register_complaint:'Registrar queixas',forward_to_clinical:'Encaminhar ao clínico',
  clinical_evaluation:'Realizar avaliação clínica',create_exam_type:'Cadastrar e gerenciar tipos de exames',request_exams:'Solicitar exames',forward_to_lab:'Encaminhar ao laboratório',forward_to_cardiologist:'Encaminhar à cardiologia',forward_to_surgeon:'Encaminhar à cirurgia',return_to_triage:'Retornar à triagem',prescribe_medication:'Solicitar medicação',administer_medication:'Administrar medicação',request_surgical_risk:'Solicitar risco cirúrgico',request_specialist_assessment:'Solicitar avaliação especializada',
@@ -23,7 +25,7 @@ export function resolveRegistryUser(user:User,profiles:AccessProfile[]):User {
  const profile=profiles.find(profile=>profile.id===user.profileId)
  return normalizeUserProfile({...user,role:profile?.role||user.role,active:user.active&&Boolean(profile?.active),permissions:profile?.permissions||[]})
 }
-export function seedRegistry(users:User[]):AccessRegistry {return {sectors:defaultSectors(),triageVersion:1,receptionVersion:1,profiles:defaultProfiles(),users:users.map(user=>({...user,sectorId:'sector-'+user.role,department:defaultSectors().find(s=>s.role===user.role)?.name,profileId:`profile-${user.role}`}))}}
+export function seedRegistry(users:User[]):AccessRegistry {return {medicalWorkVersion:1,sectors:defaultSectors(),triageVersion:1,receptionVersion:1,profiles:defaultProfiles(),users:users.map(user=>({...user,sectorId:'sector-'+user.role,department:defaultSectors().find(s=>s.role===user.role)?.name,profileId:`profile-${user.role}`}))}}
 function assertAdmin(actor:User,permission:string){if(!hasUserPermission(actor,permission))throw new Error('Sem permissão para realizar esta alteração.')}
 function preserveAdmin(registry:AccessRegistry){
  if(!registry.users.some(user=>{const effective=resolveRegistryUser(user,registry.profiles);return effective.active&&effective.role==='admin'&&['manage_users','manage_profiles','system_settings','view_dashboard_admin'].every(permission=>hasUserPermission(effective,permission))}))throw new Error('Mantenha ao menos um administrador ativo com acesso a usuários, perfis e configurações.')
@@ -103,4 +105,27 @@ export function saveHospitalSector(registry:AccessRegistry,actor:User,draft:Omit
  if(previous&&registry.users.some(user=>(user.sectorId||'sector-'+user.role)===id&&user.active)&&(!draft.active||draft.role!==previous.role))throw new Error('Realoque os usuários ativos antes de desativar ou alterar o fluxo do setor.')
  const sector={...draft,id:previous?.id||crypto.randomUUID(),name}
  return {...registry,sectors:[...sectors.filter(s=>s.id!==id),sector],users:registry.users.map(user=>(user.sectorId||'sector-'+user.role)===id?{...user,department:name}:user)}
+}
+
+export function upgradeMedicalRegistry(registry:AccessRegistry):AccessRegistry{
+ const current=upgradeSectorRegistry(registry)
+ if(current.medicalWorkVersion)return current
+ return {...current,medicalWorkVersion:1,profiles:current.profiles.map(profile=>{
+  const canonical=defaultProfiles().find(item=>item.id===profile.id)
+  if(!profile.builtIn||!canonical||!['clinico','cardiologista','anestesista','cirurgiao'].includes(profile.role))return profile
+  const old=canonical.permissions.filter(p=>!DOCTOR_WORK_PERMISSIONS.includes(p)).sort().join('|')
+  const existing=profile.permissions.filter(p=>p!=='view_all_data').sort().join('|')
+  return old===existing?{...profile,permissions:canonical.permissions}:profile
+ })}
+}
+export interface WorkplaceDraft{sectorId:string;consultationRoom:string;availability?:User['workplaceAvailability']}
+export function saveOwnWorkplace(registry:AccessRegistry,actor:User,draft:WorkplaceDraft):AccessRegistry{
+ if(!isDoctor(actor)||!hasUserPermission(actor,'manage_own_workplace'))throw new Error('Sem permissão para alterar o local de atendimento.')
+ const sector=(registry.sectors||defaultSectors()).find(sector=>sector.id===draft.sectorId&&sector.active&&sector.role===actor.role)
+ if(!sector)throw new Error('Selecione um setor ativo compatível com sua especialidade.')
+ if(!draft.consultationRoom.trim())throw new Error('Informe o número ou nome do consultório.')
+ if(draft.consultationRoom.trim().length>60)throw new Error('O consultório deve ter no máximo 60 caracteres.')
+ if(draft.availability&&!['disponivel','em_atendimento','indisponivel'].includes(draft.availability))throw new Error('Disponibilidade inválida.')
+ if(!registry.users.some(user=>user.id===actor.id&&user.active))throw new Error('Usuário não disponível para atualização.')
+ return {...registry,users:registry.users.map(user=>user.id===actor.id?{...user,sectorId:sector.id,department:sector.name,consultationRoom:draft.consultationRoom.trim(),...(draft.availability?{workplaceAvailability:draft.availability}:{})}:user)}
 }

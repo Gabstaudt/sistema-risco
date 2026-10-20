@@ -1,4 +1,5 @@
 'use client'
+import {isDoctor} from '@/lib/medical-profile'
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
@@ -124,6 +125,7 @@ export function ProfileHome({ role, children }: { role: UserRole; children?: Rea
             </Link>
           ))}
         </nav>
+        {isDoctor(user)&&<div className="mt-6 flex flex-wrap gap-3">{[['/medico/atendimentos','Meus atendimentos'],['/medico/local','Consultório e setor'],['/medico/relatorios','Meus relatórios']].filter(([href])=>canAccessRoute(href,user)).map(([href,label])=><Link key={href} href={href} className="rounded-lg border px-4 py-3 font-medium hover:bg-accent">{label}</Link>)}</div>}
         {children && <div className="mt-8">{children}</div>}
       </main>
     </>

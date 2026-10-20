@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data-context'
+import {MedicalConsultationHistory} from '@/components/shared/medical-consultation-history'
 import {TriageIntakeSummary} from '@/components/shared/triage-intake-summary'
 import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { Button } from '@/components/ui/button'
@@ -378,6 +379,7 @@ export default function PatientDetailsPage() {
         
         {/* Clinical Tab */}
         {(canViewClinical) && (<TabsContent value="clinical" className="space-y-5">
+          <Card><CardHeader><CardTitle>Anamneses e consultas médicas</CardTitle></CardHeader><CardContent><MedicalConsultationHistory patient={patient}/></CardContent></Card>
           <MedicationOrders patientId={patient.id} showAllInitially />
           <Card>
             <CardHeader>

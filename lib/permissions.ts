@@ -38,11 +38,14 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
     if (!hasUserPermission(user, 'view_patient_basic')) return false
     return segments.length === 2 ||
       (segments.length === 3 && segments[2] === 'documentos' && isDoctor(user) && (hasUserPermission(user, 'issue_prescription') || hasUserPermission(user, 'issue_certificate'))) ||
+      (segments.length===3&&segments[2]==='internacao'&&isDoctor(user)&&hasUserPermission(user,'issue_admission_documents')) ||
+      (segments.length===3&&segments[2]==='atendimento'&&isDoctor(user)&&hasUserPermission(user,'medical_consultation')) ||
       (segments.length === 3 && segments[2] === 'exames' && hasUserPermission(user, 'view_exam_results')) ||
       (segments.length === 3 && segments[2] === 'medicacoes' && (hasUserPermission(user, 'view_clinical_data') || hasUserPermission(user, 'administer_medication'))) ||
-      (segments.length === 3 && segments[2] === 'imprimir' && ['print_patient_record', 'print_patient_history', 'print_medication_sheet', 'print_exams','print_triage_sheet', 'issue_prescription', 'issue_certificate'].some(permission => hasUserPermission(user, permission))) ||
+      (segments.length === 3 && segments[2] === 'imprimir' && ['print_patient_record', 'print_patient_history', 'print_medication_sheet', 'print_exams','print_triage_sheet','issue_admission_documents', 'issue_prescription', 'issue_certificate'].some(permission => hasUserPermission(user, permission))) ||
       (segments.length === 3 && segments[2] === 'historico' && hasUserPermission(user, 'view_patient_audit'))
   }
+  if(section==='medico')return isDoctor(user)&&hasUserPermission(user,page==='local'?'manage_own_workplace':page==='relatorios'?'view_medical_reports':'medical_consultation')
   const role = sectionRoles[section]
   if (!role || !hasUserPermission(user, `view_dashboard_${role}`)) return false
   if (!page) return true
@@ -80,7 +83,7 @@ export function projectPatientForUser(patient: Patient, user: User | null): Pati
   const clinical = hasUserPermission(user, 'view_clinical_data')
   const exams = hasUserPermission(user, 'view_exam_results')
   if (triage) fields.push('sinaisVitais', 'observacoesTriagem', 'triageData', 'triageAssignedClinicianId', 'triageAssignedClinicianName', 'triageRiskClassification')
-  if (clinical) fields.push('careTimings', 'surgeryRecords', 'assessmentRequests', 'surgicalRiskRequest', 'scheduledSurgery', 'scheduledDate', 'requestingPhysician', 'riskLevel', 'avaliacaoClinica', 'clinicalEvaluation', 'avaliacaoCirurgica', 'surgicalRiskAssessment', 'cardiologyAssessment', 'anesthesiaAssessment', 'clinicalRequestsSurgicalRisk', 'clinicalAssignedCardiologistId', 'clinicalAssignedCardiologistName', 'cardiologyAssignedAnesthesiologistId', 'cardiologyAssignedAnesthesiologistName', 'clinicalAssignedSurgeonId', 'clinicalAssignedSurgeonName')
+  if (clinical) fields.push('medicalConsultations','medicalTransfers','careTimings', 'surgeryRecords', 'assessmentRequests', 'surgicalRiskRequest', 'scheduledSurgery', 'scheduledDate', 'requestingPhysician', 'riskLevel', 'avaliacaoClinica', 'clinicalEvaluation', 'avaliacaoCirurgica', 'surgicalRiskAssessment', 'cardiologyAssessment', 'anesthesiaAssessment', 'clinicalRequestsSurgicalRisk', 'clinicalAssignedCardiologistId', 'clinicalAssignedCardiologistName', 'cardiologyAssignedAnesthesiologistId', 'cardiologyAssignedAnesthesiologistName', 'clinicalAssignedSurgeonId', 'clinicalAssignedSurgeonName')
   if (exams) fields.push('examResults', 'labRiskClassification', 'labRiskNotes', 'labNurseObservation')
   // A visit contains clinical snapshots: history alone does not grant access to them.
   if (hasUserPermission(user, 'view_patient_history') && triage && clinical && exams) fields.push('visitHistory')

@@ -51,6 +51,13 @@ export function summarizeAdministration(input:{patients:Patient[];exams:ExamRequ
    addMedical(patient,visit.entryAt,'cirurgiao',snapshot?.surgicalRiskAssessment?.completedAt||snapshot?.avaliacaoCirurgica?.avaliadoEm,snapshot?.surgicalRiskAssessment?.completedBy||snapshot?.avaliacaoCirurgica?.avaliadoPor)
    for(const medication of visit.medicationsAdministered||[]){if(!medication.administeredAt)continue;const id=`${patient.id}|${medication.administeredAt}|${key(medication.name)}|${medication.dose||''}|${medication.route||''}`;administered.set(id,{id,patientId:patient.id,name:medication.name,dose:medication.dose||'',route:medication.route||'',at:medication.administeredAt})}
   }
+  for(const record of patient.medicalConsultations||[]){
+   if(!record.endedAt||record.outcome==='cancelada')continue
+   const encounterId=`${patient.id}|${record.encounterEntryAt}`
+   const specialty=SECTOR_LABELS[record.specialty as Sector]||record.specialty
+   const duplicated=[...medical.values()].some(row=>row.encounterId===encounterId&&row.professionalId===record.physicianId&&row.specialty===specialty)
+   if(!duplicated)medical.set('consultation|'+record.id,{id:record.id,patientId:patient.id,encounterId,name:record.physicianName,professionalId:record.physicianId,specialty,at:record.endedAt})
+  }
   for(const timing of patient.careTimings||[])addWait(`${patient.id}|${timing.sector}|${timing.encounterEntryAt}|${timing.queuedAt}`,patient.id,timing.sector,timing.queuedAt,timing.startedAt)
  }
  // Audit fills completed assessments absent from snapshots; it never duplicates the same specialty/entry.

@@ -2,7 +2,7 @@ import type { Patient, User } from './types'
 import { hasUserPermission } from './permissions'
 export type TicketCategory = 'emergencia' | 'prioridade' | 'comum'
 export type TicketCallStage = 'recepcao' | 'triagem' | 'clinico'
-export type TicketStage = 'aguardando_recepcao' | 'chamada_recepcao' | 'aguardando_triagem' | 'chamada_triagem' | 'em_triagem' | 'aguardando_clinico' | 'chamada_clinico' | 'em_clinico' | 'concluida' | 'ausente_recepcao' | 'ausente_triagem' | 'ausente_clinico'
+export type TicketStage = 'chamada_medico' | 'aguardando_recepcao' | 'chamada_recepcao' | 'aguardando_triagem' | 'chamada_triagem' | 'em_triagem' | 'aguardando_clinico' | 'chamada_clinico' | 'em_clinico' | 'concluida' | 'ausente_recepcao' | 'ausente_triagem' | 'ausente_clinico'
 export interface ArrivalTicket { id:string; number:string; day:string; sequence:number; category:TicketCategory; stage:TicketStage; issuedAt:string; calledAt?:string; calledBy?:string; receptionCalledBy?:string; triageCalledBy?:string; clinicalCalledBy?:string; clinicalAssignedTo?:string; clinicalQueuedAt?:string; destination?:string; patientId?:string; forwardedAt?:string }
 export const TICKET_CATEGORIES = { emergencia:{label:'Emergência',prefix:'E',rank:0,className:'border-red-300 bg-red-50 text-red-900'},prioridade:{label:'Prioridade',prefix:'P',rank:1,className:'border-amber-300 bg-amber-50 text-amber-900'},comum:{label:'Comum',prefix:'C',rank:2,className:'border-primary/20 bg-primary/5 text-primary'} } as const
 export const ticketDay = (date:Date) => new Intl.DateTimeFormat('en-CA',{timeZone:'America/Belem',year:'numeric',month:'2-digit',day:'2-digit'}).format(date)

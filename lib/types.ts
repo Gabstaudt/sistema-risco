@@ -1,3 +1,4 @@
+import type {ConsultationRecord} from './medical-care'
 import type {TriageIntake} from './triage-intake'
 import type { CareTiming } from './admin-analytics'
 // Tipos base do sistema de Avaliacao de Risco Cirurgico
@@ -5,6 +6,7 @@ import type { CareTiming } from './admin-analytics'
 export type UserRole = 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'admin'
 
 export interface User {
+  workplaceAvailability?:'disponivel'|'em_atendimento'|'indisponivel'
   sectorId?:string
   profileId?: string
   id: string
@@ -329,7 +331,7 @@ export interface ManchesterClassification {
 export type AssessmentSpecialty = 'cardiologista' | 'anestesista' | 'cirurgiao'
 export interface SpecialtyAssessmentRequest {
   specialty: AssessmentSpecialty
-  status: 'draft' | 'pending'
+  status: 'draft' | 'pending' | 'completed'
   requestedAt?: string
   requestedBy?: string
   assignedProfessionalId?: string
@@ -354,6 +356,8 @@ export interface MedicationOrder {
 export type AttendanceRoute = 'com_triagem' | 'sem_triagem'
 export interface AttendanceClosure {kind:'baixa'|'cancelamento';reason:string;at:string;by:string}
 export interface Patient {
+  medicalConsultations?:ConsultationRecord[]
+  medicalTransfers?:{at:string;from:string;to?:string;sectorId:string;sectorName:string;reason:string;clinicalSnapshot:Partial<Pick<Patient,'clinicalEvaluation'|'cardiologyAssessment'|'anesthesiaAssessment'|'surgicalRiskAssessment'>>}[]
   attendanceRoute?: AttendanceRoute
   attendanceClosure?: AttendanceClosure
   receptionClassification?: 'branca'
@@ -488,7 +492,7 @@ export interface Patient {
 export interface MedicalDocument {
   id: string
   patientId: string
-  kind: 'receita' | 'atestado'
+  kind: 'receita' | 'atestado' | 'autorizacao' | 'requisicao_exames' | 'folha_internacao' | 'evolucao_clinica' | 'notificacao_internacao' | 'notificacao_infeccao'
   content: string
   issuedAt: string
   physicianId: string
@@ -500,6 +504,10 @@ export interface MedicalDocument {
 }
 
 export type AuditAction =
+  | 'consulta_medica_atualizada'
+  | 'consulta_medica_finalizada'
+  | 'paciente_encaminhado_medico'
+  | 'local_medico_atualizado'
   | 'setor_gerenciado'
   | 'atendimento_atualizado'
   | 'atendimento_encerrado'
@@ -601,6 +609,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_clinical',
   ],
   clinico: [
+    'manage_own_workplace','medical_consultation','transfer_patient','issue_admission_documents','view_medical_reports','print_triage_sheet',
     'issue_prescription',
     'issue_certificate',
     'print_patient_record',
@@ -638,6 +647,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'update_exam_status',
   ],
   cardiologista: [
+    'manage_own_workplace','medical_consultation','transfer_patient','issue_admission_documents','view_medical_reports','print_triage_sheet',
     'prescribe_medication',
     'issue_prescription',
     'issue_certificate',
@@ -658,6 +668,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'generate_report',
   ],
   anestesista: [
+    'manage_own_workplace','medical_consultation','transfer_patient','issue_admission_documents','view_medical_reports','print_triage_sheet',
     'issue_prescription',
     'issue_certificate',
     'print_patient_record',
@@ -677,6 +688,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_surgeon',
   ],
   cirurgiao: [
+    'manage_own_workplace','medical_consultation','transfer_patient','issue_admission_documents','view_medical_reports','print_triage_sheet',
     'create_exam_type',
     'issue_prescription',
     'issue_certificate',
