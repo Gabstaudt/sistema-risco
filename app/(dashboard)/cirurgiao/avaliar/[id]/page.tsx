@@ -19,7 +19,6 @@ import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/share
 import { CareStartTracker } from '@/components/shared/care-start-tracker'
 import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
-import type { RiskLevel } from '@/lib/types'
 import { ExamRequestForm } from '@/components/shared/exam-request-form'
 import { MedicationOrders } from '@/components/shared/medication-orders'
 import { AssessmentRequestFields } from '@/components/shared/assessment-request-fields'
@@ -36,7 +35,7 @@ export default function CirurgiaoAvaliarPage() {
   const patientId = params.id as string
   const patient = getPatientById(patientId)
 
-  const [finalRisk, setFinalRisk] = useState<RiskLevel | ''>(patient?.surgicalRiskAssessment?.finalRiskLevel || '')
+  const finalRisk = patient?.cardiologyAssessment?.finalRiskLevel
   const [recommendation, setRecommendation] = useState<'aprovar' | 'adiar' | 'contraindicar' | ''>(
     patient?.surgicalRiskAssessment?.recommendation || '',
   )
@@ -92,10 +91,11 @@ export default function CirurgiaoAvaliarPage() {
   }
 
   const handleSave = async (complete: boolean) => {
+    if (!user || !hasPermission('classify_risk') || isSaving) return
     setIsSaving(true)
 
     const surgicalRiskAssessment = {
-      finalRiskLevel: finalRisk || undefined,
+      ...patient.surgicalRiskAssessment,
       recommendation: recommendation || undefined,
       notes,
       completedAt: complete ? new Date().toISOString() : undefined,
@@ -107,7 +107,6 @@ export default function CirurgiaoAvaliarPage() {
       bloodType: bloodType || undefined,
       allergies: parsedAllergies,
       status: complete ? nextAssessmentStatus({ ...patient, surgicalRiskAssessment }, 'concluido') : 'em_avaliacao_cirurgica',
-      riskLevel: finalRisk || patient.riskLevel,
       updatedAt: new Date().toISOString(),
     })
 
@@ -116,7 +115,7 @@ export default function CirurgiaoAvaliarPage() {
       userId: user!.id,
       patientId,
       details: complete
-        ? `Avaliacao cirurgica concluida. Risco Final: ${finalRisk}. Recomendacao: ${recommendation}`
+        ? `Avaliacao cirurgica concluida. Risco informado pela cardiologia: ${finalRisk || 'pendente'}. Recomendacao: ${recommendation}`
         : 'Dados de avaliacao cirurgica atualizados',
     })
 
@@ -166,7 +165,7 @@ export default function CirurgiaoAvaliarPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao de Risco Cirurgico</h1>
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliação do cirurgião</h1>
         </div>
         <div className="self-start sm:self-auto">
           <PatientStatusBadge status={patient.status} />
@@ -579,24 +578,16 @@ export default function CirurgiaoAvaliarPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            Parecer Final do Risco Cirurgico
+            Parecer do cirurgião
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-2">
-              <Label>Classificacao Final de Risco</Label>
-              <Select value={finalRisk} onValueChange={(value) => setFinalRisk(value as RiskLevel)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o nivel de risco" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixo">Baixo Risco</SelectItem>
-                  <SelectItem value="moderado">Risco Moderado</SelectItem>
-                  <SelectItem value="alto">Alto Risco</SelectItem>
-                  <SelectItem value="critico">Risco Critico</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Risco cirúrgico — Cardiologia</Label>
+              <div className="flex min-h-12 items-center rounded-md border px-3">
+                {finalRisk ? <RiskLevelBadge level={finalRisk} /> : <span className="text-muted-foreground">Aguardando avaliação do cardiologista</span>}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -641,9 +632,9 @@ export default function CirurgiaoAvaliarPage() {
           <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
             Salvar Rascunho
           </Button>
-          <Button className="w-full sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving || !finalRisk || !recommendation}>
+          <Button className="w-full sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving || !recommendation}>
             <Save className="mr-2 h-4 w-4" />
-            Emitir Parecer Final
+            Concluir avaliação cirúrgica
           </Button>
         </CardFooter>
       </Card>

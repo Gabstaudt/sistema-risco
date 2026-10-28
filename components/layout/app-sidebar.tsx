@@ -22,6 +22,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -162,8 +163,9 @@ const getNavigation = (
         ],
       },
       {
-        title: 'Risco Cardiologico',
+        title: 'Risco cirúrgico — Cardiologia',
         items: [
+          { title: 'Calculadora de risco', url: '/cardiologista/calculadora', icon: Heart },
           { title: 'Aguardando Avaliacao', url: '/cardiologista/fila', icon: Heart, badge: stats.aguardandoCardiologia },
         ],
       },
@@ -197,7 +199,6 @@ const getNavigation = (
         items: [
           { title: 'Aguardando Avaliacao', url: '/cirurgiao/fila', icon: Syringe, badge: stats.aguardandoCirurgiao },
           { title: 'Cirurgia e pós-operatório', url: '/cirurgiao/acompanhamento', icon: ClipboardList },
-          { title: 'Calculadora de Risco', url: '/cirurgiao/calculadora', icon: Heart },
           { title: 'Tipos de exames', url: '/cirurgiao/exames', icon: TestTube },
         ],
       },
@@ -243,6 +244,8 @@ const getNavigation = (
 
 export function AppSidebar() {
   const {unit}=useUnit()
+  const { isMobile, setOpenMobile } = useSidebar()
+  const closeMobileMenu = () => { if (isMobile) setOpenMobile(false) }
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const { getStats, tickets } = useData()
@@ -264,13 +267,14 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader className="px-2 py-4">
-        <Link href={`/${user.role}`} className="flex flex-col items-start">
-          <BrandLogo variant="negative" className="w-full max-w-[240px]" />
-          <span className="px-4 text-xs text-sidebar-foreground/75">{isDoctor(user) ? `Médico · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}</span>
+        <Link href={`/${user.role}`} aria-label="MedRisk Pro — início" onClick={closeMobileMenu} className="flex flex-col items-start group-data-[collapsible=icon]:items-center">
+          <BrandLogo variant="negative" className="w-full max-w-[240px] group-data-[collapsible=icon]:hidden" />
+          <img src="/Logo%20Medrisk/brand/logo/medrisk-simbolo-negativo.svg" alt="" className="hidden size-10 group-data-[collapsible=icon]:block" />
+          <span className="group-data-[collapsible=icon]:hidden px-4 text-xs text-sidebar-foreground/75">{isDoctor(user) ? `Médico · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}</span>
         </Link>
-        {unit.updatedAt&&<div className="flex items-center gap-2 px-4 text-xs text-sidebar-foreground/85">{unit.logo&&<img src={unit.logo} alt={`Logo ${unit.name}`} className="h-8 w-8 rounded bg-white object-contain"/>}<span>{unit.name}</span></div>}
+        {unit.updatedAt&&<div className="group-data-[collapsible=icon]:hidden flex items-center gap-2 px-4 text-xs text-sidebar-foreground/85">{unit.logo&&<img src={unit.logo} alt={`Logo ${unit.name}`} className="h-8 w-8 rounded bg-white object-contain"/>}<span>{unit.name}</span></div>}
       </SidebarHeader>
 
       <SidebarSeparator />
@@ -289,7 +293,7 @@ export function AppSidebar() {
                       isActive={pathname === item.url}
                       tooltip={item.title}
                     >
-                      <Link href={item.url}>
+                      <Link href={item.url} aria-label={item.title} aria-current={pathname === item.url ? 'page' : undefined} onClick={closeMobileMenu}>
                         <item.icon className="w-4 h-4" />
                         <span>{item.title}</span>
                       </Link>
@@ -314,6 +318,8 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
+                  aria-label={`Conta de ${user.name}`}
+                  tooltip={user.name}
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8">
@@ -321,11 +327,11 @@ export function AppSidebar() {
                       {getInitials(user.name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col gap-0.5 leading-none flex-1 text-left">
+                  <div className="group-data-[collapsible=icon]:hidden flex flex-col gap-0.5 leading-none flex-1 text-left">
                     <span className="font-medium text-sm truncate">{user.name}</span>
                     <span className="text-xs text-sidebar-foreground/60 truncate">{user.email}</span>
                   </div>
-                  <ChevronUp className="ml-auto w-4 h-4" />
+                  <ChevronUp className="group-data-[collapsible=icon]:hidden ml-auto w-4 h-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent

@@ -44,6 +44,7 @@ export default function RelatorioPage() {
   }
 
   const evaluation = patient.avaliacaoCirurgica
+  const cardiologyRisk = patient.cardiologyAssessment?.finalRiskLevel
   const clinicalEval = patient.avaliacaoClinica
   const vitalSigns = patient.sinaisVitais
   const completedExams = exams.filter(e => e.status === 'concluido')
@@ -58,8 +59,8 @@ export default function RelatorioPage() {
   }
 
   const getRiskIcon = () => {
-    if (!evaluation?.riscoFinal) return null
-    switch (evaluation.riscoFinal) {
+    if (!cardiologyRisk) return null
+    switch (cardiologyRisk) {
       case 'baixo':
         return <CheckCircle className="h-8 w-8 text-emerald-500" />
       case 'moderado':
@@ -74,8 +75,8 @@ export default function RelatorioPage() {
   }
 
   const getRiskColor = () => {
-    if (!evaluation?.riscoFinal) return ''
-    switch (evaluation.riscoFinal) {
+    if (!cardiologyRisk) return ''
+    switch (cardiologyRisk) {
       case 'baixo':
         return 'border-emerald-200 bg-emerald-50'
       case 'moderado':
@@ -114,7 +115,7 @@ export default function RelatorioPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Relatorio de Avaliacao</h1>
-            <p className="text-muted-foreground">Avaliacao de Risco Cirurgico Pre-Operatorio</p>
+            <p className="text-muted-foreground">Avaliação cirúrgica pré-operatória</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -180,13 +181,13 @@ export default function RelatorioPage() {
         </CardContent>
       </Card>
 
-      {/* Classificacao de Risco Final */}
+      {/* Risco cirúrgico — Cardiologia */}
       {evaluation && (
         <Card className={`print:shadow-none ${getRiskColor()}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              Classificacao de Risco Final
+              Risco cirúrgico — Cardiologia
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -195,9 +196,9 @@ export default function RelatorioPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="text-2xl font-bold">
-                    {evaluation.riscoFinal ? RISK_LABELS[evaluation.riscoFinal] : 'Não classificado'}
+                    {cardiologyRisk ? RISK_LABELS[cardiologyRisk] : 'Não classificado'}
                   </h3>
-                  {evaluation.riscoFinal && <RiskBadge risk={evaluation.riscoFinal} />}
+                  {cardiologyRisk && <RiskBadge risk={cardiologyRisk} />}
                 </div>
                 <p className="text-muted-foreground">{evaluation.conduta}</p>
               </div>

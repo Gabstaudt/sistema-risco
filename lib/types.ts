@@ -35,6 +35,7 @@ export interface User {
 }
 
 export type PatientStatus =
+  | 'aguardando_enfermaria'
   | 'em_enfermaria'
   | 'aguardando_triagem'
   | 'em_triagem'
@@ -378,6 +379,10 @@ export interface MedicationOrder {
 export type AttendanceRoute = 'com_triagem' | 'sem_triagem'
 export interface AttendanceClosure {kind:'baixa'|'cancelamento';reason:string;at:string;by:string}
 export interface Patient {
+  receptionSectorId?:string
+  receptionSectorName?:string
+  receptionProfessionalId?:string
+  receptionProfessionalName?:string
   wardStays?:WardStay[]
   medicalConsultations?:ConsultationRecord[]
   medicalTransfers?:{at:string;from:string;to?:string;sectorId:string;sectorName:string;reason:string;clinicalSnapshot:Partial<Pick<Patient,'clinicalEvaluation'|'cardiologyAssessment'|'anesthesiaAssessment'|'surgicalRiskAssessment'>>}[]
@@ -692,6 +697,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'view_clinical_data',
     'view_exam_results',
     'classify_cardiac_risk',
+    'calculate_scores',
     'approve_for_surgery',
     'contraindicate_surgery',
     'forward_to_surgeon',
@@ -737,7 +743,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'register_vital_signs',
     'request_exams',
     'view_exam_results',
-    'calculate_scores',
     'classify_risk',
     'approve_surgery',
     'contraindicate_surgery',
@@ -784,6 +789,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 export const STATUS_LABELS: Record<PatientStatus, string> = {
+  aguardando_enfermaria:'Aguardando entrada na enfermaria',
   em_enfermaria:'Em acompanhamento na enfermaria',
   aguardando_triagem: 'Aguardando Triagem',
   em_triagem: 'Em Triagem',

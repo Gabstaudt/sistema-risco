@@ -1,4 +1,5 @@
 'use client'
+import { assertSurgicalRiskUpdate } from './surgical-risk-access'
 import {deductAdministeredMedication} from './pharmacy'
 import {readMedicationOrders,readPharmacy,writePharmacy,pharmacyLock,PHARMACY_EVENT} from './pharmacy-storage'
 import {validateExamConfiguration, examReferenceForAge, patientAgeAtRequest} from './laboratory-settings'
@@ -12,7 +13,7 @@ import { patients as initialPatients, examRequests as initialExamRequests, hydra
 import { examTypes as initialExamTypes } from './data/exams'
 import { auditLogs as initialAuditLogs } from './data/audit'
 import { hasPendingAssessment } from './assessment-requests'
-import { intakeUpdates, updateReceptionAttendance, closeReceptionAttendance, type IntakeDraft } from './reception-attendance'
+import { routeReceptionTicket,nextPatientRecordNumber,intakeUpdates, updateReceptionAttendance, closeReceptionAttendance, type IntakeDraft } from './reception-attendance'
 import { cleanRegistration, registrationDraft } from './patient-registration'
 import { recordCareStart } from './admin-analytics'
 import { nextAssessmentStatus } from './assessment-requests'
@@ -304,39 +305,39 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const patient = stored.find(item => item.id === patientId)
     if (!patient) throw new Error('Paciente não encontrado.')
     if (!['concluido', 'liberado', 'contraindicado'].includes(patient.status)) throw new Error('Este paciente já possui um atendimento em andamento.')
-    const updates = intakeUpdates(intake, users)
+    const updates = intakeUpdates(intake, users,sectors)
     const direct=user.role==='triagem'
     if(direct&&(!hasPermission('create_patient')||!hasPermission('forward_to_triage')||intake.route!=='com_triagem'))throw new Error('Sem permissão para iniciar este atendimento na triagem.')
     const issued=direct?issueArrivalTicket(current,'comum'):undefined
     const source=issued?[...current,{...issued,patientId,stage:'aguardando_triagem' as const,forwardedAt:new Date().toISOString()}]:forwardArrivalTicket(current,ticketId,patientId,user)
     if(issued)ticketId=issued.id
-    const nextTickets = source.map(ticket=>ticket.id===ticketId&&intake.route==='sem_triagem'?{...ticket,stage:'aguardando_clinico' as const,clinicalAssignedTo:updates.triageAssignedClinicianId,clinicalQueuedAt:new Date().toISOString()}:ticket)
+    const nextTickets = source.map(ticket=>ticket.id===ticketId?routeReceptionTicket(ticket,updates):ticket)
     const ticket = nextTickets.find(item => item.id === ticketId)!
     const previous = patient.visitHistory || []
     const currentVisit = previous.find(item => item.id === `${patient.id}-visit-current`)
     const archived = currentVisit ? { ...currentVisit, id: `${patient.id}-visit-${crypto.randomUUID()}`, dischargeAt: currentVisit.dischargeAt || patient.dischargeAt || patient.ultimaAtualizacao, clinicalSnapshot: { triageData: patient.triageData, examResults: patient.examResults, avaliacaoClinica: patient.avaliacaoClinica, avaliacaoCirurgica: patient.avaliacaoCirurgica, clinicalEvaluation: patient.clinicalEvaluation, cardiologyAssessment: patient.cardiologyAssessment, anesthesiaAssessment: patient.anesthesiaAssessment, surgicalRiskAssessment: patient.surgicalRiskAssessment } } : undefined
-    const updated = normalizePatient({ ...patient, attendanceClosure:undefined, ticketId, ticketNumber: ticket.number, status: 'aguardando_triagem', dataEntrada: new Date().toISOString(), dischargeAt: undefined,
+    const updated = normalizePatient({ ...patient, attendanceClosure:undefined, ticketId, ticketNumber: ticket.number, prontuario:patient.prontuario||nextPatientRecordNumber(stored), status: 'aguardando_triagem', dataEntrada: new Date().toISOString(), dischargeAt: undefined,
       triageData: undefined, sinaisVitais: undefined, triageRiskClassification: undefined, observacoesTriagem: undefined, clinicalEvaluation: undefined, avaliacaoClinica: undefined, cardiologyAssessment: undefined, anesthesiaAssessment: undefined, surgicalRiskAssessment: undefined, avaliacaoCirurgica: undefined, riskLevel: undefined, assessmentRequests: undefined, surgicalRiskRequest: undefined, clinicalRequestsSurgicalRisk: false, clinicalAssignedCardiologistId: undefined, clinicalAssignedCardiologistName: undefined, cardiologyAssignedAnesthesiologistId: undefined, cardiologyAssignedAnesthesiologistName: undefined, clinicalAssignedSurgeonId: undefined, clinicalAssignedSurgeonName: undefined, triageAssignedClinicianId: undefined, triageAssignedClinicianName: undefined, labRiskClassification: undefined, labRiskNotes: undefined, labNurseObservation: undefined, queixaPrincipal: intake.complaint.trim(), descricaoInicial: intake.notes.trim(), prioridade: 'normal', examesSolicitados: [], examResults: undefined,
       visitHistory: [...previous.filter(item => item.id !== `${patient.id}-visit-current`), ...(archived ? [archived] : [])], ...updates })
     const sourceTicket = current.find(item => item.id === ticketId)
     if (sourceTicket?.calledAt) updated.careTimings = recordCareStart(updated, 'recepcao', sourceTicket.issuedAt, user.id, new Date(sourceTicket.calledAt),user)
     const nextPatients = stored.map(item => item.id === patientId ? updated : item)
     localStorage.setItem(PATIENTS_KEY, JSON.stringify(nextPatients)); setPatients(nextPatients)
-    addAuditLog({ action: 'senha_encaminhada', patientId, details: `Senha ${ticket.number} encaminhada ${intake.route==='sem_triagem'?'ao clínico, sem triagem (branca)':'à triagem'}.` })
+    addAuditLog({ action: 'senha_encaminhada', patientId, details: `Senha ${ticket.number} encaminhada ${`para ${updates.receptionSectorName}${intake.route==='sem_triagem'?' · classificação branca':''}`}.` })
     return { tickets: nextTickets, result: undefined }
-  }), [user, users, hasPermission, mutateTickets, addAuditLog])
+  }), [user, users,sectors, hasPermission, mutateTickets, addAuditLog])
 
   const updateAttendance = useCallback((patientId:string,draft:IntakeDraft)=>mutateTickets(current=>{
     if(!user)throw new Error('Faça login para atualizar atendimentos.')
     const stored:Patient[]=JSON.parse(localStorage.getItem(PATIENTS_KEY)||'[]')
     const patient=stored.find(item=>item.id===patientId);if(!patient)throw new Error('Paciente não encontrado.')
-    const updates=updateReceptionAttendance(patient,draft,user,users,current)
+    const updates=updateReceptionAttendance(patient,draft,user,users,current,sectors)
     const next=normalizePatient({...patient,...updates,ultimaAtualizacao:new Date().toISOString(),ultimoAtualizadoPor:user.id})
     const list=stored.map(item=>item.id===patientId?next:item);localStorage.setItem(PATIENTS_KEY,JSON.stringify(list));setPatients(list)
-    const routed=updates.status?current.map(ticket=>ticket.patientId===patientId&&ticket.stage!=='concluida'?{...ticket,stage:draft.route==='sem_triagem'?'aguardando_clinico' as const:'aguardando_triagem' as const,clinicalAssignedTo:updates.triageAssignedClinicianId,clinicalQueuedAt:draft.route==='sem_triagem'?new Date().toISOString():undefined,calledBy:undefined,calledAt:undefined}:ticket):current
+    const routed=updates.status?current.map(ticket=>ticket.patientId===patientId&&ticket.stage!=='concluida'?routeReceptionTicket(ticket,updates):ticket):current
     addAuditLog({action:'atendimento_atualizado',patientId,details:`Atendimento atualizado: ${draft.route==='sem_triagem'?'sem triagem':'com triagem'}.`})
     return {tickets:routed,result:undefined}
-  }),[user,users,mutateTickets,addAuditLog])
+  }),[user,users,sectors,mutateTickets,addAuditLog])
 
   const closeAttendance = useCallback(async(patientId:string,kind:'baixa'|'cancelamento',reason:string)=>{
     const close=()=>mutateTickets(current=>{
@@ -428,7 +429,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return {tickets:result.tickets,result:undefined}
     }
     let ticket=[...current].reverse().find(t=>t.patientId===patientId)
-    if(ticket&&ticket.stage!=='concluida'&&!(ticket.stage==='chamada_medico'&&ticket.calledBy===user.id))throw new Error('O paciente está em atendimento em outra etapa.')
+    if(ticket&&ticket.stage!=='concluida'&&!(ticket.stage==='aguardando_setor'&&ticket.professionalAssignedTo===user.id)&&!(ticket.stage==='chamada_medico'&&ticket.calledBy===user.id))throw new Error('O paciente está em atendimento em outra etapa.')
     if(!ticket)ticket={...issueArrivalTicket(current,'comum'),patientId}
     const called={...ticket,stage:'chamada_medico' as const,calledBy:user.id,calledAt:new Date().toISOString(),destination:user.consultationRoom}
     return {tickets:[...current.filter(t=>t.id!==ticket!.id).map(t=>t.stage==='chamada_medico'&&t.calledBy===user.id?{...t,stage:'concluida' as const,calledBy:undefined,calledAt:undefined}:t),called],result:undefined}
@@ -457,16 +458,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const registration = cleanRegistration(registrationDraft(patientData as Patient), stored)
       const route = patientData.attendanceRoute || 'com_triagem'
       if (user.role === 'triagem' && route !== 'com_triagem') throw new Error('O cadastro da triagem deve seguir o fluxo de triagem.')
-      const updates = intakeUpdates({complaint:patientData.queixaPrincipal||'',notes:patientData.descricaoInicial||'',route,doctorId:patientData.triageAssignedClinicianId||''}, users)
-      const newPatient: Patient = normalizePatient({ ...patientData, ...registration, ...updates, ticketId: ticket?.id || directTicket?.id, ticketNumber: ticket?.number || directTicket?.number, id, prontuario: `PRONT-${new Date().getFullYear()}-${String(stored.length + 1).padStart(3, '0')}`, name: patientData.nomeCompleto, age: patientData.idade, cadastradoEm: new Date().toISOString(), ultimaAtualizacao: new Date().toISOString(), updatedAt: new Date().toISOString(), ultimoAtualizadoPor: user.id })
+      const updates = intakeUpdates({complaint:patientData.queixaPrincipal||'',notes:patientData.descricaoInicial||'',route,doctorId:patientData.receptionProfessionalId||patientData.triageAssignedClinicianId||'',sectorId:patientData.receptionSectorId}, users,sectors)
+      const newPatient: Patient = normalizePatient({ ...patientData, ...registration, ...updates, ticketId: ticket?.id || directTicket?.id, ticketNumber: ticket?.number || directTicket?.number, id, prontuario: nextPatientRecordNumber(stored), name: patientData.nomeCompleto, age: patientData.idade, cadastradoEm: new Date().toISOString(), ultimaAtualizacao: new Date().toISOString(), updatedAt: new Date().toISOString(), ultimoAtualizadoPor: user.id })
       if (ticket?.calledAt) newPatient.careTimings = recordCareStart(newPatient, 'recepcao', ticket.issuedAt, user.id, new Date(ticket.calledAt),user)
       const nextPatients = [...stored, newPatient]
       localStorage.setItem(PATIENTS_KEY, JSON.stringify(nextPatients)); setPatients(nextPatients)
       addAuditLog({ patientId: id, action: 'cadastro_paciente', description: `Paciente ${newPatient.nomeCompleto} cadastrado${ticket ? ` com senha ${ticket.number}, ${route==='sem_triagem'?'sem triagem (branca)':'encaminhado à triagem'}` : ''}.` })
-      const routedTickets = nextTickets.map(item=>item.patientId===id&&route==='sem_triagem'?{...item,stage:'aguardando_clinico' as const,clinicalAssignedTo:updates.triageAssignedClinicianId,clinicalQueuedAt:new Date().toISOString()}:item)
+      const routedTickets = nextTickets.map(item=>item.patientId===id?routeReceptionTicket(item,updates):item)
       return { tickets: routedTickets, result: newPatient }
     })
-  }, [user, users, hasPermission, mutateTickets, addAuditLog])
+  }, [user, users,sectors, hasPermission, mutateTickets, addAuditLog])
 
   const updatePatient = useCallback((id: string, updates: Partial<Patient>) => {
     if(user?.previewMode)throw new Error('Visualização de perfil: alterações não são permitidas.')
@@ -474,6 +475,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const currentPatient = storedPatients.find(patient => patient.id === id) || patients.find(patient => patient.id === id)
     if(currentPatient?.attendanceClosure&&updates.status&&!['concluido','liberado','contraindicado'].includes(updates.status))throw new Error('O atendimento foi encerrado.')
     if (!currentPatient || !projectPatientForUser(currentPatient, user)) throw new Error('Paciente não direcionado para este profissional.')
+    assertSurgicalRiskUpdate(currentPatient, updates, user)
     if (updates.triageData?.completedAt && user?.role === 'triagem') {
       void mutateTickets(current => ({ tickets: current.map(ticket => ticket.patientId === id && ['chamada_triagem', 'em_triagem'].includes(ticket.stage) && ticket.calledBy === user.id ? { ...ticket, stage: updates.status==='aguardando_clinico'?'aguardando_clinico' as const:'concluida' as const, clinicalAssignedTo: updates.status==='aguardando_clinico'?updates.triageAssignedClinicianId || currentPatient.triageAssignedClinicianId:undefined, clinicalQueuedAt: updates.triageData?.completedAt, calledBy: undefined, calledAt: undefined } : ticket), result: undefined }))
     }
@@ -540,6 +542,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updatePatient(id, { status })
     
     const actionMap: Record<PatientStatus, AuditAction> = {
+      aguardando_enfermaria:'atendimento_atualizado',
       em_enfermaria:'enfermaria_entrada',
       aguardando_triagem: 'encaminhamento_triagem',
       em_triagem: 'encaminhamento_triagem',
@@ -842,7 +845,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider value={{
-      wardCandidates:user?.role==='enfermaria'&&hasProfilePermission('ward_admit')?patients.filter(patient=>!patient.attendanceClosure&&!['concluido','liberado','contraindicado','em_enfermaria'].includes(patient.status)&&!patient.wardStays?.some(stay=>!stay.dischargedAt)).map(patient=>({id:patient.id,nomeCompleto:patient.nomeCompleto,nomeSocial:patient.nomeSocial,prontuario:patient.prontuario,dataNascimento:patient.dataNascimento,idade:patient.idade,sexo:patient.sexo,cpf:patient.cpf,status:patient.status} as Patient)):[],admitWard,recordWard,dischargeFromWard,
+      wardCandidates:user?.role==='enfermaria'&&hasProfilePermission('ward_admit')?patients.filter(patient=>!patient.attendanceClosure&&!['concluido','liberado','contraindicado','em_enfermaria'].includes(patient.status)&&!patient.wardStays?.some(stay=>!stay.dischargedAt)&&!(patient.status==='aguardando_enfermaria'&&patient.receptionSectorId&&patient.receptionSectorId!==(user.sectorId||'sector-enfermaria'))).map(patient=>({id:patient.id,nomeCompleto:patient.nomeCompleto,nomeSocial:patient.nomeSocial,prontuario:patient.prontuario,dataNascimento:patient.dataNascimento,idade:patient.idade,sexo:patient.sexo,cpf:patient.cpf,dataEntrada:patient.dataEntrada,status:patient.status,receptionSectorId:patient.receptionSectorId,receptionSectorName:patient.receptionSectorName,queixaPrincipal:patient.queixaPrincipal,wardStays:patient.wardStays?.map(stay=>({id:stay.id,encounterEntryAt:stay.encounterEntryAt,dischargedAt:stay.dischargedAt}))} as Patient)):[],admitWard,recordWard,dischargeFromWard,
       registerCareStart, updateAttendance, closeAttendance,
       medicalDocuments: hasPermission('view_clinical_data') ? medicalDocuments.filter(document => visibleIds.has(document.patientId)&&(user?.role!=='enfermaria'||Boolean(patients.find(p=>p.id===document.patientId)&&wardDateVisible(patients.find(p=>p.id===document.patientId)!,document.issuedAt,user)))) : [],
       consultations:(hasPermission('medical_consultation')||hasPermission('view_medical_reports'))?patients.flatMap(patient=>(patient.medicalConsultations||[]).filter(record=>record.physicianId===user?.id)):[],saveConsultation,transferMedicalPatient,callMedicalPatient,

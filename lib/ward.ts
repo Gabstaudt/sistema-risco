@@ -17,6 +17,7 @@ export function assertWardAccess(patient:Patient,user:User,permission:string){
 export function wardAdmission(patient:Patient,user:User,sector:HospitalSector,reason:string,bed=''):Partial<Patient>{
  const allowed=user.role==='enfermaria'?hasUserPermission(user,'ward_admit')&&userSectorId(user)===sector.id:isDoctor(user)?hasUserPermission(user,'transfer_patient'):user.role==='triagem'&&hasUserPermission(user,'forward_triage_sector')
  if(!allowed||!sector.active||sector.role!=='enfermaria')throw new Error('Sem permissão para admitir neste setor.')
+ if(patient.status==='aguardando_enfermaria'&&patient.receptionSectorId&&patient.receptionSectorId!==sector.id)throw new Error('Paciente encaminhado para outro setor de enfermaria.')
  if(patient.attendanceClosure||['concluido','liberado','contraindicado'].includes(patient.status))throw new Error('A entrada hospitalar está encerrada. Registre um novo atendimento.')
  if(user.role==='enfermaria'&&patient.medicalConsultations?.some(record=>!record.endedAt))throw new Error('A consulta médica está em andamento. O médico pode encaminhar o paciente para a enfermaria.')
  if(patient.status==='em_enfermaria')throw new Error('O paciente já está na enfermaria.')

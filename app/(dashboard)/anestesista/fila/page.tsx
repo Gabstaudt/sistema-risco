@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import {getPatientManchesterPriority} from '@/lib/manchester'
 import { hasPendingAssessment } from '@/lib/assessment-requests'
 import { Header } from '@/components/layout/header'
 import { StatusBadge } from '@/components/shared/badges'
@@ -10,16 +11,18 @@ import { useData } from '@/lib/data-context'
 import { ArrowRight, Clock, FileText, ShieldPlus, User } from 'lucide-react'
 import type { LabUrgency, Patient } from '@/lib/types'
 
-const urgencyMeta: Record<LabUrgency, { label: string; className: string; rank: number }> = {
+const urgencyMeta: Record<LabUrgency|'branca'|'sem_classificacao', { label: string; className: string; rank: number }> = {
   emergente: { label: 'Vermelho', className: 'bg-red-100 text-red-800 border-red-200', rank: 0 },
   muito_urgente: { label: 'Laranja', className: 'bg-orange-100 text-orange-800 border-orange-200', rank: 1 },
   urgente: { label: 'Amarelo', className: 'bg-yellow-100 text-yellow-800 border-yellow-200', rank: 2 },
   pouco_urgente: { label: 'Verde', className: 'bg-emerald-100 text-emerald-800 border-emerald-200', rank: 3 },
+  branca:{label:'Branca · sem triagem',className:'border-slate-300 bg-white text-slate-900',rank:5},
+  sem_classificacao:{label:'Não classificado',className:'border-slate-200 bg-slate-50 text-slate-700',rank:6},
   nao_urgente: { label: 'Azul', className: 'bg-sky-100 text-sky-800 border-sky-200', rank: 4 },
 }
 
-function getUrgency(patient: Patient): LabUrgency {
-  return patient.labRiskClassification || patient.triageRiskClassification || 'nao_urgente'
+function getUrgency(patient: Patient): LabUrgency|'branca'|'sem_classificacao' {
+  return getPatientManchesterPriority(patient) || (patient.attendanceRoute==='sem_triagem'?'branca':'sem_classificacao')
 }
 
 export default function AnestesistaFilaPage() {

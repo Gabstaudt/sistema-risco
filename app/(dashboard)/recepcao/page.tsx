@@ -1,5 +1,2 @@
-import { ProfileHome } from '@/components/shared/profile-home'
-
-export default function Page() {
-  return <ProfileHome role="recepcao" />
-}
+import {ReceptionAttendanceBoard} from '@/components/shared/reception-attendance-board'
+export default function Page(){return <ReceptionAttendanceBoard/>}

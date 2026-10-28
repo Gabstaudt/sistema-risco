@@ -30,7 +30,7 @@ export default function CirurgiaoAltoRiscoPage() {
 
     return patients
       .filter((patient) => {
-        const finalRisk = patient.surgicalRiskAssessment?.finalRiskLevel || patient.riskLevel
+        const finalRisk = patient.cardiologyAssessment?.finalRiskLevel || patient.riskLevel
         return patient.status === 'alto_risco' || finalRisk === 'alto' || finalRisk === 'critico'
       })
       .filter((patient) => {
@@ -90,7 +90,7 @@ export default function CirurgiaoAltoRiscoPage() {
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <StatusBadge status={patient.status} />
-                            <RiskBadge risk={patient.surgicalRiskAssessment?.finalRiskLevel || patient.riskLevel || 'alto'} />
+                            <RiskBadge risk={patient.cardiologyAssessment?.finalRiskLevel || patient.riskLevel || 'alto'} />
                           </div>
                           <p className="mt-2 break-words font-medium">{patient.nomeCompleto}</p>
                           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">

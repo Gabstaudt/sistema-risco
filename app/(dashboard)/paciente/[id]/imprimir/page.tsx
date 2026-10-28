@@ -1,4 +1,6 @@
 'use client'
+import {ReceptionAttendanceSheet} from '@/components/shared/reception-attendance-sheet'
+import {RECEPTION_SHEETS} from '@/components/shared/reception-print-actions'
 import {WardHistory} from '@/components/shared/ward-history'
 import {MedicalConsultationHistory} from '@/components/shared/medical-consultation-history'
 import {ADMISSION_DOCUMENTS,documentPermission} from '@/lib/admission-documents'
@@ -29,6 +31,7 @@ function PrintPage() {
  const exams = getExamRequestsByPatient(id).filter(exam => !query.get('exame') || exam.id === query.get('exame')).sort((a,b) => Date.parse(b.solicitadoEm)-Date.parse(a.solicitadoEm))
  const meds = medicationOrders.filter(order => order.patientId === id && (!query.get('medicacao') || order.id === query.get('medicacao'))).sort((a,b) => Date.parse(b.requestedAt)-Date.parse(a.requestedAt))
  if (!isDataReady) return <p className="p-6">Carregando...</p>
+ if(patient&&Object.hasOwn(RECEPTION_SHEETS,kind))return <ReceptionAttendanceSheet patient={patient} kind={kind as keyof typeof RECEPTION_SHEETS}/>
  if (!patient || !permissions[kind] || !hasPermission(permissions[kind]) || ((['receita','atestado'].includes(kind)||Object.hasOwn(ADMISSION_DOCUMENTS,kind)) && !document)) return <p className="p-6">Documento indisponível ou acesso não autorizado.</p>
  const priority = getPatientManchesterPriority(patient)
  const record = kind === 'prontuario'

@@ -61,6 +61,7 @@ const homeByRole: Record<UserRole, HomeConfig> = {
     title: 'Cardiologista',
     actions: [
       { label: 'Avaliar pacientes', description: 'Abrir a fila de cardiologia', href: '/cardiologista/fila', icon: ClipboardList },
+      { label: 'Calcular risco', description: 'Abrir a calculadora de risco', href: '/cardiologista/calculadora', icon: Calculator },
       { label: 'Buscar paciente', description: 'Consultar os pacientes', href: '/cardiologista/pacientes', icon: Users },
     ],
   },
@@ -76,7 +77,6 @@ const homeByRole: Record<UserRole, HomeConfig> = {
     actions: [
       { label: 'Avaliar pacientes', description: 'Abrir a fila de avaliação cirúrgica', href: '/cirurgiao/fila', icon: ClipboardList },
       { label: 'Ver pacientes liberados', description: 'Consultar liberações para cirurgia', href: '/cirurgiao/liberados', icon: FileCheck },
-      { label: 'Calcular risco', description: 'Abrir a calculadora de risco', href: '/cirurgiao/calculadora', icon: Calculator },
     ],
   },
   admin: {

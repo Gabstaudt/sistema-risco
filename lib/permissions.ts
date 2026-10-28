@@ -67,6 +67,7 @@ export function canAccessRoute(pathname: string, user: User | null): boolean {
     if (page === 'configuracoes' && !hasUserPermission(user, 'system_settings')) return false
     return !!adminPermissions[page] && hasUserPermission(user, adminPermissions[page])
   }
+  if (page === 'calculadora' && ['cirurgiao', 'cardiologista'].includes(section)) return section === 'cardiologista' && user.role === 'cardiologista' && hasUserPermission(user, 'classify_cardiac_risk')
   if (section === 'cirurgiao' && page === 'acompanhamento') return hasUserPermission(user, 'record_surgery') && hasUserPermission(user, 'view_clinical_data')
   if (section === 'triagem') return hasUserPermission(user, 'view_triage_data')
   if (section === 'laboratorio') return hasUserPermission(user, 'view_exam_results')
@@ -87,7 +88,7 @@ export function projectPatientForUser(patient: Patient, user: User | null): Pati
     'healthInsurance', 'bloodType', 'allergies', 'queixaPrincipal', 'descricaoInicial',
     'cadastradoPor', 'cadastradoEm', 'ultimaAtualizacao', 'ultimoAtualizadoPor', 'updatedAt',
   ] as const
-  const fields: (keyof Patient)[] = [...basicFields,...REGISTRATION_TEXT_FIELDS,...REGISTRATION_BOOLEAN_FIELDS,'attendanceRoute','attendanceClosure','receptionClassification','triageAssignedClinicianId','triageAssignedClinicianName']
+  const fields: (keyof Patient)[] = [...basicFields,...REGISTRATION_TEXT_FIELDS,...REGISTRATION_BOOLEAN_FIELDS,'attendanceRoute','attendanceClosure','receptionClassification','receptionSectorId','receptionSectorName','receptionProfessionalId','receptionProfessionalName','triageAssignedClinicianId','triageAssignedClinicianName']
   const triage = hasUserPermission(user, 'view_triage_data')&&(user?.role!=='enfermaria'||Boolean(activeWard))
   const clinical = hasUserPermission(user, 'view_clinical_data')&&(user?.role!=='enfermaria'||Boolean(activeWard))
   const exams = hasUserPermission(user, 'view_exam_results')&&(user?.role!=='enfermaria'||Boolean(activeWard))
