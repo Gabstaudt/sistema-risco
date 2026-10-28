@@ -1,8 +1,12 @@
 'use client'
+import {useUnit} from '@/lib/use-unit'
 
 import Link from 'next/link'
+import { BrandLogo } from '@/components/shared/brand-logo'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import { isDoctor } from '@/lib/medical-profile'
+import { canAccessRoute } from '@/lib/permissions'
 import { useData } from '@/lib/data-context'
 import { ROLE_LABELS, type UserRole } from '@/lib/types'
 import {
@@ -18,6 +22,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -29,7 +34,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
-  Activity,
   Users,
   UserPlus,
   ClipboardList,
@@ -65,6 +69,7 @@ const getNavigation = (
   role: UserRole,
   stats: {
     aguardandoTriagem: number
+    aguardandoRecepcao: number
     emAvaliacaoClinica: number
     examesPendentes: number
     aguardandoCardiologia: number
@@ -73,19 +78,23 @@ const getNavigation = (
   },
 ): NavGroup[] => {
   const roleNavigation: Record<UserRole, NavGroup[]> = {
+    farmacia:[{title:'Farmácia',items:[{title:'Estoque',url:'/farmacia',icon:ClipboardList},{title:'Fornecedores',url:'/farmacia/fornecedores',icon:Users},{title:'Produtos',url:'/farmacia/produtos',icon:TestTube},{title:'Programas de saúde',url:'/farmacia/programas',icon:Heart},{title:'Movimentações',url:'/farmacia/movimentacoes',icon:History},{title:'Separação de medicamentos',url:'/farmacia/separacao',icon:Syringe},{title:'Medicamentos vencidos',url:'/farmacia/vencidos',icon:AlertCircle}]}],
+    enfermaria:[{title:'Enfermaria',items:[{title:'Pacientes',url:'/enfermaria',icon:Users},{title:'Altas da enfermaria',url:'/enfermaria/altas',icon:History}]}],
     recepcao: [
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/recepcao', icon: LayoutDashboard },
+          { title: 'Início', url: '/recepcao', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/recepcao/pacientes', icon: Users },
-          { title: 'Novo Paciente', url: '/recepcao/cadastro', icon: UserPlus },
+          {title:'Atendimentos',url:'/recepcao/atendimentos',icon:ClipboardList},
+          {title:'Novo atendimento',url:'/recepcao/novo',icon:UserPlus},
+          {title:'Ficha em branco',url:'/recepcao/ficha-em-branco',icon:FileText},
         ],
       },
       {
         title: 'Fila',
         items: [
-          { title: 'Aguardando Triagem', url: '/recepcao/fila', icon: ClipboardList, badge: stats.aguardandoTriagem },
+          { title: 'Senhas e encaminhamentos', url: '/recepcao/fila', icon: ClipboardList, badge: stats.aguardandoRecepcao },
         ],
       },
     ],
@@ -93,9 +102,9 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/triagem', icon: LayoutDashboard },
+          { title: 'Início', url: '/triagem', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/triagem/pacientes', icon: Users },
-          { title: 'Novo Paciente', url: '/triagem/cadastro', icon: UserPlus },
+          { title: 'Novo atendimento', url: '/triagem/cadastro', icon: UserPlus },
         ],
       },
       {
@@ -109,7 +118,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/clinico', icon: LayoutDashboard },
+          { title: 'Início', url: '/clinico', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/clinico/pacientes', icon: Users },
         ],
       },
@@ -131,12 +140,14 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/laboratorio', icon: LayoutDashboard },
+          { title: 'Início', url: '/laboratorio', icon: LayoutDashboard },
+          { title: 'Pacientes', url: '/laboratorio/pacientes', icon: Users },
         ],
       },
       {
         title: 'Exames',
         items: [
+          { title: 'Fila de Atendimento', url: '/laboratorio/fila', icon: ClipboardList },
           { title: 'Exames Pendentes', url: '/laboratorio/pendentes', icon: FlaskConical, badge: stats.examesPendentes },
           { title: 'Exames Concluidos', url: '/laboratorio/concluidos', icon: FileText },
         ],
@@ -146,13 +157,15 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/cardiologista', icon: LayoutDashboard },
+          { title: 'Início', url: '/cardiologista', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/cardiologista/pacientes', icon: Users },
+          { title: 'Exames dos pacientes', url: '/cardiologista/exames', icon: FlaskConical },
         ],
       },
       {
-        title: 'Risco Cardiologico',
+        title: 'Risco cirúrgico — Cardiologia',
         items: [
+          { title: 'Calculadora de risco', url: '/cardiologista/calculadora', icon: Heart },
           { title: 'Aguardando Avaliacao', url: '/cardiologista/fila', icon: Heart, badge: stats.aguardandoCardiologia },
         ],
       },
@@ -161,8 +174,9 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/anestesista', icon: LayoutDashboard },
+          { title: 'Início', url: '/anestesista', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/anestesista/pacientes', icon: Users },
+          { title: 'Exames dos pacientes', url: '/anestesista/exames', icon: FlaskConical },
         ],
       },
       {
@@ -176,7 +190,7 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/cirurgiao', icon: LayoutDashboard },
+          { title: 'Início', url: '/cirurgiao', icon: LayoutDashboard },
           { title: 'Pacientes', url: '/cirurgiao/pacientes', icon: Users },
         ],
       },
@@ -184,7 +198,8 @@ const getNavigation = (
         title: 'Avaliacoes',
         items: [
           { title: 'Aguardando Avaliacao', url: '/cirurgiao/fila', icon: Syringe, badge: stats.aguardandoCirurgiao },
-          { title: 'Calculadora de Risco', url: '/cirurgiao/calculadora', icon: Heart },
+          { title: 'Cirurgia e pós-operatório', url: '/cirurgiao/acompanhamento', icon: ClipboardList },
+          { title: 'Tipos de exames', url: '/cirurgiao/exames', icon: TestTube },
         ],
       },
       {
@@ -199,33 +214,48 @@ const getNavigation = (
       {
         title: 'Menu Principal',
         items: [
-          { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+          {title:'Setores',url:'/admin/setores',icon:Users},
+          { title: 'Início', url: '/admin', icon: LayoutDashboard },
           { title: 'Usuarios', url: '/admin/usuarios', icon: Users },
+          {title:'Profissionais de saúde',url:'/admin/profissionais',icon:Stethoscope},
+          {title:'Pacientes cadastrados',url:'/admin/pacientes',icon:Users},
         ],
       },
       {
         title: 'Sistema',
         items: [
+          { title: 'Farmácia e estoque', url: '/admin/farmacia', icon: ClipboardList },
           { title: 'Tipos de Exames', url: '/admin/exames', icon: TestTube },
+          { title: 'Cirurgias por tipo', url: '/admin/cirurgias', icon: Syringe },
+          { title: 'Relatórios', url: '/admin/relatorios', icon: FileText },
           { title: 'Auditoria', url: '/admin/auditoria', icon: History },
-          { title: 'Configuracoes', url: '/admin/configuracoes', icon: Settings },
+          {title:'Visualizar outro perfil',url:'/admin/visualizar',icon:Users},
+          {title:'Dados da unidade',url:'/admin/unidade',icon:Settings},
+          {title:'Modelos de fichas',url:'/admin/modelos',icon:FileText},
+          {title:'Produção / BPA',url:'/admin/producao',icon:ClipboardList},
+          { title: 'Perfis e permissões', url: '/admin/configuracoes', icon: Settings },
         ],
       },
     ],
   }
 
-  return roleNavigation[role] || []
+  return [...(roleNavigation[role]||[]),...(['clinico','cardiologista','anestesista','cirurgiao'].includes(role)?[{title:'Atendimento médico',items:[{title:'Meus atendimentos',url:'/medico/atendimentos',icon:Stethoscope},{title:'Meu consultório e setor',url:'/medico/local',icon:Settings},{title:'Meus relatórios',url:'/medico/relatorios',icon:FileText}]}]:[])]
 }
 
 export function AppSidebar() {
+  const {unit}=useUnit()
+  const { isMobile, setOpenMobile } = useSidebar()
+  const closeMobileMenu = () => { if (isMobile) setOpenMobile(false) }
   const pathname = usePathname()
   const { user, logout } = useAuth()
-  const { getStats } = useData()
+  const { getStats, tickets } = useData()
   
   if (!user) return null
 
   const stats = getStats()
-  const navigation = getNavigation(user.role, stats)
+  const navigation = getNavigation(user.role, { ...stats, aguardandoRecepcao: tickets.filter(ticket => ticket.stage === 'aguardando_recepcao').length, aguardandoTriagem: user.role === 'triagem' ? tickets.filter(ticket => ticket.stage === 'aguardando_triagem').length : stats.aguardandoTriagem })
+    .map((group) => ({ ...group, items: group.items.filter((item) => canAccessRoute(item.url, user)) }))
+    .filter((group) => group.items.length > 0)
 
   const getInitials = (name: string) => {
     return name
@@ -237,17 +267,14 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4">
-        <Link href={`/${user.role}`} className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <Activity className="w-5 h-5 text-sidebar-primary-foreground" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sidebar-foreground">MedRisk Pro</span>
-            <span className="text-xs text-sidebar-foreground/60">{ROLE_LABELS[user.role]}</span>
-          </div>
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="px-2 py-4">
+        <Link href={`/${user.role}`} aria-label="MedRisk Pro — início" onClick={closeMobileMenu} className="flex flex-col items-start group-data-[collapsible=icon]:items-center">
+          <BrandLogo variant="negative" className="w-full max-w-[240px] group-data-[collapsible=icon]:hidden" />
+          <img src="/Logo%20Medrisk/brand/logo/medrisk-simbolo-negativo.svg" alt="" className="hidden size-10 group-data-[collapsible=icon]:block" />
+          <span className="group-data-[collapsible=icon]:hidden px-4 text-xs text-sidebar-foreground/75">{isDoctor(user) ? `Médico · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}</span>
         </Link>
+        {unit.updatedAt&&<div className="group-data-[collapsible=icon]:hidden flex items-center gap-2 px-4 text-xs text-sidebar-foreground/85">{unit.logo&&<img src={unit.logo} alt={`Logo ${unit.name}`} className="h-8 w-8 rounded bg-white object-contain"/>}<span>{unit.name}</span></div>}
       </SidebarHeader>
 
       <SidebarSeparator />
@@ -262,10 +289,11 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
                       asChild
+                      className="min-h-12 text-base"
                       isActive={pathname === item.url}
                       tooltip={item.title}
                     >
-                      <Link href={item.url}>
+                      <Link href={item.url} aria-label={item.title} aria-current={pathname === item.url ? 'page' : undefined} onClick={closeMobileMenu}>
                         <item.icon className="w-4 h-4" />
                         <span>{item.title}</span>
                       </Link>
@@ -290,6 +318,8 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
+                  aria-label={`Conta de ${user.name}`}
+                  tooltip={user.name}
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8">
@@ -297,11 +327,11 @@ export function AppSidebar() {
                       {getInitials(user.name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col gap-0.5 leading-none flex-1 text-left">
+                  <div className="group-data-[collapsible=icon]:hidden flex flex-col gap-0.5 leading-none flex-1 text-left">
                     <span className="font-medium text-sm truncate">{user.name}</span>
                     <span className="text-xs text-sidebar-foreground/60 truncate">{user.email}</span>
                   </div>
-                  <ChevronUp className="ml-auto w-4 h-4" />
+                  <ChevronUp className="group-data-[collapsible=icon]:hidden ml-auto w-4 h-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent

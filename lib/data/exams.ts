@@ -1,6 +1,6 @@
 import { ASAClassification, ExamType } from '../types'
 
-export const examTypes: ExamType[] = [
+const seedExamTypes: ExamType[] = [
   {
     id: 'exam-1',
     name: 'Hemograma Completo',
@@ -109,6 +109,7 @@ export const examTypes: ExamType[] = [
   },
 ]
 
+export const examTypes: ExamType[] = seedExamTypes.map(exam => ({ ...exam, resultMode: exam.category.toLocaleLowerCase().includes('imagem') ? 'multiple_images' : 'single_file' }))
 export const EXAM_TYPES = examTypes
 
 export const ASA_CLASSIFICATIONS: Array<{

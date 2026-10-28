@@ -1,20 +1,42 @@
+import type {WardStay} from './ward'
+import type {ConsultationRecord} from './medical-care'
+import type {TriageIntake} from './triage-intake'
+import type { CareTiming } from './admin-analytics'
 // Tipos base do sistema de Avaliacao de Risco Cirurgico
 
-export type UserRole = 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'admin'
+export type UserRole = 'farmacia' | 'recepcao' | 'triagem' | 'clinico' | 'laboratorio' | 'cardiologista' | 'anestesista' | 'cirurgiao' | 'enfermaria' | 'admin'
 
 export interface User {
+  previewMode?:boolean
+  isHealthProfessional?:boolean
+  cboCode?:string
+  occupationName?:string
+  unitName?:string
+  professionalCns?:string
+  workplaceAvailability?:'disponivel'|'em_atendimento'|'indisponivel'
+  sectorId?:string
+  profileId?: string
   id: string
   email: string
   password: string
   name: string
   role: UserRole
+  /** Sala atual de atendimento, informada pelo cadastro/serviço de profissionais. */
+  professionalGroup?: 'medico' | 'farmacia' | 'recepcao' | 'triagem' | 'laboratorio' | 'enfermaria' | 'admin'
+  medicalSpecialty?: 'clinico' | 'cirurgiao' | 'cardiologista' | 'anestesista'
+  professionalRegistration?: string
+  consultationRoom?: string
+  /** Effective permissions supplied by the backend; [] means no access. */
+  permissions?: string[]
   department?: string
   avatar?: string
   active: boolean
   createdAt: string
 }
 
-export type PatientStatus = 
+export type PatientStatus =
+  | 'aguardando_enfermaria'
+  | 'em_enfermaria'
   | 'aguardando_triagem'
   | 'em_triagem'
   | 'aguardando_avaliacao'
@@ -50,6 +72,8 @@ export type SurgeryUrgency = 'eletiva' | 'urgencia' | 'emergencia'
 export type SurgerySize = 'pequeno' | 'medio' | 'grande'
 
 export interface VitalSigns {
+  hgt?:number
+  glasgow?:number
   bloodPressure?: string
   heartRate?: number
   temperature?: number
@@ -96,6 +120,7 @@ export interface Comorbidities {
 }
 
 export interface ClinicalEvaluation {
+  lesionType?: string
   id?: string
   patientId?: string
   rcriScore?: {
@@ -124,7 +149,21 @@ export interface ClinicalEvaluation {
   avaliadoEm?: string
 }
 
+export type ExamResultMode = 'single_file' | 'multiple_images' | 'individual'
+export interface ExamAttachmentFile { id: string; name: string; type: string; size: number; uploadedAt: string; uploadedBy: string }
+
+export interface ExamAgeRange {
+  id: string
+  name: string
+  minYears: number
+  maxYears?: number
+  reference: string
+}
+
 export interface ExamType {
+  ageRanges?: ExamAgeRange[]
+  active?: boolean
+  resultMode?: ExamResultMode
   id: string
   name: string
   category: string
@@ -152,6 +191,11 @@ export type LabUrgency =
   | 'nao_urgente'
 
 export interface ExamRequest {
+  performedCboCode?:string
+  performedOccupation?:string
+  performedSector?:string
+  performedUnit?:string
+  performedProfessionalCns?:string
   id: string
   patientId: string
   examTypeId: string
@@ -163,6 +207,12 @@ export interface ExamRequest {
   observacoesLab?: string
   labAnalysis?: string
   labUrgency?: LabUrgency
+  attachment?: ExamAttachmentFile
+  attachments?: ExamAttachmentFile[]
+  examCategory?: string
+  resultMode?: ExamResultMode
+  performedAt?: string
+  performedBy?: string
   anexoUrl?: string
   solicitadoPor: string
   solicitadoEm: string
@@ -186,6 +236,8 @@ export interface RiskScores {
 }
 
 export interface CardiologyAssessment {
+  specialistReferral?: string
+  riskScores?: Partial<Record<'rcri' | 'vsgcri' | 'emapo' | 'acp', { result: string; interpretation: string }>>
   surgeryType?: string
   urgency?: SurgeryUrgency
   releaseProfile?: 'eletiva' | 'emergencia'
@@ -196,6 +248,21 @@ export interface CardiologyAssessment {
   notes?: string
   completedAt?: string
   completedBy?: string
+}
+
+export interface SurgeryRecord {
+  id: string
+  procedureType: string
+  segment: string
+  status: 'planejada' | 'realizada' | 'cancelada'
+  performedAt?: string
+  notes: string
+  postoperativeNotes: string
+  postoperativeOutcome: 'em_acompanhamento' | 'alta' | 'retorno' | 'internacao'
+  createdAt: string
+  createdBy: string
+  updatedAt: string
+  updatedBy: string
 }
 
 export interface AnesthesiaAssessment {
@@ -239,6 +306,9 @@ export interface AdministeredMedication {
 }
 
 export interface PatientEncounter {
+  attendanceRoute?: AttendanceRoute
+  attendanceClosure?: AttendanceClosure
+  clinicalSnapshot?: Pick<Patient, 'clinicalEvaluation' | 'cardiologyAssessment' | 'anesthesiaAssessment' | 'surgicalRiskAssessment' | 'triageData' | 'examResults' | 'avaliacaoClinica' | 'avaliacaoCirurgica'>
   id: string
   entryAt: string
   dischargeAt?: string
@@ -269,7 +339,95 @@ export interface PatientEncounter {
   outcome?: string
 }
 
+export interface ManchesterClassification {
+  protocol: 'Manchester'
+  priority: LabUrgency
+  flowchart: string
+  discriminator: string
+  targetMinutes: number
+  classifiedAt?: string
+  classifiedBy?: string
+  updatedAt?: string
+  updatedBy?: string
+}
+
+export type AssessmentSpecialty = 'cardiologista' | 'anestesista' | 'cirurgiao'
+export interface SpecialtyAssessmentRequest {
+  specialty: AssessmentSpecialty
+  status: 'draft' | 'pending' | 'completed'
+  requestedAt?: string
+  requestedBy?: string
+  assignedProfessionalId?: string
+  assignedProfessionalName?: string
+}
+
+export interface MedicationOrder {
+  id: string
+  patientId: string
+  medication: string
+  dose: string
+  route: string
+  instructions: string
+  status: 'solicitada' | 'administrada' | 'cancelada'
+  cancelledReason?: string
+  requestedAt: string
+  requestedBy: string
+  administeredAt?: string
+  administeredBy?: string
+}
+
+export type AttendanceRoute = 'com_triagem' | 'sem_triagem'
+export interface AttendanceClosure {kind:'baixa'|'cancelamento';reason:string;at:string;by:string}
 export interface Patient {
+  receptionSectorId?:string
+  receptionSectorName?:string
+  receptionProfessionalId?:string
+  receptionProfessionalName?:string
+  wardStays?:WardStay[]
+  medicalConsultations?:ConsultationRecord[]
+  medicalTransfers?:{at:string;from:string;to?:string;sectorId:string;sectorName:string;reason:string;clinicalSnapshot:Partial<Pick<Patient,'clinicalEvaluation'|'cardiologyAssessment'|'anesthesiaAssessment'|'surgicalRiskAssessment'>>}[]
+  attendanceRoute?: AttendanceRoute
+  attendanceClosure?: AttendanceClosure
+  receptionClassification?: 'branca'
+  nomeSocial?: string
+  genero?: string
+  racaCor?: string
+  cep?: string
+  logradouro?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  ufResidencia?: string
+  municipioResidencia?: string
+  ufNascimento?: string
+  municipioNascimento?: string
+  situacaoRua?: boolean
+  telefone2?: string
+  whatsapp?: string
+  email?: string
+  escolaridade?: string
+  nomeMae?: string
+  maeDesconhecida?: boolean
+  nomePai?: string
+  paiDesconhecido?: boolean
+  telefoneResponsavel?: string
+  informacoesComplementares?: string
+  nacionalidade?: 'brasileira'|'naturalizado'|'estrangeiro'|string
+  paisNascimento?: string
+  dataNaturalizacao?: string
+  portariaNaturalizacao?: string
+  dataEntradaBrasil?: string
+  pisPasep?: string
+  possuiPlanoPrivado?: boolean
+  nomePlanoPrivado?: string
+  ocupacao?: string
+  photoId?: string
+  careTimings?: CareTiming[]
+  ticketId?: string
+  ticketNumber?: string
+  surgeryRecords?: SurgeryRecord[]
+  assessmentRequests?: SpecialtyAssessmentRequest[]
+  surgicalRiskRequest?: { requestedBy: string; requestedAt: string; requesterRole: 'clinico' | 'cirurgiao' }
   id: string
   prontuario: string
   name?: string
@@ -295,6 +453,7 @@ export interface Patient {
   contatoEmergencia?: string
   unidade: string
   dataEntrada: string
+  dischargeAt?: string
   
   // Status do fluxo
   status: PatientStatus
@@ -316,6 +475,8 @@ export interface Patient {
   sinaisVitais?: VitalSigns
   observacoesTriagem?: string
   triageData?: {
+    intake?:TriageIntake
+    manchester?: ManchesterClassification
     vitalSigns?: VitalSigns
     comorbidities?: Comorbidities
     asaClassification?: ASAClassification
@@ -356,7 +517,46 @@ export interface Patient {
   updatedAt?: string
 }
 
-export type AuditAction = 
+export interface MedicalDocument {
+  id: string
+  patientId: string
+  kind: 'receita' | 'atestado' | 'autorizacao' | 'requisicao_exames' | 'folha_internacao' | 'evolucao_clinica' | 'notificacao_internacao' | 'notificacao_infeccao'
+  content: string
+  issuedAt: string
+  physicianId: string
+  physicianName: string
+  physicianRole: UserRole
+  professionalRegistration: string
+  startDate?: string
+  endDate?: string
+}
+
+export type AuditAction =
+  | 'enfermaria_entrada'
+  | 'enfermaria_sinais_vitais'
+  | 'enfermaria_observacao'
+  | 'enfermaria_reavaliacao'
+  | 'enfermaria_alta'
+  | 'consulta_medica_atualizada'
+  | 'consulta_medica_finalizada'
+  | 'paciente_encaminhado_medico'
+  | 'local_medico_atualizado'
+  | 'setor_gerenciado'
+  | 'atendimento_atualizado'
+  | 'atendimento_encerrado'
+  | 'usuario_gerenciado'
+  | 'perfil_gerenciado'
+  | 'inicio_atendimento'
+  | 'documento_medico_emitido'
+  | 'senha_ausente'
+  | 'senha_retornada'
+  | 'medicacao_solicitada'
+  | 'medicacao_administrada'
+  | 'senha_chamada'
+  | 'senha_encaminhada'
+  | 'cirurgia_registrada'
+  | 'cirurgia_atualizada'
+  | 'solicitacao_avaliacao_especializada'
   | 'cadastro_paciente'
   | 'edicao_dados_basicos'
   | 'encaminhamento_triagem'
@@ -411,7 +611,12 @@ export interface AuditLog {
 
 // Permissoes por perfil
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
+  farmacia:['view_dashboard_farmacia','manage_pharmacy','view_patient_basic','view_patients_list'],
+  enfermaria:['view_dashboard_enfermaria','view_patients_list','search_patient','view_ward_care','ward_admit','ward_record_vitals','ward_observations','ward_reassess','ward_discharge','administer_medication','print_medication_sheet','print_patient_record'],
   recepcao: [
+    'manage_attendance',
+    'print_blank_attendance',
+    'manage_reception_queue',
     'view_dashboard_recepcao',
     'view_patients_list',
     'create_patient',
@@ -420,6 +625,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_triage',
   ],
   triagem: [
+    'cancel_triage_attendance',
+    'forward_triage_sector',
+    'print_triage_sheet',
+    'print_medication_sheet',
+    'print_patient_history',
+    'print_patient_record',
+    'call_triage_ticket',
     'view_dashboard_triagem',
     'view_patients_list',
     'create_patient',
@@ -432,6 +644,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_clinical',
   ],
   clinico: [
+    'manage_own_workplace','medical_consultation','transfer_patient','issue_admission_documents','view_medical_reports','print_triage_sheet',
+    'issue_prescription',
+    'issue_certificate',
+    'print_patient_record',
+    'print_patient_history',
+    'print_medication_sheet',
+    'print_exams',
+    'prescribe_medication',
+    'request_surgical_risk',
+    'request_specialist_assessment',
     'view_dashboard_clinico',
     'view_patients_list',
     'view_clinical_data',
@@ -447,6 +669,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'return_to_triage',
   ],
   laboratorio: [
+    'print_patient_record',
+    'print_patient_history',
+    'view_patients_list',
+    'print_medication_sheet',
+    'print_exams',
+    'administer_medication',
     'view_dashboard_laboratorio',
     'view_pending_exams',
     'view_patient_minimal',
@@ -454,18 +682,36 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'update_exam_status',
   ],
   cardiologista: [
+    'manage_own_workplace','medical_consultation','transfer_patient','issue_admission_documents','view_medical_reports','print_triage_sheet',
+    'prescribe_medication',
+    'issue_prescription',
+    'issue_certificate',
+    'print_patient_record',
+    'print_patient_history',
+    'print_medication_sheet',
+    'print_exams',
+    'request_exams',
     'view_dashboard_cardiologista',
     'view_patients_list',
     'view_all_data',
     'view_clinical_data',
     'view_exam_results',
     'classify_cardiac_risk',
+    'calculate_scores',
     'approve_for_surgery',
     'contraindicate_surgery',
     'forward_to_surgeon',
     'generate_report',
   ],
   anestesista: [
+    'manage_own_workplace','medical_consultation','transfer_patient','issue_admission_documents','view_medical_reports','print_triage_sheet',
+    'issue_prescription',
+    'issue_certificate',
+    'print_patient_record',
+    'print_patient_history',
+    'print_medication_sheet',
+    'print_exams',
+    'request_exams',
     'view_dashboard_anestesista',
     'view_patients_list',
     'view_all_data',
@@ -478,6 +724,18 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'forward_to_surgeon',
   ],
   cirurgiao: [
+    'manage_own_workplace','medical_consultation','transfer_patient','issue_admission_documents','view_medical_reports','print_triage_sheet',
+    'create_exam_type',
+    'issue_prescription',
+    'issue_certificate',
+    'print_patient_record',
+    'print_patient_history',
+    'print_medication_sheet',
+    'print_exams',
+    'prescribe_medication',
+    'record_surgery',
+    'request_surgical_risk',
+    'request_specialist_assessment',
     'view_dashboard_cirurgiao',
     'view_patients_list',
     'view_all_data',
@@ -485,7 +743,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'register_vital_signs',
     'request_exams',
     'view_exam_results',
-    'calculate_scores',
     'classify_risk',
     'approve_surgery',
     'contraindicate_surgery',
@@ -495,6 +752,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'return_to_lab',
   ],
   admin: [
+    'manage_pharmacy',
+    'manage_attendance',
+    'print_blank_attendance',
+    'manage_profiles',
+    'print_patient_history',
+    'print_patient_record',
+    'print_medication_sheet',
+    'print_exams',
+    'view_surgery_audit',
     'view_dashboard_admin',
     'view_all_data',
     'view_patients_list',
@@ -510,6 +776,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
+  farmacia:'Farmácia',
+  enfermaria:'Enfermaria',
   recepcao: 'Recepcao',
   triagem: 'Triagem',
   clinico: 'Medico Clinico',
@@ -521,6 +789,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 export const STATUS_LABELS: Record<PatientStatus, string> = {
+  aguardando_enfermaria:'Aguardando entrada na enfermaria',
+  em_enfermaria:'Em acompanhamento na enfermaria',
   aguardando_triagem: 'Aguardando Triagem',
   em_triagem: 'Em Triagem',
   aguardando_avaliacao: 'Aguardando Avaliacao',

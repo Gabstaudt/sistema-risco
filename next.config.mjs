@@ -3,9 +3,7 @@ const nextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  distDir: process.env.MEDRISK_NEXT_DIST_DIR || '.next',
   images: {
     unoptimized: true,
   },

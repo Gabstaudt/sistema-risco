@@ -1,5 +1,8 @@
 'use client'
+import { hasUserPermission } from '@/lib/permissions'
 
+import Link from 'next/link'
+import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
@@ -12,22 +15,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Save, User, Shield, Activity, Calculator } from 'lucide-react'
-import { PatientStatusBadge, RiskLevelBadge, ASABadge, RCRIBadge } from '@/components/shared/badges'
+import { PatientStatusBadge, RiskLevelBadge, ASABadge } from '@/components/shared/badges'
+import { CareStartTracker } from '@/components/shared/care-start-tracker'
+import { PatientPrintActions } from '@/components/shared/patient-print-actions'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
-import type { RiskLevel } from '@/lib/types'
+import { ExamRequestForm } from '@/components/shared/exam-request-form'
+import { MedicationOrders } from '@/components/shared/medication-orders'
+import { AssessmentRequestFields } from '@/components/shared/assessment-request-fields'
+import { buildAssessmentUpdates, getAssessmentDraft, nextAssessmentStatus, type AssessmentDraft } from '@/lib/assessment-requests'
 
 const BLOOD_TYPE_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
 
 export default function CirurgiaoAvaliarPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
+  const { users, user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog } = useData()
 
   const patientId = params.id as string
   const patient = getPatientById(patientId)
 
-  const [finalRisk, setFinalRisk] = useState<RiskLevel | ''>(patient?.surgicalRiskAssessment?.finalRiskLevel || '')
+  const finalRisk = patient?.cardiologyAssessment?.finalRiskLevel
   const [recommendation, setRecommendation] = useState<'aprovar' | 'adiar' | 'contraindicar' | ''>(
     patient?.surgicalRiskAssessment?.recommendation || '',
   )
@@ -35,6 +43,8 @@ export default function CirurgiaoAvaliarPage() {
   const [allergiesText, setAllergiesText] = useState((patient?.allergies || []).join(', '))
   const [notes, setNotes] = useState(patient?.surgicalRiskAssessment?.notes || '')
   const [isSaving, setIsSaving] = useState(false)
+  const [assessmentDraft, setAssessmentDraft] = useState<AssessmentDraft>(() => { const draft = getAssessmentDraft(patient); return { ...draft, targets: draft.targets.filter((item) => item !== 'cirurgiao') } })
+  const [requestMessage, setRequestMessage] = useState('')
   const parsedAllergies = allergiesText
     .split(/,|\n/)
     .map((item) => item.trim())
@@ -81,10 +91,11 @@ export default function CirurgiaoAvaliarPage() {
   }
 
   const handleSave = async (complete: boolean) => {
+    if (!user || !hasPermission('classify_risk') || isSaving) return
     setIsSaving(true)
 
     const surgicalRiskAssessment = {
-      finalRiskLevel: finalRisk || undefined,
+      ...patient.surgicalRiskAssessment,
       recommendation: recommendation || undefined,
       notes,
       completedAt: complete ? new Date().toISOString() : undefined,
@@ -95,8 +106,7 @@ export default function CirurgiaoAvaliarPage() {
       surgicalRiskAssessment,
       bloodType: bloodType || undefined,
       allergies: parsedAllergies,
-      status: complete ? 'concluido' : 'em_avaliacao_cirurgica',
-      riskLevel: finalRisk || patient.riskLevel,
+      status: complete ? nextAssessmentStatus({ ...patient, surgicalRiskAssessment }, 'concluido') : 'em_avaliacao_cirurgica',
       updatedAt: new Date().toISOString(),
     })
 
@@ -105,7 +115,7 @@ export default function CirurgiaoAvaliarPage() {
       userId: user!.id,
       patientId,
       details: complete
-        ? `Avaliacao cirurgica concluida. Risco Final: ${finalRisk}. Recomendacao: ${recommendation}`
+        ? `Avaliacao cirurgica concluida. Risco informado pela cardiologia: ${finalRisk || 'pendente'}. Recomendacao: ${recommendation}`
         : 'Dados de avaliacao cirurgica atualizados',
     })
 
@@ -115,6 +125,19 @@ export default function CirurgiaoAvaliarPage() {
         router.push('/cirurgiao')
       }
     }, 500)
+  }
+
+  const handleRequestAssessments = () => {
+    if (!user || isSaving) return
+    setRequestMessage('')
+    try {
+      const updates = buildAssessmentUpdates(patient, user, assessmentDraft, true, users)
+      updatePatient(patientId, { ...updates, status: nextAssessmentStatus({ ...patient, ...updates }, patient.status) })
+      addAuditLog({ action: 'solicitacao_avaliacao_especializada', userId: user.id, patientId, details: `Solicitação pelo cirurgião. Risco cirúrgico: ${assessmentDraft.requestRisk ? 'sim' : 'não'}. Especialidades: ${assessmentDraft.targets.join(', ')}` })
+      setRequestMessage('Solicitações enviadas às filas das especialidades.')
+    } catch (error) {
+      setRequestMessage(error instanceof Error ? error.message : 'Não foi possível enviar a solicitação.')
+    }
   }
 
   const triageData = patient.triageData
@@ -136,14 +159,13 @@ export default function CirurgiaoAvaliarPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100svh-4rem)] min-w-0 w-full flex-1 space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao de Risco Cirurgico</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">Analise completa e parecer final</p>
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliação do cirurgião</h1>
         </div>
         <div className="self-start sm:self-auto">
           <PatientStatusBadge status={patient.status} />
@@ -163,8 +185,7 @@ export default function CirurgiaoAvaliarPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {triageData?.asaClassification && <ASABadge classification={triageData.asaClassification} />}
-              {clinicalEval?.rcriScore && <RCRIBadge score={clinicalEval.rcriScore.score} />}
+              {patient.anesthesiaAssessment?.asaClassification && <ASABadge classification={patient.anesthesiaAssessment.asaClassification} />}
             </div>
           </div>
         </CardHeader>
@@ -279,20 +300,9 @@ export default function CirurgiaoAvaliarPage() {
               <CardContent className="space-y-4">
                 {clinicalEval ? (
                   <>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="min-w-0 space-y-1">
-                        <p className="text-xs text-muted-foreground">RCRI Score</p>
-                        <p className="font-medium text-lg">{clinicalEval.rcriScore?.score || 0}</p>
-                        <p className="text-xs text-muted-foreground">{clinicalEval.rcriScore?.riskPercentage}</p>
-                      </div>
-                      <div className="min-w-0 space-y-1">
-                        <p className="text-xs text-muted-foreground">VSG-CRI</p>
-                        <p className="font-medium text-lg">{clinicalEval.vsgcriScore?.score || 0}</p>
-                        <p className="text-xs text-muted-foreground">{clinicalEval.vsgcriScore?.riskClass}</p>
-                      </div>
-                    </div>
-                    <Separator />
+
                     <div>
+                      <p className="mb-2 break-words text-sm"><span className="font-medium">Tipo de lesão:</span> {clinicalEval.lesionType || 'Não informado'}</p>
                       <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
                       <p className="break-words text-sm">{clinicalEval.notes || 'Sem observacoes clinicas.'}</p>
                     </div>
@@ -380,21 +390,10 @@ export default function CirurgiaoAvaliarPage() {
             <CardContent className="space-y-4">
               {clinicalEval ? (
                 <>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-xs text-muted-foreground">RCRI Score</p>
-                      <p className="font-medium text-lg">{clinicalEval.rcriScore?.score || 0}</p>
-                      <p className="text-xs text-muted-foreground">{clinicalEval.rcriScore?.riskPercentage}</p>
-                    </div>
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-xs text-muted-foreground">VSG-CRI</p>
-                      <p className="font-medium text-lg">{clinicalEval.vsgcriScore?.score || 0}</p>
-                      <p className="text-xs text-muted-foreground">{clinicalEval.vsgcriScore?.riskClass}</p>
-                    </div>
-                  </div>
-                  <Separator />
+
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
+                    <p className="mb-2 break-words text-sm"><span className="font-medium">Tipo de lesão:</span> {clinicalEval.lesionType || 'Não informado'}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Observacoes Clinicas</p>
                     <p className="break-words text-sm">{clinicalEval.notes || 'Sem observacoes clinicas.'}</p>
                   </div>
                 </>
@@ -523,16 +522,28 @@ export default function CirurgiaoAvaliarPage() {
           <PatientExamsHistory
             examRequests={patientExamRequests}
             title="Historico Completo de Exames"
-            description="Todos os exames ja executados ou em andamento neste paciente, incluindo leitura do laboratorio."
+            description=""
             emptyMessage="Este paciente ainda nao possui exames registrados."
           />
         </TabsContent>
       </Tabs>
 
+      <CardiologyRiskScores value={getCardiologyScores(patient)} />
+      {hasPermission('record_surgery') && <Button asChild className="h-12"><Link href={`/cirurgiao/acompanhamento/${patient.id}`}>Registrar cirurgia e pós-operatório</Link></Button>}
+
+      <CareStartTracker patientId={patientId} />
+      <PatientPrintActions patientId={patientId} />
+      <ExamRequestForm patientId={patientId} />
+      <MedicationOrders patientId={patient.id} prescribe />
+      {hasPermission('request_specialist_assessment') && <div className="space-y-3">
+        <AssessmentRequestFields value={assessmentDraft} onChange={setAssessmentDraft} patient={patient} surgeon />
+        {requestMessage && <p role="status" className="rounded-lg border p-3 text-sm">{requestMessage}</p>}
+        <Button onClick={handleRequestAssessments} disabled={isSaving || assessmentDraft.targets.length === 0}>Enviar solicitações de avaliação</Button>
+      </div>}
+
       <Card>
         <CardHeader>
           <CardTitle>Dados Adicionais</CardTitle>
-          <CardDescription>Informacoes basicas que impactam a decisao cirurgica e anestesica.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
@@ -567,25 +578,16 @@ export default function CirurgiaoAvaliarPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            Parecer Final do Risco Cirurgico
+            Parecer do cirurgião
           </CardTitle>
-          <CardDescription>Defina a classificacao final de risco e a recomendacao para o procedimento</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-2">
-              <Label>Classificacao Final de Risco</Label>
-              <Select value={finalRisk} onValueChange={(value) => setFinalRisk(value as RiskLevel)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o nivel de risco" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixo">Baixo Risco</SelectItem>
-                  <SelectItem value="moderado">Risco Moderado</SelectItem>
-                  <SelectItem value="alto">Alto Risco</SelectItem>
-                  <SelectItem value="critico">Risco Critico</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Risco cirúrgico — Cardiologia</Label>
+              <div className="flex min-h-12 items-center rounded-md border px-3">
+                {finalRisk ? <RiskLevelBadge level={finalRisk} /> : <span className="text-muted-foreground">Aguardando avaliação do cardiologista</span>}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -630,9 +632,9 @@ export default function CirurgiaoAvaliarPage() {
           <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
             Salvar Rascunho
           </Button>
-          <Button className="w-full sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving || !finalRisk || !recommendation}>
+          <Button className="w-full sm:w-auto" onClick={() => handleSave(true)} disabled={isSaving || !recommendation}>
             <Save className="mr-2 h-4 w-4" />
-            Emitir Parecer Final
+            Concluir avaliação cirúrgica
           </Button>
         </CardFooter>
       </Card>

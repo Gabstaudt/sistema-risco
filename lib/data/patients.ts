@@ -1,3 +1,4 @@
+import {wardDemoPatients} from './ward'
 import { Patient, PatientEncounter, ExamRequest, ExamResult } from '../types'
 
 // Funcao para calcular idade
@@ -48,25 +49,30 @@ function summarizeVitalSigns(patient: Patient) {
 function buildCurrentEncounter(patient: Patient): PatientEncounter {
   return {
     id: `${patient.id}-visit-current`,
+    attendanceRoute: patient.attendanceRoute,
+    attendanceClosure: patient.attendanceClosure,
     entryAt: patient.dataEntrada,
+    dischargeAt: patient.dischargeAt,
     unit: patient.unidade,
     reason: patient.queixaPrincipal || patient.scheduledSurgery || 'Admissao hospitalar',
     receptionNotes: patient.descricaoInicial,
-    triage: patient.sinaisVitais || patient.observacoesTriagem || patient.triageRiskClassification
+    triage: patient.triageData || patient.sinaisVitais || patient.observacoesTriagem || patient.triageRiskClassification
       ? {
-          performedBy: patient.sinaisVitais?.registradoPor,
+          performedBy: patient.triageData?.completedBy || patient.sinaisVitais?.registradoPor,
           assignedClinicianName: patient.triageAssignedClinicianName,
           riskClassification: patient.triageRiskClassification,
-          vitalSignsSummary: summarizeVitalSigns(patient),
-          notes: patient.observacoesTriagem,
+          vitalSignsSummary: patient.triageData?.vitalSigns
+            ? [patient.triageData.vitalSigns.bloodPressure && `PA ${patient.triageData.vitalSigns.bloodPressure} mmHg`, patient.triageData.vitalSigns.heartRate && `FC ${patient.triageData.vitalSigns.heartRate} bpm`, patient.triageData.vitalSigns.oxygenSaturation && `SpO2 ${patient.triageData.vitalSigns.oxygenSaturation}%`].filter(Boolean).join(' | ')
+            : summarizeVitalSigns(patient),
+          notes: patient.triageData?.notes || patient.observacoesTriagem,
         }
       : undefined,
-    clinical: patient.avaliacaoClinica
+    clinical: patient.clinicalEvaluation || patient.avaliacaoClinica
       ? {
-          physicianName: patient.avaliacaoClinica.avaliadoPor,
-          hypothesis: patient.avaliacaoClinica.hipoteseDiagnostica,
-          conduct: patient.avaliacaoClinica.observacoesMedicas,
-          notes: patient.avaliacaoClinica.historicoClinico,
+          physicianName: patient.clinicalEvaluation?.completedBy || patient.avaliacaoClinica?.avaliadoPor,
+          hypothesis: patient.clinicalEvaluation?.hipoteseDiagnostica || patient.avaliacaoClinica?.hipoteseDiagnostica,
+          conduct: patient.clinicalEvaluation?.notes || patient.avaliacaoClinica?.observacoesMedicas,
+          notes: patient.avaliacaoClinica?.historicoClinico,
         }
       : undefined,
     surgery: patient.avaliacaoCirurgica
@@ -78,7 +84,7 @@ function buildCurrentEncounter(patient: Patient): PatientEncounter {
       : undefined,
     medicationsAdministered: [],
     examsSummary: patient.examesSolicitados,
-    outcome: patient.status,
+    outcome: patient.attendanceClosure ? `${patient.attendanceClosure.kind==='cancelamento'?'Cancelamento':'Baixa administrativa'}: ${patient.attendanceClosure.reason}` : patient.status,
   }
 }
 
@@ -1219,6 +1225,53 @@ const basePatients: Patient[] = [
   },
 ]
 
+// Exemplos de entradas encerradas, separados dos pacientes nas filas ativas.
+const mockNow = Date.now()
+basePatients[0].visitHistory = [
+  {
+    id: 'patient-1-visit-return',
+    entryAt: new Date(mockNow - 7 * 86400000).toISOString(),
+    dischargeAt: new Date(mockNow - 7 * 86400000 + 3 * 3600000).toISOString(),
+    unit: 'Hospital Central', reason: 'Retorno ambulatorial',
+    receptionNotes: 'Retorno para reavaliação e orientação de seguimento.',
+    triage: { performedBy: 'user-2', assignedClinicianName: 'Dr. Carlos Mendes', riskClassification: 'pouco_urgente', vitalSignsSummary: 'PA 130/80 mmHg | FC 78 bpm | SpO2 98%' },
+    clinical: { physicianName: 'user-3', hypothesis: 'Paciente estável na reavaliação', conduct: 'Orientado seguimento ambulatorial.' },
+    outcome: 'Alta após reavaliação, com seguimento ambulatorial',
+  },
+  {
+    id: 'patient-1-visit-observation',
+    entryAt: new Date(mockNow - 30 * 86400000).toISOString(),
+    dischargeAt: new Date(mockNow - 30 * 86400000 + 8 * 3600000).toISOString(),
+    unit: 'Hospital Central', reason: 'Avaliação clínica em observação',
+    triage: { performedBy: 'user-2', assignedClinicianName: 'Dr. Carlos Mendes', riskClassification: 'urgente', vitalSignsSummary: 'PA 140/90 mmHg | FC 90 bpm | SpO2 97%' },
+    clinical: { physicianName: 'user-3', conduct: 'Observação clínica, reavaliação e orientação de retorno.' },
+    outcome: 'Alta após observação, com retorno agendado',
+  },
+]
+
+basePatients.push({
+  ...basePatients[0],
+  id: 'patient-14', cartaoSus:'898001456789012', prontuario: 'PRONT-2024-014', nomeCompleto: 'Mariana Costa Almeida',
+  cpf: '147.258.369-00', dataNascimento: '1990-04-12', idade: calcularIdade('1990-04-12'), sexo: 'F',
+  responsavel: undefined, allergies: [], telefone: '(11) 99999-1414',
+  dataEntrada: new Date(mockNow - 5 * 3600000).toISOString(),
+  dischargeAt: new Date(mockNow - 2 * 3600000).toISOString(),
+  status: 'concluido', prioridade: 'normal', queixaPrincipal: 'Reavaliação clínica',
+  descricaoInicial: 'Atendimento finalizado após avaliação e orientações de seguimento.',
+  examesSolicitados: [], triageAssignedClinicianId: 'user-3', triageAssignedClinicianName: 'Dr. Carlos Mendes',
+  triageRiskClassification: 'pouco_urgente',
+  triageData: {
+    vitalSigns: { bloodPressure: '120/80', heartRate: 76, oxygenSaturation: 98, temperature: 36.5 },
+    notes: 'Paciente encaminhada ao clínico.', completedBy: 'user-2', completedAt: new Date(mockNow - 4.5 * 3600000).toISOString(),
+  },
+  clinicalEvaluation: { hipoteseDiagnostica: 'Reavaliação sem intercorrências', notes: 'Alta com orientações e seguimento ambulatorial.', completedBy: 'user-3', completedAt: new Date(mockNow - 2 * 3600000).toISOString() },
+  visitHistory: [{
+    id: 'patient-14-visit-current', entryAt: new Date(mockNow - 5 * 3600000).toISOString(),
+    unit: 'Hospital Central', reason: 'Reavaliação clínica', outcome: 'Alta com orientações e seguimento ambulatorial',
+  }],
+  cadastradoEm: new Date(mockNow - 5 * 3600000).toISOString(), ultimaAtualizacao: new Date(mockNow - 2 * 3600000).toISOString(), ultimoAtualizadoPor: 'user-3',
+})
+
 // Exames solicitados
 export const examRequests: ExamRequest[] = [
   // Paciente 5 - exames solicitados
@@ -1555,8 +1608,8 @@ function mapComorbidities(patient: Patient) {
   }
 }
 
-function buildExamResults(patientId: string) {
-  const patientExamRequests = examRequests.filter((exam) => exam.patientId === patientId)
+function buildExamResults(patientId: string, entryAt?: string) {
+  const patientExamRequests = examRequests.filter((exam) => exam.patientId === patientId && (!entryAt || Date.parse(exam.solicitadoEm) >= Date.parse(entryAt)))
 
   return patientExamRequests.reduce<Record<string, ExamResult>>((acc, exam) => {
     acc[exam.examTypeId] = {
@@ -1575,16 +1628,26 @@ function buildExamResults(patientId: string) {
 export function hydratePatient(patient: Patient): Patient {
   const triageComorbidities = mapComorbidities(patient)
   const requestedExams = patient.examesSolicitados || []
-  const hasExamResults = examRequests.some((exam) => exam.patientId === patient.id)
-  const visitHistory = [...(patient.visitHistory || []), buildCurrentEncounter(patient)].sort(
+  const hasExamResults = examRequests.some((exam) => exam.patientId === patient.id && (!patient.ticketId || Date.parse(exam.solicitadoEm) >= Date.parse(patient.dataEntrada)))
+  const currentId = `${patient.id}-visit-current`
+  const previousCurrent = patient.visitHistory?.find((visit) => visit.id === currentId)
+  const currentEncounter = {
+    ...previousCurrent,
+    ...buildCurrentEncounter(patient),
+    medicationsAdministered: previousCurrent?.medicationsAdministered || [],
+    outcome: patient.attendanceClosure ? `${patient.attendanceClosure.kind==='cancelamento'?'Cancelamento':'Baixa administrativa'}: ${patient.attendanceClosure.reason}` : patient.dischargeAt ? previousCurrent?.outcome || 'Alta após atendimento médico' : patient.status,
+  }
+  const visitHistory = [...(patient.visitHistory || []).filter((visit) => visit.id !== currentId), currentEncounter].sort(
     (a, b) => new Date(b.entryAt).getTime() - new Date(a.entryAt).getTime(),
   )
   const shouldMoveToCardiology =
+    !patient.assessmentRequests &&
     patient.clinicalRequestsSurgicalRisk &&
     !patient.cardiologyAssessment &&
     !patient.surgicalRiskAssessment &&
     !patient.avaliacaoCirurgica
   const shouldMoveToAnesthesia =
+    !patient.assessmentRequests &&
     patient.cardiologyAssessment?.recommendation === 'aprovar' &&
     !patient.anesthesiaAssessment &&
     !patient.surgicalRiskAssessment &&
@@ -1612,7 +1675,9 @@ export function hydratePatient(patient: Patient): Patient {
     healthInsurance: patient.cartaoSus ? 'SUS' : 'Particular',
     allergies: patient.allergies && patient.allergies.length > 0 ? patient.allergies : patient.avaliacaoClinica?.comorbidades?.alergias || [],
     riskLevel: patient.cardiologyAssessment?.finalRiskLevel || patient.avaliacaoCirurgica?.riscoFinal,
-    triageData: patient.sinaisVitais
+    triageData: patient.triageData
+      ? { ...patient.triageData, asaClassification: undefined }
+      : patient.sinaisVitais
       ? {
           vitalSigns: {
             bloodPressure:
@@ -1628,20 +1693,12 @@ export function hydratePatient(patient: Patient): Patient {
             ...patient.sinaisVitais,
           },
           comorbidities: triageComorbidities,
-          asaClassification:
-            patient.avaliacaoCirurgica?.scores?.asa === 1 ? 'I' :
-            patient.avaliacaoCirurgica?.scores?.asa === 2 ? 'II' :
-            patient.avaliacaoCirurgica?.scores?.asa === 3 ? 'III' :
-            patient.avaliacaoCirurgica?.scores?.asa === 4 ? 'IV' :
-            patient.avaliacaoCirurgica?.scores?.asa === 5 ? 'V' :
-            patient.avaliacaoCirurgica?.scores?.asa === 6 ? 'VI' :
-            undefined,
           notes: patient.observacoesTriagem || patient.descricaoInicial,
           completedAt: patient.sinaisVitais.registradoEm,
           completedBy: patient.sinaisVitais.registradoPor,
         }
       : undefined,
-    clinicalEvaluation: patient.avaliacaoClinica
+    clinicalEvaluation: patient.clinicalEvaluation || (patient.avaliacaoClinica
       ? {
           ...patient.avaliacaoClinica,
           requestedExams,
@@ -1669,10 +1726,10 @@ export function hydratePatient(patient: Patient): Patient {
           completedAt: patient.avaliacaoClinica.avaliadoEm,
           completedBy: patient.avaliacaoClinica.avaliadoPor,
         }
-      : undefined,
-    examResults: hasExamResults ? buildExamResults(patient.id) : undefined,
+      : undefined),
+    examResults: hasExamResults ? buildExamResults(patient.id, patient.ticketId ? patient.dataEntrada : undefined) : undefined,
     visitHistory,
-    surgicalRiskAssessment: patient.avaliacaoCirurgica
+    surgicalRiskAssessment: patient.surgicalRiskAssessment || (patient.avaliacaoCirurgica
       ? {
           finalRiskLevel: patient.avaliacaoCirurgica.riscoFinal,
           recommendation:
@@ -1685,8 +1742,50 @@ export function hydratePatient(patient: Patient): Patient {
           completedAt: patient.avaliacaoCirurgica.avaliadoEm,
           completedBy: patient.avaliacaoCirurgica.avaliadoPor,
         }
-      : undefined,
+      : undefined),
   }
 }
 
-export const patients: Patient[] = basePatients.map(hydratePatient)
+const surgicalQueueMocks: Patient[] = [
+  { name: 'Marcos Oliveira (exemplo)', surgery: 'Hernioplastia inguinal', priority: 'pouco_urgente', age: 48 },
+  { name: 'Luciana Ferreira (exemplo)', surgery: 'Colecistectomia', priority: 'urgente', age: 56 },
+  { name: 'Roberto Lima (exemplo)', surgery: 'Avaliação de lesão abdominal', priority: 'muito_urgente', age: 63 },
+  { name: 'Cláudia Santos (exemplo)', surgery: 'Exérese de lesão cutânea', priority: 'nao_urgente', age: 39 },
+].map((example, index): Patient => {
+  const entryAt = new Date(Date.now() - (index + 2) * 3600000).toISOString()
+  return {
+    id: `demo-surgery-${index + 1}`,
+    prontuario: `DEMO-CIR-${String(index + 1).padStart(3, '0')}`,
+    nomeCompleto: example.name,
+    idade: example.age,
+    dataNascimento: `${new Date().getFullYear() - example.age}-01-01`,
+    cpf: '', telefone: '', endereco: '', responsavel: undefined, contatoEmergencia: undefined,
+    cartaoSus: undefined,
+    status: index === 0 ? 'em_avaliacao_cirurgica' : 'aguardando_cirurgiao',
+    sexo: index % 2 === 0 ? 'M' : 'F',
+    unidade: 'Hospital Central',
+    prioridade: example.priority === 'muito_urgente' ? 'urgente' : example.priority === 'urgente' ? 'alta' : 'normal',
+    cadastradoPor: 'user-1', ultimoAtualizadoPor: 'user-3', ultimaAtualizacao: entryAt,
+    dataEntrada: entryAt, cadastradoEm: entryAt,
+    queixaPrincipal: example.surgery,
+    descricaoInicial: 'Paciente fictício para demonstração da fila cirúrgica.',
+    avaliacaoClinica: { tipoCirurgia: example.surgery, motivoAvaliacao: 'Avaliação pré-operatória (demonstração)', avaliadoEm: entryAt, avaliadoPor: 'user-3' },
+    triageRiskClassification: example.priority as Patient['triageRiskClassification'],
+    triageData: undefined,
+    labRiskClassification: undefined,
+    examesSolicitados: [],
+    avaliacaoCirurgica: undefined, surgicalRiskAssessment: undefined, surgeryRecords: [],
+    visitHistory: [], dischargeAt: undefined,
+    assessmentRequests: [{ specialty: 'cirurgiao', status: 'pending', requestedAt: entryAt, requestedBy: 'user-3', assignedProfessionalId: 'user-5', assignedProfessionalName: 'Dr. Roberto Lima' }],
+    cardiologyAssessment: { recommendation: 'aprovar', finalRiskLevel: 'baixo', completedAt: entryAt, completedBy: 'user-8' },
+    anesthesiaAssessment: { asaClassification: 'II', recommendation: 'aprovar', fitForAnesthesia: true, completedAt: entryAt, completedBy: 'user-9' },
+  }
+})
+
+export const patients: Patient[] = [...basePatients, ...surgicalQueueMocks,...wardDemoPatients].map(patient => hydratePatient({
+  ...patient,
+  triageAssignedClinicianId: patient.triageAssignedClinicianId || (!['aguardando_triagem', 'em_triagem'].includes(patient.status) ? 'user-3' : undefined),
+  clinicalAssignedCardiologistId: patient.clinicalAssignedCardiologistId || (patient.clinicalRequestsSurgicalRisk ? 'user-8' : undefined),
+  cardiologyAssignedAnesthesiologistId: patient.cardiologyAssignedAnesthesiologistId || (patient.clinicalRequestsSurgicalRisk || patient.anesthesiaAssessment ? 'user-9' : undefined),
+  clinicalAssignedSurgeonId: patient.clinicalAssignedSurgeonId || (patient.clinicalRequestsSurgicalRisk || patient.id.startsWith('demo-surgery-') || patient.avaliacaoCirurgica ? 'user-5' : undefined),
+}))

@@ -1,5 +1,6 @@
 'use client'
 
+import { examActivityTime } from '@/lib/lab-operations'
 import { useMemo, useState } from 'react'
 import { Header } from '@/components/layout/header'
 import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
@@ -53,31 +54,24 @@ export default function ClinicoResultadosPage() {
           .toLowerCase()
 
         const matchesSearch = search === '' || combinedText.includes(searchLower)
-        const matchesStatus = statusFilter === 'all' || exam.status === statusFilter
+        const matchesStatus = statusFilter === 'all' || (statusFilter === 'pending' ? !['concluido', 'cancelado'].includes(exam.status) : exam.status === statusFilter)
         const matchesCategory = categoryFilter === 'all' || examCategory === categoryFilter
 
         return matchesSearch && matchesStatus && matchesCategory
       })
-      .sort((a, b) => {
-        const left = a.concluidoEm || a.analisadoEm || a.coletadoEm || a.solicitadoEm
-        const right = b.concluidoEm || b.analisadoEm || b.coletadoEm || b.solicitadoEm
-        return new Date(right).getTime() - new Date(left).getTime()
-      })
+      .sort((a, b) => examActivityTime(b) - examActivityTime(a))
   }, [categoryFilter, examRequests, examTypes, patientMap, search, statusFilter])
 
   const concludedCount = filteredRequests.filter((exam) => exam.status === 'concluido').length
   const pendingCount = filteredRequests.filter((exam) => exam.status !== 'concluido' && exam.status !== 'cancelado').length
-  const criticalCount = filteredRequests.filter((exam) => exam.labUrgency === 'emergente' || exam.labUrgency === 'muito_urgente').length
+  const awaitingResultCount = filteredRequests.filter((exam) => ['coletado', 'em_analise'].includes(exam.status)).length
 
   return (
     <>
       <Header breadcrumbs={[{ label: 'Resultados de Exames' }]} />
-      <div className="mx-auto flex-1 w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100svh-4rem)] min-w-0 flex-1 w-full space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Resultados de Exames</h1>
-          <p className="max-w-3xl text-muted-foreground">
-            Consulta global dos exames de qualquer paciente, com leitura do resultado e acesso rapido ao prontuario.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -95,8 +89,8 @@ export default function ClinicoResultadosPage() {
           </Card>
           <Card className="border-l-4 border-l-orange-500">
             <CardContent className="p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Alta prioridade</p>
-              <p className="mt-1 text-2xl font-semibold">{criticalCount}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Aguardando resultado</p>
+              <p className="mt-1 text-2xl font-semibold">{awaitingResultCount}</p>
               <p className="text-sm text-muted-foreground">{pendingCount} ainda em fluxo</p>
             </CardContent>
           </Card>
@@ -121,9 +115,10 @@ export default function ClinicoResultadosPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os status</SelectItem>
-                    <SelectItem value="solicitado">Solicitado</SelectItem>
+                    <SelectItem value="pending">Ainda aguardando</SelectItem>
+                    <SelectItem value="solicitado">Aguardando coleta</SelectItem>
                     <SelectItem value="coletado">Coletado</SelectItem>
-                    <SelectItem value="em_analise">Em analise</SelectItem>
+                    <SelectItem value="em_analise">Aguardando resultado</SelectItem>
                     <SelectItem value="concluido">Concluido</SelectItem>
                     <SelectItem value="cancelado">Cancelado</SelectItem>
                   </SelectContent>
@@ -149,7 +144,7 @@ export default function ClinicoResultadosPage() {
         <PatientExamsHistory
           examRequests={filteredRequests}
           patientsById={patientMap}
-          description="Historico consolidado de exames com resultado, interpretacao laboratorial e atalho para abrir o paciente."
+          description=""
           emptyMessage="Nenhum exame corresponde aos filtros aplicados."
           patientLinkBuilder={(patientId) => `/paciente/${patientId}`}
           actionLabel="Abrir prontuario"

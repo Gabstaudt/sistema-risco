@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { StatusBadge, RiskBadge } from '@/components/shared/badges'
 import { ArrowLeft, Printer, Download, FileText, CheckCircle, AlertTriangle, XCircle, Heart, Activity, Stethoscope, Calendar, User } from 'lucide-react'
 import Link from 'next/link'
+import { BrandLogo } from '@/components/shared/brand-logo'
 import { RISK_LABELS, STATUS_LABELS, ASAScore } from '@/lib/types'
 
 const ASA_DESCRIPTIONS: Record<ASAScore, string> = {
@@ -43,6 +44,7 @@ export default function RelatorioPage() {
   }
 
   const evaluation = patient.avaliacaoCirurgica
+  const cardiologyRisk = patient.cardiologyAssessment?.finalRiskLevel
   const clinicalEval = patient.avaliacaoClinica
   const vitalSigns = patient.sinaisVitais
   const completedExams = exams.filter(e => e.status === 'concluido')
@@ -57,8 +59,8 @@ export default function RelatorioPage() {
   }
 
   const getRiskIcon = () => {
-    if (!evaluation?.riscoFinal) return null
-    switch (evaluation.riscoFinal) {
+    if (!cardiologyRisk) return null
+    switch (cardiologyRisk) {
       case 'baixo':
         return <CheckCircle className="h-8 w-8 text-emerald-500" />
       case 'moderado':
@@ -73,8 +75,8 @@ export default function RelatorioPage() {
   }
 
   const getRiskColor = () => {
-    if (!evaluation?.riscoFinal) return ''
-    switch (evaluation.riscoFinal) {
+    if (!cardiologyRisk) return ''
+    switch (cardiologyRisk) {
       case 'baixo':
         return 'border-emerald-200 bg-emerald-50'
       case 'moderado':
@@ -88,7 +90,8 @@ export default function RelatorioPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString || !Number.isFinite(Date.parse(dateString))) return 'Não informado'
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -112,7 +115,7 @@ export default function RelatorioPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Relatorio de Avaliacao</h1>
-            <p className="text-muted-foreground">Avaliacao de Risco Cirurgico Pre-Operatorio</p>
+            <p className="text-muted-foreground">Avaliação cirúrgica pré-operatória</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -125,18 +128,14 @@ export default function RelatorioPage() {
 
       {/* Cabecalho do Relatorio */}
       <Card className="print:shadow-none print:border-2">
-        <CardHeader className="bg-primary/5 print:bg-gray-100">
+        <CardHeader className="border-b-2 border-primary">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center print:bg-gray-200">
-                <Heart className="h-8 w-8 text-primary print:text-gray-700" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">MedRisk Pro</CardTitle>
-                <CardDescription>Sistema de Avaliacao de Risco Cirurgico</CardDescription>
-              </div>
+            <div>
+              <BrandLogo className="w-[260px] print:hidden" />
+              <BrandLogo variant="mono" className="hidden w-[260px] print:inline-flex" />
+              <CardDescription className="px-4">Sistema de Avaliação de Risco Cirúrgico</CardDescription>
             </div>
-            <div className="text-right">
+            <div className="text-right font-mono">
               <p className="text-sm text-muted-foreground">Documento gerado em:</p>
               <p className="font-medium">{formatDate(new Date().toISOString())}</p>
             </div>
@@ -182,13 +181,13 @@ export default function RelatorioPage() {
         </CardContent>
       </Card>
 
-      {/* Classificacao de Risco Final */}
+      {/* Risco cirúrgico — Cardiologia */}
       {evaluation && (
         <Card className={`print:shadow-none ${getRiskColor()}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              Classificacao de Risco Final
+              Risco cirúrgico — Cardiologia
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -197,9 +196,9 @@ export default function RelatorioPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="text-2xl font-bold">
-                    {RISK_LABELS[evaluation.riscoFinal]}
+                    {cardiologyRisk ? RISK_LABELS[cardiologyRisk] : 'Não classificado'}
                   </h3>
-                  <RiskBadge risk={evaluation.riscoFinal} />
+                  {cardiologyRisk && <RiskBadge risk={cardiologyRisk} />}
                 </div>
                 <p className="text-muted-foreground">{evaluation.conduta}</p>
               </div>
@@ -210,23 +209,23 @@ export default function RelatorioPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="text-center p-4 rounded-lg bg-background">
                 <p className="text-sm text-muted-foreground mb-1">Score ASA</p>
-                <p className="text-3xl font-bold text-primary">{evaluation.scores.asa || '-'}</p>
-                {evaluation.scores.asa && (
+                <p className="text-3xl font-bold text-primary">{evaluation.scores?.asa || '-'}</p>
+                {evaluation.scores?.asa && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {ASA_DESCRIPTIONS[evaluation.scores.asa]}
+                    {ASA_DESCRIPTIONS[evaluation.scores?.asa]}
                   </p>
                 )}
               </div>
               <div className="text-center p-4 rounded-lg bg-background">
                 <p className="text-sm text-muted-foreground mb-1">Score RCRI</p>
-                <p className="text-3xl font-bold text-primary">{evaluation.scores.rcri ?? '-'}</p>
+                <p className="text-3xl font-bold text-primary">{evaluation.scores?.rcri ?? '-'}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Revised Cardiac Risk Index
                 </p>
               </div>
               <div className="text-center p-4 rounded-lg bg-background">
                 <p className="text-sm text-muted-foreground mb-1">Score VSG-CRI</p>
-                <p className="text-3xl font-bold text-primary">{evaluation.scores.vsgCri ?? '-'}</p>
+                <p className="text-3xl font-bold text-primary">{evaluation.scores?.vsgCri ?? '-'}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Vascular Surgery Group
                 </p>
@@ -258,13 +257,13 @@ export default function RelatorioPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Porte Cirurgico</p>
                 <Badge variant="outline" className="mt-1">
-                  {evaluation.porteCirurgico.charAt(0).toUpperCase() + evaluation.porteCirurgico.slice(1)}
+                  {evaluation.porteCirurgico ? evaluation.porteCirurgico.charAt(0).toUpperCase() + evaluation.porteCirurgico.slice(1) : 'Não informado'}
                 </Badge>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Urgencia</p>
                 <Badge variant="outline" className="mt-1">
-                  {evaluation.urgencia.charAt(0).toUpperCase() + evaluation.urgencia.slice(1)}
+                  {evaluation.urgencia ? evaluation.urgencia.charAt(0).toUpperCase() + evaluation.urgencia.slice(1) : 'Não informada'}
                 </Badge>
               </div>
               <div>
@@ -352,27 +351,27 @@ export default function RelatorioPage() {
               {clinicalEval.comorbidades.anticoagulantes && (
                 <Badge variant="destructive">Uso de Anticoagulantes</Badge>
               )}
-              {clinicalEval.comorbidades.outras.map((item, i) => (
+              {(clinicalEval.comorbidades.outras || []).map((item, i) => (
                 <Badge key={i} variant="outline">{item}</Badge>
               ))}
             </div>
             
-            {clinicalEval.comorbidades.alergias.length > 0 && (
+            {(clinicalEval.comorbidades.alergias || []).length > 0 && (
               <div className="mt-4">
                 <p className="text-sm font-medium text-red-600 mb-2">Alergias:</p>
                 <div className="flex flex-wrap gap-2">
-                  {clinicalEval.comorbidades.alergias.map((alergia, i) => (
+                  {(clinicalEval.comorbidades.alergias || []).map((alergia, i) => (
                     <Badge key={i} variant="destructive">{alergia}</Badge>
                   ))}
                 </div>
               </div>
             )}
             
-            {clinicalEval.comorbidades.medicacoes.length > 0 && (
+            {(clinicalEval.comorbidades.medicacoes || []).length > 0 && (
               <div className="mt-4">
                 <p className="text-sm font-medium mb-2">Medicacoes em Uso:</p>
                 <p className="text-sm text-muted-foreground">
-                  {clinicalEval.comorbidades.medicacoes.join(', ')}
+                  {(clinicalEval.comorbidades.medicacoes || []).join(', ')}
                 </p>
               </div>
             )}

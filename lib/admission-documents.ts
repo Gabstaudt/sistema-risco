@@ -1,0 +1,3 @@
+export const ADMISSION_DOCUMENTS={autorizacao:'Autorização de internação',requisicao_exames:'Requisição de exames',folha_internacao:'Folha de internação',evolucao_clinica:'Evolução clínica',notificacao_internacao:'Notificação de internação',notificacao_infeccao:'Notificação de infecção'} as const
+export const DOCUMENT_TITLES={receita:'Receita médica',atestado:'Atestado médico',...ADMISSION_DOCUMENTS}
+export function documentPermission(kind:string){return kind==='receita'?'issue_prescription':kind==='atestado'?'issue_certificate':Object.hasOwn(ADMISSION_DOCUMENTS,kind)?'issue_admission_documents':undefined}

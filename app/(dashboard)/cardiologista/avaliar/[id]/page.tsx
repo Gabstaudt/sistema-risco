@@ -1,9 +1,15 @@
 'use client'
+import { hasUserPermission } from '@/lib/permissions'
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { nextAssessmentStatus } from '@/lib/assessment-requests'
+import { CardiologyRiskScores, getCardiologyScores } from '@/components/shared/cardiology-risk-scores'
 import { Header } from '@/components/layout/header'
-import { PatientExamsHistory } from '@/components/shared/patient-exams-history'
+import { ExamRequestForm } from '@/components/shared/exam-request-form'
+import { CareStartTracker } from '@/components/shared/care-start-tracker'
+import { PatientPrintActions } from '@/components/shared/patient-print-actions'
+import { PatientExamList as PatientExamsHistory } from '@/components/shared/patient-exam-list'
 import { PatientStatusBadge, RiskLevelBadge } from '@/components/shared/badges'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +19,6 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/lib/auth'
-import { users } from '@/lib/data/users'
 import { useData } from '@/lib/data-context'
 import type { RiskLevel, SurgeryUrgency } from '@/lib/types'
 import { Activity, ArrowLeft, Heart, Save, ShieldCheck, User } from 'lucide-react'
@@ -25,7 +30,7 @@ type Recommendation = 'aprovar' | 'adiar' | 'contraindicar'
 export default function CardiologistaAvaliarPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, hasPermission, isLoading: isAuthLoading } = useAuth()
+  const { users, user, hasPermission, isLoading: isAuthLoading } = useAuth()
   const { getPatientById, getExamRequestsByPatient, updatePatient, addAuditLog } = useData()
 
   const patientId = params.id as string
@@ -33,6 +38,9 @@ export default function CardiologistaAvaliarPage() {
   const cardiologyAssessment = patient?.cardiologyAssessment
   const clinicalEvaluation = patient?.clinicalEvaluation
 
+  const [riskScores, setRiskScores] = useState(() => getCardiologyScores(patient))
+  const [specialistReferral, setSpecialistReferral] = useState(cardiologyAssessment?.specialistReferral || '')
+  const [saveError, setSaveError] = useState('')
   const [surgeryType, setSurgeryType] = useState(cardiologyAssessment?.surgeryType || clinicalEvaluation?.tipoCirurgia || patient?.scheduledSurgery || '')
   const [urgency, setUrgency] = useState<SurgeryUrgency>(cardiologyAssessment?.urgency || clinicalEvaluation?.urgencia || 'eletiva')
   const [releaseProfile, setReleaseProfile] = useState<ReleaseProfile>(cardiologyAssessment?.releaseProfile || 'eletiva')
@@ -43,7 +51,7 @@ export default function CardiologistaAvaliarPage() {
   const [notes, setNotes] = useState(cardiologyAssessment?.notes || '')
   const [assignedAnesthesiologistId, setAssignedAnesthesiologistId] = useState(patient?.cardiologyAssignedAnesthesiologistId || '')
   const [isSaving, setIsSaving] = useState(false)
-  const anesthesiologists = users.filter((item) => item.role === 'anestesista' && item.active)
+  const anesthesiologists = users.filter((item) => item.role === 'anestesista' && item.active && hasUserPermission(item, 'classify_asa'))
   const normalizedAnesthesiologistId = assignedAnesthesiologistId === 'unassigned' ? '' : assignedAnesthesiologistId
   const assignedAnesthesiologist = anesthesiologists.find((item) => item.id === normalizedAnesthesiologistId)
 
@@ -77,12 +85,18 @@ export default function CardiologistaAvaliarPage() {
   }
 
   const handleSave = async (complete: boolean) => {
+    if (!user || !hasPermission('classify_cardiac_risk') || isSaving) return
+    setSaveError('')
+    if (complete && riskScores.acp?.interpretation === 'Alto risco' && !specialistReferral.trim()) {
+      setSaveError('Registre o encaminhamento especializado ou o suporte de maior complexidade para o ACP de alto risco.')
+      return
+    }
     setIsSaving(true)
 
     const nextStatus =
       complete
         ? recommendation === 'aprovar'
-          ? 'aguardando_anestesista'
+          ? patient.assessmentRequests ? nextAssessmentStatus({ ...patient, cardiologyAssessment: { ...patient.cardiologyAssessment, completedAt: new Date().toISOString() } }, 'aguardando_resultado') : 'aguardando_anestesista'
           : recommendation === 'contraindicar'
             ? 'contraindicado'
             : 'alto_risco'
@@ -90,6 +104,9 @@ export default function CardiologistaAvaliarPage() {
 
     updatePatient(patientId, {
       cardiologyAssessment: {
+        ...patient.cardiologyAssessment,
+        riskScores,
+        specialistReferral: specialistReferral.trim(),
         surgeryType: surgeryType || patient.scheduledSurgery,
         urgency,
         releaseProfile,
@@ -127,14 +144,13 @@ export default function CardiologistaAvaliarPage() {
   return (
     <>
       <Header breadcrumbs={[{ label: 'Cardiologista', href: '/cardiologista' }, { label: 'Avaliacao' }]} />
-      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100svh-4rem)] min-w-0 flex-1 w-full space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Avaliacao Cardiologica Pre-Operatoria</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">Etapa obrigatoria antes do fluxo da anestesia.</p>
           </div>
           <PatientStatusBadge status={patient.status} />
         </div>
@@ -164,17 +180,17 @@ export default function CardiologistaAvaliarPage() {
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Clinico Solicitante</p>
                 <p className="font-medium">{patient.requestingPhysician || 'Nao informado'}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">RCRI</p>
-                <p className="font-medium">{clinicalEvaluation?.rcriScore?.score ?? 0}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">VSG-CRI</p>
-                <p className="font-medium">{clinicalEvaluation?.vsgcriScore?.riskClass || 'Nao calculado'}</p>
-              </div>
             </div>
           </CardContent>
         </Card>
+
+        <CardiologyRiskScores value={riskScores} onChange={setRiskScores} />
+        {riskScores.acp?.interpretation === 'Alto risco' && <Card><CardHeader><CardTitle>Encaminhamento — ACP alto risco</CardTitle></CardHeader><CardContent className="space-y-2"><Label htmlFor="cardio-specialist-referral">Parecer especializado / suporte de maior complexidade *</Label><Textarea id="cardio-specialist-referral" value={specialistReferral} onChange={event => setSpecialistReferral(event.target.value)} rows={3} /></CardContent></Card>}
+        {saveError && <p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{saveError}</p>}
+
+        <CareStartTracker patientId={patientId} />
+      <PatientPrintActions patientId={patientId} />
+        <ExamRequestForm patientId={patientId} />
 
         <Tabs defaultValue="resumo" className="space-y-4">
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 sm:grid-cols-4">
@@ -232,7 +248,7 @@ export default function CardiologistaAvaliarPage() {
             <PatientExamsHistory
               examRequests={examRequests}
               title="Historico Completo de Exames"
-              description="Todos os exames executados ou em andamento neste paciente."
+              description=""
               emptyMessage="Este paciente ainda nao possui exames registrados."
             />
           </TabsContent>
@@ -244,7 +260,6 @@ export default function CardiologistaAvaliarPage() {
               <Heart className="h-5 w-5 text-primary" />
               Parecer Cardiologico
             </CardTitle>
-            <CardDescription>Fluxo baseado no tipo de cirurgia, urgencia, controle de danos e necessidade de UTI.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-2">

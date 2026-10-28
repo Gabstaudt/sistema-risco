@@ -1,9 +1,12 @@
 'use client'
 
+import {ProfilePreviewBanner} from '@/components/shared/profile-preview-banner'
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { canAccessRoute } from '@/lib/permissions'
 import { useAuth } from '@/lib/auth'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
+import {DoctorWorkplace} from '@/components/shared/doctor-workplace'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { Loader2 } from 'lucide-react'
 
@@ -14,12 +17,16 @@ export default function DashboardLayout({
 }) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+  const canAccess = canAccessRoute(pathname, user)
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace('/login')
+    } else if (!isLoading && user && !canAccess && canAccessRoute(`/${user.role}`, user)) {
+      router.replace(`/${user.role}`)
     }
-  }, [user, isLoading, router])
+  }, [user, isLoading, router, canAccess])
 
   if (isLoading) {
     return (
@@ -33,11 +40,20 @@ export default function DashboardLayout({
     return null
   }
 
+  if (canAccess && pathname === '/recepcao/ficha-em-branco') return <>{children}</>
+
   return (
     <SidebarProvider>
       <AppSidebar />
+      <DoctorWorkplace automatic/>
       <SidebarInset>
-        {children}
+        <ProfilePreviewBanner/>
+        {canAccess ? children : (
+          <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 p-6 text-center">
+            <p className="text-lg font-semibold">Acesso não autorizado</p>
+            <p className="text-muted-foreground">Seu perfil não tem permissão para visualizar esta página.</p>
+          </div>
+        )}
       </SidebarInset>
     </SidebarProvider>
   )

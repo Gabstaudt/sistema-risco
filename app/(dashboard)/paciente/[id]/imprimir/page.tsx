@@ -1,0 +1,80 @@
+'use client'
+import {ReceptionAttendanceSheet} from '@/components/shared/reception-attendance-sheet'
+import {RECEPTION_SHEETS} from '@/components/shared/reception-print-actions'
+import {WardHistory} from '@/components/shared/ward-history'
+import {MedicalConsultationHistory} from '@/components/shared/medical-consultation-history'
+import {ADMISSION_DOCUMENTS,documentPermission} from '@/lib/admission-documents'
+import {TriageIntakeSummary} from '@/components/shared/triage-intake-summary'
+import { Suspense } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
+import { useAuth } from '@/lib/auth'
+import { useData } from '@/lib/data-context'
+import {UnitBrand} from '@/components/shared/unit-brand'
+import { ExamAttachment } from '@/components/shared/exam-operations'
+import { Button } from '@/components/ui/button'
+import { MANCHESTER_PRIORITIES, getPatientManchesterPriority } from '@/lib/manchester'
+import { ROLE_LABELS, STATUS_LABELS, type PatientStatus } from '@/lib/types'
+const titles: Record<string,string> = {...ADMISSION_DOCUMENTS,fila:'Ficha da fila de atendimento',urgencia:'Ficha de urgência',triagem:'Ficha de triagem', prontuario:'Prontuário do paciente', historico:'Histórico de atendimentos', medicacoes:'Ficha de medicação', solicitacao_medicacao:'Solicitação de medicação', exames:'Exames do paciente', receita:'Receita médica', atestado:'Atestado médico' }
+const permissions: Record<string,string> = {...Object.fromEntries(Object.keys(ADMISSION_DOCUMENTS).map(kind=>[kind,documentPermission(kind)!])),fila:'view_patient_basic',urgencia:'print_triage_sheet',triagem:'print_triage_sheet', prontuario:'print_patient_record', historico:'print_patient_history', medicacoes:'print_medication_sheet', solicitacao_medicacao:'print_medication_sheet', exames:'print_exams', receita:'issue_prescription', atestado:'issue_certificate' }
+const at = (value?:string) => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('pt-BR') : 'Não informado'
+const day = (value?:string) => value ? new Date(value + 'T12:00:00').toLocaleDateString('pt-BR') : 'Não informado'
+function Section({ title, children }: { title:string; children:React.ReactNode }) { return <section className="space-y-3 border-t pt-5 print:break-inside-avoid"><h2 className="text-lg font-bold">{title}</h2>{children}</section> }
+function PrintPage() {
+ const { id } = useParams<{ id:string }>()
+ const query = useSearchParams()
+ const kind = query.get('tipo') || 'prontuario'
+ const { users, hasPermission } = useAuth()
+ const {tickets, getPatientById, getExamRequestsByPatient, medicationOrders, medicalDocuments, isDataReady } = useData()
+ const professional = (id?:string) => users.find(user => user.id === id)?.name || id || 'Não informado'
+ const patient = getPatientById(id)
+ const document = medicalDocuments.find(item => item.patientId === id && item.id === query.get('documento') && item.kind === kind)
+ const exams = getExamRequestsByPatient(id).filter(exam => !query.get('exame') || exam.id === query.get('exame')).sort((a,b) => Date.parse(b.solicitadoEm)-Date.parse(a.solicitadoEm))
+ const meds = medicationOrders.filter(order => order.patientId === id && (!query.get('medicacao') || order.id === query.get('medicacao'))).sort((a,b) => Date.parse(b.requestedAt)-Date.parse(a.requestedAt))
+ if (!isDataReady) return <p className="p-6">Carregando...</p>
+ if(patient&&Object.hasOwn(RECEPTION_SHEETS,kind))return <ReceptionAttendanceSheet patient={patient} kind={kind as keyof typeof RECEPTION_SHEETS}/>
+ if (!patient || !permissions[kind] || !hasPermission(permissions[kind]) || ((['receita','atestado'].includes(kind)||Object.hasOwn(ADMISSION_DOCUMENTS,kind)) && !document)) return <p className="p-6">Documento indisponível ou acesso não autorizado.</p>
+ const priority = getPatientManchesterPriority(patient)
+ const record = kind === 'prontuario'
+ const clinical = hasPermission('view_clinical_data')
+ const triageSheet=kind==='triagem'||kind==='urgencia'
+ if ((kind === 'historico' && !hasPermission('view_patient_history')) || (kind === 'exames' && !hasPermission('view_exam_results')) || (['medicacoes','solicitacao_medicacao'].includes(kind) && !clinical && !hasPermission('administer_medication'))) return <p className="p-6">Acesso não autorizado.</p>
+ return <main className={`medrisk-print-document mx-auto w-full min-w-0 max-w-5xl space-y-6 p-5 sm:p-10 ${triageSheet?'triage-print-sheet':''}`}>
+  <style>{`@media print { [data-slot="sidebar"], [data-slot="sidebar-gap"], [data-slot="sidebar-container"], header:not(.document-header) { display:none !important; } [data-slot="sidebar-inset"] { margin:0 !important; width:100% !important; } .medrisk-print-document { max-width:none !important; padding:0 !important; color:black; background:white; } @page { size:A4; margin:15mm; } }`}</style>
+  {triageSheet&&<style>{`
+   .triage-print-sheet{font-size:10pt;line-height:1.3;overflow-wrap:anywhere}
+   .triage-print-sheet .document-header .brand-logo{width:45mm;height:11mm;padding:0}
+   .triage-print-sheet .document-header h1{font-size:16pt;line-height:1.2}
+   @media print{
+    @page{size:A4 portrait;margin:12mm}
+    html,body{margin:0!important;padding:0!important}
+    .triage-print-sheet{width:100%;font-size:9pt;line-height:1.25;display:flex;flex-direction:column;gap:2.5mm}
+    .triage-print-sheet > *{margin-block:0!important}
+    .triage-print-sheet .document-header{display:flex;flex-direction:column;gap:2mm;padding-bottom:3mm;break-inside:avoid}
+    .triage-print-sheet .document-header > *{margin-block:0!important}
+    .triage-print-sheet .document-header .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:1mm 5mm;font-size:9pt}
+    .triage-print-sheet section{display:flex;flex-direction:column;gap:1.5mm;padding-top:2.5mm;break-inside:auto}
+    .triage-print-sheet section > *{margin-block:0!important}
+    .triage-print-sheet section h2{font-size:11pt;line-height:1.2;break-after:avoid}
+    .triage-print-sheet dl{grid-template-columns:repeat(2,minmax(0,1fr));gap:2mm 5mm}
+    .triage-print-sheet dl > div{break-inside:avoid}
+    .triage-print-sheet dt{font-size:9pt;font-weight:600}
+    .triage-print-sheet .triage-signature{padding-top:5mm;font-size:9pt;break-inside:avoid;text-align:center}
+   }
+  `}</style>}
+  <div className="flex flex-wrap gap-3 print:hidden"><Button className="h-12" onClick={() => window.print()}>Imprimir / salvar PDF</Button><Button variant="outline" className="h-12" onClick={() => window.close()}>Fechar</Button></div>
+  <header className="document-header space-y-4 border-b pb-5"><UnitBrand compact/><h1 className="text-2xl font-bold">{titles[kind]}</h1><div className="grid gap-2 text-sm sm:grid-cols-2"><p><strong>Paciente:</strong> {patient.nomeCompleto}</p><p><strong>Prontuário:</strong> {patient.prontuario}</p><p><strong>Nascimento:</strong> {day(patient.dataNascimento)}</p><p><strong>Unidade:</strong> {patient.unidade}</p>{patient.cpf && <p><strong>CPF:</strong> {patient.cpf}</p>}</div></header>
+  {kind==='fila'&&<Section title="Fila de atendimento"><div className="grid gap-3 text-sm sm:grid-cols-2"><p><strong>Senha:</strong> {patient.ticketNumber||tickets.find(ticket=>ticket.patientId===id)?.number||'Não informada'}</p><p><strong>Chegada:</strong> {at(patient.dataEntrada)}</p><p><strong>Situação:</strong> {STATUS_LABELS[patient.status]}</p><p><strong>Fluxo:</strong> {patient.attendanceRoute==='sem_triagem'?'Sem triagem · classificação branca':'Com triagem'}</p><p><strong>Classificação:</strong> {hasPermission('view_triage_data')&&priority?MANCHESTER_PRIORITIES[priority].label:patient.attendanceRoute==='sem_triagem'?'Branca':'Consultar triagem'}</p><p><strong>Setor de destino:</strong> {patient.triageAssignedClinicianName?'Clínica · '+patient.triageAssignedClinicianName:tickets.find(ticket=>ticket.patientId===id)?.destination||'Não informado'}</p><p><strong>Queixa:</strong> {patient.queixaPrincipal||'Não informada'}</p><p><strong>Chamada:</strong> {at(tickets.find(ticket=>ticket.patientId===id)?.calledAt)}</p></div><p className="pt-8 text-center text-sm">Identificação do profissional: __________________________________</p></Section>}
+  {document && <><div className="whitespace-pre-wrap break-words text-base leading-8">{document.content}</div>{document.kind === 'atestado' && <p><strong>Período:</strong> {day(document.startDate)} a {day(document.endDate)}</p>}<p>Emitido em {at(document.issuedAt)}</p><div className="pt-12 text-center"><p>________________________________________________</p><p className="mt-2 font-semibold">{document.physicianName}</p><p>{ROLE_LABELS[document.physicianRole]} · CRM / UF: {document.professionalRegistration}</p><p className="text-sm">Assinatura e carimbo</p></div></>}
+  {(record||triageSheet) && <Section title="Atendimento atual"><p><strong>Entrada:</strong> {at(patient.dataEntrada)}</p><p><strong>Queixa:</strong> {patient.queixaPrincipal || 'Não informada'}</p><p className="whitespace-pre-wrap break-words">{patient.descricaoInicial}</p></Section>}
+  {(record||triageSheet) && hasPermission('view_triage_data') && <Section title="Triagem"><p><strong>Manchester:</strong> {priority ? MANCHESTER_PRIORITIES[priority].label : 'Não registrada'}</p><p><strong>Sinais vitais:</strong> PA {patient.triageData?.vitalSigns?.bloodPressure || '—'} · FC {patient.triageData?.vitalSigns?.heartRate || '—'} · SpO₂ {patient.triageData?.vitalSigns?.oxygenSaturation || '—'}</p><p><strong>Temperatura:</strong> {patient.triageData?.vitalSigns?.temperature ?? '—'} · <strong>FR:</strong> {patient.triageData?.vitalSigns?.respiratoryRate ?? '—'} · <strong>Peso:</strong> {patient.triageData?.vitalSigns?.weight ?? '—'}</p><TriageIntakeSummary patient={patient}/><p className="whitespace-pre-wrap break-words">{patient.triageData?.notes || patient.observacoesTriagem}</p></Section>}
+  {triageSheet&&hasPermission('view_triage_data')&&<footer className="triage-signature space-y-2 border-t pt-5 text-sm"><p>Triagem registrada em {at(patient.triageData?.completedAt)} · {professional(patient.triageData?.completedBy)}</p><p>Assinatura e identificação do profissional: ____________________________________</p></footer>}
+  {record&&(clinical||hasPermission('view_ward_care'))&&Boolean(patient.wardStays?.length)&&<Section title="Acompanhamento na enfermaria"><WardHistory patient={patient}/></Section>}
+  {record&&clinical&&Boolean(patient.medicalConsultations?.length)&&<Section title="Anamneses e consultas médicas"><MedicalConsultationHistory patient={patient}/></Section>}
+  {record && clinical && <><Section title="Avaliação clínica"><p><strong>Alergias:</strong> {patient.allergies?.join(', ') || 'Nenhuma registrada'}</p><p><strong>Histórico clínico:</strong> {patient.clinicalEvaluation?.historicoClinico || patient.avaliacaoClinica?.historicoClinico || 'Não informado'}</p><p><strong>Cirurgia prevista:</strong> {patient.scheduledSurgery || 'Não informada'}</p><p><strong>Tipo de lesão:</strong> {patient.clinicalEvaluation?.lesionType || 'Não informado'}</p><p><strong>Hipótese:</strong> {patient.clinicalEvaluation?.hipoteseDiagnostica || 'Não informada'}</p><p className="whitespace-pre-wrap break-words">{patient.clinicalEvaluation?.notes || patient.avaliacaoClinica?.observacoesMedicas || 'Sem parecer registrado.'}</p></Section><Section title="Pareceres especializados"><p><strong>Cardiologia:</strong> {patient.cardiologyAssessment?.finalRiskLevel || 'Não classificado'}</p><p className="whitespace-pre-wrap break-words">{patient.cardiologyAssessment?.notes}</p>{Object.entries(patient.cardiologyAssessment?.riskScores || {}).map(([score,value]) => <p key={score}><strong>{score.toUpperCase()}:</strong> {value?.result || 'Não informado'} · {value?.interpretation}</p>)}<p className="whitespace-pre-wrap break-words">{patient.cardiologyAssessment?.specialistReferral}</p><p><strong>Histórico anestésico:</strong> {patient.anesthesiaAssessment?.anestheticHistory || 'Não informado'}</p><p><strong>Via aérea:</strong> {patient.anesthesiaAssessment?.airwayAssessment || 'Não informada'}</p><p><strong>Tipo de anestesia:</strong> {patient.anesthesiaAssessment?.anesthesiaType || 'Não informado'}</p><p><strong>ASA:</strong> {patient.anesthesiaAssessment?.asaClassification || 'Não registrada'}</p><p className="whitespace-pre-wrap break-words">{patient.anesthesiaAssessment?.notes}</p><p><strong>Cirurgia:</strong> {patient.surgicalRiskAssessment?.finalRiskLevel || 'Não classificado'}</p><p className="whitespace-pre-wrap break-words">{patient.surgicalRiskAssessment?.notes}</p></Section></>}
+  {record && clinical && Boolean(patient.surgeryRecords?.length) && <Section title="Cirurgia e pós-operatório">{patient.surgeryRecords?.map(surgery => <article key={surgery.id} className="space-y-2 border-b pb-4"><h3 className="font-semibold">{surgery.procedureType} · {surgery.segment}</h3><p>{surgery.status} · {surgery.performedAt ? day(surgery.performedAt) : 'Sem data de realização'}</p><p className="whitespace-pre-wrap break-words">{surgery.notes}</p><p className="whitespace-pre-wrap break-words">{surgery.postoperativeNotes}</p><p>{surgery.postoperativeOutcome}</p></article>)}</Section>}
+  {(kind === 'historico' || record) && hasPermission('view_patient_history') && <Section title="Histórico de entradas">{patient.visitHistory?.length ? patient.visitHistory.map(visit => <article key={visit.id} className="space-y-2 border-b pb-4"><h3 className="font-semibold">{at(visit.entryAt)} · {visit.unit}</h3><p>{visit.reason}</p><p><strong>Saída:</strong> {at(visit.dischargeAt)}</p>{hasPermission('view_triage_data') && <p>{visit.triage?.vitalSignsSummary} {visit.triage?.notes}</p>}{clinical && <><p className="whitespace-pre-wrap">{visit.clinical?.hypothesis} {visit.clinical?.conduct}</p><p className="whitespace-pre-wrap">{visit.surgery?.decision} {visit.surgery?.notes}</p><p>{visit.medicationsAdministered?.map(medication => `${medication.name} · ${medication.dose} · ${medication.route} · ${at(medication.administeredAt)}`).join('; ')}</p></>}<p><strong>Desfecho:</strong> {STATUS_LABELS[visit.outcome as PatientStatus] || visit.outcome || 'Em atendimento'}</p></article>) : <p>Nenhum atendimento anterior registrado.</p>}</Section>}
+  {(kind === 'medicacoes' || kind === 'solicitacao_medicacao' || record) && (clinical || hasPermission('administer_medication')) && <Section title="Medicações">{meds.length ? meds.map(order => <article key={order.id} className="space-y-2 border-b pb-4"><h3 className="font-semibold">{order.medication} · {order.dose} · {order.route}</h3><p className="whitespace-pre-wrap break-words">{order.instructions}</p><p>Solicitada em {at(order.requestedAt)} · {professional(order.requestedBy)}</p><p>{order.status === 'cancelada' ? `Cancelada: ${order.cancelledReason||'Atendimento encerrado'}` : order.status === 'administrada' ? `Administrada em ${at(order.administeredAt)} · ${professional(order.administeredBy)}` : 'Aguardando administração'}</p></article>) : <p>Nenhuma medicação registrada.</p>}</Section>}
+  {(kind === 'exames' || record) && hasPermission('view_exam_results') && <Section title="Exames">{exams.length ? exams.map(exam => <article key={exam.id} className="space-y-3 border-b pb-4 print:break-inside-avoid"><h3 className="font-semibold">{exam.examTypeName}</h3><p>Solicitado: {at(exam.solicitadoEm)} · Coletado: {at(exam.coletadoEm)}</p><p>Realizado: {at(exam.performedAt)} · Resultado: {at(exam.concluidoEm)}</p><p className="whitespace-pre-wrap break-words">{exam.resultado || 'Resultado ainda não liberado.'}</p><ExamAttachment exam={exam} preview /></article>) : <p>Nenhum exame registrado.</p>}</Section>}
+ </main>
+}
+export default function Page() { return <Suspense fallback={<p className="p-6">Carregando...</p>}><PrintPage /></Suspense> }

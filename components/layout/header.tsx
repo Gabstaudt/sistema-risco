@@ -1,5 +1,6 @@
 'use client'
 
+import { Fragment } from 'react'
 import { useAuth } from '@/lib/auth'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -11,6 +12,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import { isDoctor } from '@/lib/medical-profile'
 import { ROLE_LABELS } from '@/lib/types'
 
 interface HeaderProps {
@@ -22,8 +24,8 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
   const { user } = useAuth()
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-background">
-      <SidebarTrigger className="-ml-1" />
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-card">
+      <SidebarTrigger className="-ml-1 size-12" />
       <Separator orientation="vertical" className="h-4" />
       
       {breadcrumbs && breadcrumbs.length > 0 ? (
@@ -33,23 +35,24 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
               <>
                 <BreadcrumbItem>
                   <BreadcrumbLink href={`/${user.role}`}>
-                    {ROLE_LABELS[user.role]}
+                    {isDoctor(user) ? `Médico · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
               </>
             )}
             {breadcrumbs.map((crumb, index) => (
-              <BreadcrumbItem key={index}>
-                {index < breadcrumbs.length - 1 ? (
-                  <>
+              <Fragment key={index}>
+                <BreadcrumbItem>
+                  {index < breadcrumbs.length - 1 ? (
                     <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
-                    <BreadcrumbSeparator />
-                  </>
-                ) : (
-                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                )}
-              </BreadcrumbItem>
+                  ) : (
+                    <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {/* Separators render as li elements and must be siblings of breadcrumb items. */}
+                {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+              </Fragment>
             ))}
           </BreadcrumbList>
         </Breadcrumb>

@@ -1,13 +1,15 @@
 'use client'
 
 import Link from 'next/link'
+import { examActivityTime } from '@/lib/lab-operations'
+import { ExamAttachment, ExamTimeline } from '@/components/shared/exam-operations'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/badges'
 import type { ExamRequest, Patient } from '@/lib/types'
 import { AlertTriangle, CheckCircle2, Clock3, ExternalLink, FileText, FlaskConical } from 'lucide-react'
-import { users } from '@/lib/data/users'
+import { useAuth } from '@/lib/auth'
 
 type PatientLookup = Pick<Patient, 'id' | 'nomeCompleto' | 'prontuario' | 'status'>
 
@@ -23,10 +25,10 @@ interface PatientExamsHistoryProps {
 }
 
 const examStatusMeta: Record<ExamRequest['status'], { label: string; className: string }> = {
-  solicitado: { label: 'Solicitado', className: 'bg-violet-100 text-violet-800 border-violet-200' },
+  solicitado: { label: 'Aguardando coleta', className: 'bg-violet-100 text-violet-800 border-violet-200' },
   coletado: { label: 'Coletado', className: 'bg-sky-100 text-sky-800 border-sky-200' },
-  em_analise: { label: 'Em analise', className: 'bg-blue-100 text-blue-800 border-blue-200' },
-  concluido: { label: 'Concluido', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  em_analise: { label: 'Aguardando resultado', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+  concluido: { label: 'Resultado disponível', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   cancelado: { label: 'Cancelado', className: 'bg-slate-100 text-slate-700 border-slate-200' },
 }
 
@@ -39,7 +41,7 @@ const urgencyMeta: Record<NonNullable<ExamRequest['labUrgency']>, { label: strin
 }
 
 function getRelevantTimestamp(exam: ExamRequest) {
-  return exam.concluidoEm || exam.analisadoEm || exam.coletadoEm || exam.solicitadoEm
+  return new Date(examActivityTime(exam)).toISOString()
 }
 
 function formatDate(dateString?: string) {
@@ -54,11 +56,6 @@ function formatDate(dateString?: string) {
   })
 }
 
-function getUserName(userId?: string) {
-  if (!userId) return 'Nao informado'
-
-  return users.find((user) => user.id === userId)?.name || userId
-}
 
 function getResultTone(exam: ExamRequest) {
   const text = `${exam.resultado || ''} ${exam.observacoesLab || ''} ${exam.labAnalysis || ''}`.toLowerCase()
@@ -84,8 +81,15 @@ export function PatientExamsHistory({
   actionLabel = 'Abrir paciente',
   maxItems,
 }: PatientExamsHistoryProps) {
+  const { users } = useAuth()
+  function getUserName(userId?: string) {
+  if (!userId) return 'Nao informado'
+
+  return users.find((user) => user.id === userId)?.name || userId
+}
+
   const sortedExams = [...examRequests]
-    .sort((a, b) => new Date(getRelevantTimestamp(b)).getTime() - new Date(getRelevantTimestamp(a)).getTime())
+    .sort((a, b) => examActivityTime(b) - examActivityTime(a))
     .slice(0, maxItems ?? examRequests.length)
 
   return (
@@ -95,7 +99,7 @@ export function PatientExamsHistory({
           <FlaskConical className="h-5 w-5 text-primary" />
           {title}
         </CardTitle>
-        <CardDescription>{description}</CardDescription>
+        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
         {sortedExams.length === 0 ? (
@@ -164,6 +168,8 @@ export function PatientExamsHistory({
                         </div>
                       </div>
 
+                      <ExamTimeline exam={exam} />
+                      <ExamAttachment exam={exam} />
                       <div className="rounded-lg border bg-background/70 p-3">
                         <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Responsaveis</p>
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
